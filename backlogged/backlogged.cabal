@@ -68,7 +68,7 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.16.4.0
+    build-depends:    base >=4.16 && <5
                     , aeson ^>=2.2.1
                     , directory ^>=1.3.8
                     , http-client ^>=0.7.14
@@ -100,7 +100,7 @@ executable backlogged
 
     -- Other library packages from which modules are imported.
     build-depends:
-        base ^>=4.16.4.0,
+        base >=4.16 && <5,
         backlogged
 
     -- Directories containing source files.
@@ -133,5 +133,5 @@ test-suite backlogged-test
 
     -- Test dependencies.
     build-depends:
-        base ^>=4.16.4.0,
+        base >=4.16 && <5,
         backlogged
