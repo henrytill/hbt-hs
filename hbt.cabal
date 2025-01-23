@@ -16,17 +16,27 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options: -Wall
 
+common extensions
+    default-extensions: ImportQualifiedPost
+
 library
-    import:           warnings
-    exposed-modules:  MyLib
+    import:           warnings, extensions
+    exposed-modules:  Hbt
+                      Hbt.Collection
     -- other-modules:
     -- other-extensions:
-    build-depends:    base ^>=4.17.2.1
+    build-depends:    base ^>=4.17.2.1,
+                      containers ^>=0.6.7,
+                      network-uri ^>=2.6.4.2,
+                      text ^>=2.0.2,
+                      time ^>=1.12,
+                      vector ^>=0.13.2.0
     hs-source-dirs:   src
     default-language: Haskell2010
 
+
 executable hbt
-    import:           warnings
+    import:           warnings, extensions
     main-is:          Main.hs
     -- other-modules:
     -- other-extensions:
@@ -36,9 +46,10 @@ executable hbt
 
     hs-source-dirs:   exe
     default-language: Haskell2010
+    default-extensions: ImportQualifiedPost
 
 test-suite hbt-test
-    import:           warnings
+    import:           warnings, extensions
     default-language: Haskell2010
     -- other-modules:
     -- other-extensions:
