@@ -46,7 +46,6 @@ executable hbt
 
     hs-source-dirs:   exe
     default-language: Haskell2010
-    default-extensions: ImportQualifiedPost
 
 test-suite hbt-test
     import:           warnings, extensions
