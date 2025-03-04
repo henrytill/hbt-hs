@@ -34,7 +34,6 @@ library
                       vector ^>=0.13.2.0
     hs-source-dirs:   src
 
-
 executable hbt
     import:           warnings, extensions
     main-is:          Main.hs
@@ -43,16 +42,15 @@ executable hbt
     build-depends:
         base ^>=4.17.2.1,
         hbt
-
     hs-source-dirs:   exe
 
 test-suite hbt-test
     import:           warnings, extensions
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
     -- other-modules:
     -- other-extensions:
-    type:             exitcode-stdio-1.0
-    hs-source-dirs:   test
-    main-is:          Main.hs
     build-depends:
         base ^>=4.17.2.1,
         hbt
+    hs-source-dirs:   test
