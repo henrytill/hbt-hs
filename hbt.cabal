@@ -48,9 +48,10 @@ test-suite hbt-test
     import:           warnings, extensions
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
-    -- other-modules:
+    other-modules:    Hbt.CollectionTests
     -- other-extensions:
     build-depends:
         base ^>=4.17.2.1,
+        dwergaz ^>=0.3.0.2,
         hbt
     hs-source-dirs:   test
