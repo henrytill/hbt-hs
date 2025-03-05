@@ -57,16 +57,16 @@ emptyEntity =
     }
 
 updateEntity :: Time -> Set Name -> Set Label -> Entity -> Entity
-updateEntity updatedAt names labels entity =
-  if entityCreatedAt entity > updatedAt
-    then
+updateEntity updatedAt names labels entity
+  | let createdAt = entityCreatedAt entity,
+    createdAt > updatedAt =
       entity
-        { entityUpdatedAt = entityCreatedAt entity : entityUpdatedAt entity,
+        { entityUpdatedAt = createdAt : entityUpdatedAt entity,
           entityCreatedAt = updatedAt,
           entityNames = updatedNames,
           entityLabels = updatedLabels
         }
-    else
+  | otherwise =
       entity
         { entityUpdatedAt = updatedAt : entityUpdatedAt entity,
           entityNames = updatedNames,
@@ -120,22 +120,20 @@ insert e c = (id, MkCollection updatedNodes updatedEdges updatedUris)
     updatedUris = Map.insert (entityUri e) id (collectionUris c)
 
 upsert :: Entity -> Collection -> (Id, Collection)
-upsert e c = case lookupId (entityUri e) c of
-  Nothing -> insert e c
-  Just id@(MkId i) -> (id, c {collectionNodes = updatedNodes})
-    where
-      currentNodes = collectionNodes c
-      updatedNodes = currentNodes // [(i, absorbEntity e (currentNodes ! i))]
+upsert e c
+  | let uri = entityUri e,
+    Just id@(MkId i) <- lookupId uri c,
+    let currentNodes = collectionNodes c =
+      (id, c {collectionNodes = currentNodes // [(i, absorbEntity e (currentNodes ! i))]})
+  | otherwise = insert e c
 
 addEdge :: Id -> Id -> Collection -> Collection
-addEdge (MkId i) to c = c {collectionEdges = updatedEdges}
-  where
-    currentEdges = collectionEdges c
-    fromEdges = currentEdges ! i
-    updatedEdges =
-      if Vector.elem to fromEdges
-        then currentEdges
-        else currentEdges // [(i, Vector.snoc fromEdges to)]
+addEdge (MkId i) to c
+  | let currentEdges = collectionEdges c,
+    let fromEdges = currentEdges ! i,
+    not $ Vector.elem to fromEdges =
+      c {collectionEdges = currentEdges // [(i, Vector.snoc fromEdges to)]}
+  | otherwise = c
 
 addEdges :: Id -> Id -> Collection -> Collection
 addEdges from to = addEdge to from . addEdge from to
