@@ -123,8 +123,13 @@ upsert :: Entity -> Collection -> (Id, Collection)
 upsert e c
   | let uri = entityUri e,
     Just id@(MkId i) <- lookupId uri c,
-    let currentNodes = collectionNodes c =
-      (id, c {collectionNodes = currentNodes // [(i, absorbEntity e (currentNodes ! i))]})
+    let currentNodes = collectionNodes c,
+    let updatedEntity = absorbEntity e (currentNodes ! i) =
+      if updatedEntity /= e
+        then
+          (id, c {collectionNodes = currentNodes // [(i, updatedEntity)]})
+        else
+          (id, c)
   | otherwise = insert e c
 
 addEdge :: Id -> Id -> Collection -> Collection
