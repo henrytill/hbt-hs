@@ -77,11 +77,14 @@ updateEntity updatedAt names labels entity
     updatedLabels = Set.union (entityLabels entity) labels
 
 absorbEntity :: Entity -> Entity -> Entity
-absorbEntity other =
-  updateEntity
-    (entityCreatedAt other)
-    (entityNames other)
-    (entityLabels other)
+absorbEntity entity1 entity2
+  | entity1 /= entity2 =
+      updateEntity
+        (entityCreatedAt entity1)
+        (entityNames entity1)
+        (entityLabels entity1)
+        entity2
+  | otherwise = entity1
 
 type Edges = Vector Id
 
