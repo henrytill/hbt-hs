@@ -29,12 +29,18 @@ newtype Time = MkTime {unTime :: POSIXTime}
 emptyTime :: Time
 emptyTime = MkTime 0
 
+newtype Extended = MkExtended {unExtended :: Text}
+  deriving (Show, Eq, Ord)
+
 data Entity = MkEntity
   { entityUri :: URI,
     entityCreatedAt :: Time,
     entityUpdatedAt :: [Time],
     entityNames :: Set Name,
-    entityLabels :: Set Label
+    entityLabels :: Set Label,
+    entityExtended :: Maybe Extended,
+    entityShared :: Bool,
+    entityToRead :: Bool
   }
   deriving (Show, Eq, Ord)
 
@@ -45,7 +51,10 @@ mkEntity uri createdAt maybeName labels =
       entityCreatedAt = createdAt,
       entityUpdatedAt = [],
       entityNames = maybe Set.empty Set.singleton maybeName,
-      entityLabels = labels
+      entityLabels = labels,
+      entityExtended = Nothing,
+      entityShared = False,
+      entityToRead = False
     }
 
 emptyEntity :: Entity
@@ -55,7 +64,10 @@ emptyEntity =
       entityCreatedAt = emptyTime,
       entityUpdatedAt = [],
       entityNames = Set.empty,
-      entityLabels = Set.empty
+      entityLabels = Set.empty,
+      entityExtended = Nothing,
+      entityShared = False,
+      entityToRead = False
     }
 
 updateEntity :: Time -> Set Name -> Set Label -> Entity -> Entity
