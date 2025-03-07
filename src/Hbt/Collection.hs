@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiWayIf #-}
+
 module Hbt.Collection where
 
 import Data.Map (Map)
@@ -125,14 +127,14 @@ insert entity collection = (id, MkCollection updatedNodes updatedEdges updatedUr
 upsert :: Entity -> Collection -> (Id, Collection)
 upsert entity collection
   | let uri = entityUri entity,
-    Just id@(MkId i) <- lookupId uri collection,
-    let nodes = collectionNodes collection,
-    let updatedEntity = absorbEntity entity (nodes ! i) =
-      if updatedEntity /= entity
-        then
-          (id, collection {collectionNodes = nodes // [(i, updatedEntity)]})
-        else
-          (id, collection)
+    Just id@(MkId i) <- lookupId uri collection =
+      if
+        | let nodes = collectionNodes collection,
+          let updatedEntity = absorbEntity entity (nodes ! i),
+          updatedEntity /= entity ->
+            (id, collection {collectionNodes = nodes // [(i, updatedEntity)]})
+        | otherwise ->
+            (id, collection)
   | otherwise = insert entity collection
 
 addEdge :: Id -> Id -> Collection -> Collection
