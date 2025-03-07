@@ -3,8 +3,8 @@ name:               hbt
 version:            0.1.0.0
 synopsis:           Heterogeneous Bookmark Transformation
 -- description:
-license:            ISC
-license-file:       LICENSE
+license:            Unlicense
+license-file:       UNLICENSE
 author:             Henry Till
 maintainer:         henrytill@gmail.com
 -- copyright:
