@@ -112,36 +112,36 @@ lookupId :: URI -> Collection -> Maybe Id
 lookupId uri = Map.lookup uri . collectionUris
 
 lookupEntity :: Id -> Collection -> Entity
-lookupEntity (MkId i) c = collectionNodes c ! i
+lookupEntity (MkId i) collection = collectionNodes collection ! i
 
 insert :: Entity -> Collection -> (Id, Collection)
-insert e c = (id, MkCollection updatedNodes updatedEdges updatedUris)
+insert entity collection = (id, MkCollection updatedNodes updatedEdges updatedUris)
   where
-    id = MkId $ length c
-    updatedNodes = Vector.snoc (collectionNodes c) e
-    updatedEdges = Vector.snoc (collectionEdges c) Vector.empty
-    updatedUris = Map.insert (entityUri e) id (collectionUris c)
+    id = MkId $ length collection
+    updatedNodes = Vector.snoc (collectionNodes collection) entity
+    updatedEdges = Vector.snoc (collectionEdges collection) Vector.empty
+    updatedUris = Map.insert (entityUri entity) id (collectionUris collection)
 
 upsert :: Entity -> Collection -> (Id, Collection)
-upsert e c
-  | let uri = entityUri e,
-    Just id@(MkId i) <- lookupId uri c,
-    let currentNodes = collectionNodes c,
-    let updatedEntity = absorbEntity e (currentNodes ! i) =
-      if updatedEntity /= e
+upsert entity collection
+  | let uri = entityUri entity,
+    Just id@(MkId i) <- lookupId uri collection,
+    let nodes = collectionNodes collection,
+    let updatedEntity = absorbEntity entity (nodes ! i) =
+      if updatedEntity /= entity
         then
-          (id, c {collectionNodes = currentNodes // [(i, updatedEntity)]})
+          (id, collection {collectionNodes = nodes // [(i, updatedEntity)]})
         else
-          (id, c)
-  | otherwise = insert e c
+          (id, collection)
+  | otherwise = insert entity collection
 
 addEdge :: Id -> Id -> Collection -> Collection
-addEdge (MkId i) to c
-  | let currentEdges = collectionEdges c,
-    let fromEdges = currentEdges ! i,
+addEdge (MkId i) to collection
+  | let edges = collectionEdges collection,
+    let fromEdges = edges ! i,
     not $ Vector.elem to fromEdges =
-      c {collectionEdges = currentEdges // [(i, Vector.snoc fromEdges to)]}
-  | otherwise = c
+      collection {collectionEdges = edges // [(i, Vector.snoc fromEdges to)]}
+  | otherwise = collection
 
 addEdges :: Id -> Id -> Collection -> Collection
 addEdges from to = addEdge to from . addEdge from to
