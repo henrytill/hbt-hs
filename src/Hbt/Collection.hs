@@ -17,17 +17,17 @@ import Prelude hiding (id, length)
 newtype Id = MkId {unId :: Int}
   deriving (Show, Eq, Ord)
 
-newtype Name = MkName {unName :: Text}
-  deriving (Show, Eq, Ord)
-
-newtype Label = MkLabel {unLabel :: Text}
-  deriving (Show, Eq, Ord)
-
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
 
 emptyTime :: Time
 emptyTime = MkTime 0
+
+newtype Name = MkName {unName :: Text}
+  deriving (Show, Eq, Ord)
+
+newtype Label = MkLabel {unLabel :: Text}
+  deriving (Show, Eq, Ord)
 
 newtype Extended = MkExtended {unExtended :: Text}
   deriving (Show, Eq, Ord)
@@ -91,14 +91,14 @@ updateEntity updatedAt names labels entity
     updatedLabels = Set.union (entityLabels entity) labels
 
 absorbEntity :: Entity -> Entity -> Entity
-absorbEntity entity1 entity2
-  | entity1 /= entity2 =
+absorbEntity other existing
+  | other /= existing =
       updateEntity
-        (entityCreatedAt entity1)
-        (entityNames entity1)
-        (entityLabels entity1)
-        entity2
-  | otherwise = entity1
+        (entityCreatedAt other)
+        (entityNames other)
+        (entityLabels other)
+        existing
+  | otherwise = existing
 
 type Edges = Vector Id
 
