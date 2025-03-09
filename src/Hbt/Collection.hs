@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 module Hbt.Collection where
 
@@ -33,128 +34,123 @@ newtype Extended = MkExtended {unExtended :: Text}
   deriving (Show, Eq, Ord)
 
 data Entity = MkEntity
-  { entityUri :: URI,
-    entityCreatedAt :: Time,
-    entityUpdatedAt :: [Time],
-    entityNames :: Set Name,
-    entityLabels :: Set Label,
-    entityExtended :: Maybe Extended,
-    entityShared :: Bool,
-    entityToRead :: Bool
+  { uri :: URI,
+    createdAt :: Time,
+    updatedAt :: [Time],
+    names :: Set Name,
+    labels :: Set Label,
+    extended :: Maybe Extended,
+    shared :: Bool,
+    toRead :: Bool
   }
   deriving (Show, Eq, Ord)
 
 mkEntity :: URI -> Time -> Maybe Name -> Set Label -> Entity
 mkEntity uri createdAt maybeName labels =
   MkEntity
-    { entityUri = uri,
-      entityCreatedAt = createdAt,
-      entityUpdatedAt = [],
-      entityNames = maybe Set.empty Set.singleton maybeName,
-      entityLabels = labels,
-      entityExtended = Nothing,
-      entityShared = False,
-      entityToRead = False
+    { uri,
+      createdAt,
+      updatedAt = [],
+      names = maybe Set.empty Set.singleton maybeName,
+      labels,
+      extended = Nothing,
+      shared = False,
+      toRead = False
     }
 
 emptyEntity :: Entity
 emptyEntity =
   MkEntity
-    { entityUri = URI.nullURI,
-      entityCreatedAt = emptyTime,
-      entityUpdatedAt = [],
-      entityNames = Set.empty,
-      entityLabels = Set.empty,
-      entityExtended = Nothing,
-      entityShared = False,
-      entityToRead = False
+    { uri = URI.nullURI,
+      createdAt = emptyTime,
+      updatedAt = [],
+      names = Set.empty,
+      labels = Set.empty,
+      extended = Nothing,
+      shared = False,
+      toRead = False
     }
 
 updateEntity :: Time -> Set Name -> Set Label -> Entity -> Entity
 updateEntity updatedAt names labels entity
-  | let createdAt = entityCreatedAt entity,
+  | let createdAt = entity.createdAt,
     createdAt > updatedAt =
       entity
-        { entityUpdatedAt = createdAt : entityUpdatedAt entity,
-          entityCreatedAt = updatedAt,
-          entityNames = updatedNames,
-          entityLabels = updatedLabels
+        { updatedAt = createdAt : entity.updatedAt,
+          createdAt = updatedAt,
+          names = updatedNames,
+          labels = updatedLabels
         }
   | otherwise =
       entity
-        { entityUpdatedAt = updatedAt : entityUpdatedAt entity,
-          entityNames = updatedNames,
-          entityLabels = updatedLabels
+        { updatedAt = updatedAt : entity.updatedAt,
+          names = updatedNames,
+          labels = updatedLabels
         }
   where
-    updatedNames = Set.union (entityNames entity) names
-    updatedLabels = Set.union (entityLabels entity) labels
+    updatedNames = Set.union entity.names names
+    updatedLabels = Set.union entity.labels labels
 
 absorbEntity :: Entity -> Entity -> Entity
 absorbEntity other existing
-  | other /= existing =
-      updateEntity
-        (entityCreatedAt other)
-        (entityNames other)
-        (entityLabels other)
-        existing
+  | other /= existing = updateEntity other.createdAt other.names other.labels existing
   | otherwise = existing
 
 type Edges = Vector Id
 
 data Collection = MkCollection
-  { collectionNodes :: Vector Entity,
-    collectionEdges :: Vector Edges,
-    collectionUris :: Map URI Id
+  { nodes :: Vector Entity,
+    edges :: Vector Edges,
+    uris :: Map URI Id
   }
 
 empty :: Collection
 empty =
   MkCollection
-    { collectionNodes = Vector.empty,
-      collectionEdges = Vector.empty,
-      collectionUris = Map.empty
+    { nodes = Vector.empty,
+      edges = Vector.empty,
+      uris = Map.empty
     }
 
 length :: Collection -> Int
-length = Vector.length . collectionNodes
+length = Vector.length . nodes
 
 null :: Collection -> Bool
-null = Vector.null . collectionNodes
+null = Vector.null . nodes
 
 lookupId :: URI -> Collection -> Maybe Id
-lookupId uri = Map.lookup uri . collectionUris
+lookupId uri = Map.lookup uri . uris
 
 lookupEntity :: Id -> Collection -> Entity
-lookupEntity (MkId i) collection = collectionNodes collection ! i
+lookupEntity (MkId i) collection = collection.nodes ! i
 
 insert :: Entity -> Collection -> (Id, Collection)
 insert entity collection = (id, MkCollection updatedNodes updatedEdges updatedUris)
   where
     id = MkId $ length collection
-    updatedNodes = Vector.snoc (collectionNodes collection) entity
-    updatedEdges = Vector.snoc (collectionEdges collection) Vector.empty
-    updatedUris = Map.insert (entityUri entity) id (collectionUris collection)
+    updatedNodes = Vector.snoc collection.nodes entity
+    updatedEdges = Vector.snoc collection.edges Vector.empty
+    updatedUris = Map.insert entity.uri id collection.uris
 
 upsert :: Entity -> Collection -> (Id, Collection)
 upsert entity collection
-  | let uri = entityUri entity,
+  | let uri = entity.uri,
     Just id@(MkId i) <- lookupId uri collection =
       if
-        | let nodes = collectionNodes collection,
-          let updatedEntity = absorbEntity entity (nodes ! i),
+        | let existingNodes = collection.nodes,
+          let updatedEntity = absorbEntity entity (existingNodes ! i),
           updatedEntity /= entity ->
-            (id, collection {collectionNodes = nodes // [(i, updatedEntity)]})
+            (id, collection {nodes = existingNodes // [(i, updatedEntity)]})
         | otherwise ->
             (id, collection)
   | otherwise = insert entity collection
 
 addEdge :: Id -> Id -> Collection -> Collection
 addEdge (MkId i) to collection
-  | let edges = collectionEdges collection,
-    let fromEdges = edges ! i,
+  | let existingEdges = collection.edges,
+    let fromEdges = existingEdges ! i,
     not $ Vector.elem to fromEdges =
-      collection {collectionEdges = edges // [(i, Vector.snoc fromEdges to)]}
+      collection {edges = existingEdges // [(i, Vector.snoc fromEdges to)]}
   | otherwise = collection
 
 addEdges :: Id -> Id -> Collection -> Collection

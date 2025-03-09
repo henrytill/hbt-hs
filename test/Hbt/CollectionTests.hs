@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.CollectionTests where
@@ -23,11 +24,11 @@ emptyEntityTests :: Test
 emptyEntityTests =
   group
     "Entity operations on empty entity"
-    [ assertEqual "emptyEntity has null URI" URI.nullURI (entityUri emptyEntity),
-      assertEqual "emptyEntity has empty creation time" emptyTime (entityCreatedAt emptyEntity),
-      assertEqual "emptyEntity has empty update history" [] (entityUpdatedAt emptyEntity),
-      assertEqual "emptyEntity has empty names" Set.empty (entityNames emptyEntity),
-      assertEqual "emptyEntity has empty labels" Set.empty (entityLabels emptyEntity)
+    [ assertEqual "emptyEntity has null URI" URI.nullURI emptyEntity.uri,
+      assertEqual "emptyEntity has empty creation time" emptyTime emptyEntity.createdAt,
+      assertEqual "emptyEntity has empty update history" [] emptyEntity.updatedAt,
+      assertEqual "emptyEntity has empty names" Set.empty emptyEntity.names,
+      assertEqual "emptyEntity has empty labels" Set.empty emptyEntity.labels
     ]
 
 entityTests :: Test
@@ -40,11 +41,11 @@ entityTests =
       expectedNames = Set.singleton (MkName "Test Entity")
    in group
         "Entity operations"
-        [ assertEqual "mkEntity sets correct URI" uri (entityUri entity),
-          assertEqual "mkEntity sets correct creation time" time (entityCreatedAt entity),
-          assertEqual "mkEntity sets empty update history" [] (entityUpdatedAt entity),
-          assertEqual "mkEntity sets correct names" expectedNames (entityNames entity),
-          assertEqual "mkEntity sets correct labels" labels (entityLabels entity)
+        [ assertEqual "mkEntity sets correct URI" uri entity.uri,
+          assertEqual "mkEntity sets correct creation time" time entity.createdAt,
+          assertEqual "mkEntity sets empty update history" [] entity.updatedAt,
+          assertEqual "mkEntity sets correct names" expectedNames entity.names,
+          assertEqual "mkEntity sets correct labels" labels entity.labels
         ]
 
 updateEntityTests :: Test
@@ -75,14 +76,14 @@ updateEntityTests =
       olderExpectedLabels = Set.fromList [MkLabel "label1", MkLabel "label2"]
    in group
         "Entity update operations"
-        [ assertEqual "updateEntity preserves creation time when update is newer" (mkTime 1000) (entityCreatedAt updatedEntity),
-          assertEqual "updateEntity adds update history when update is newer" expectedUpdates (entityUpdatedAt updatedEntity),
-          assertEqual "updateEntity merges names when update is newer" expectedNames (entityNames updatedEntity),
-          assertEqual "updateEntity merges labels when update is newer" expectedLabels (entityLabels updatedEntity),
-          assertEqual "updateEntity changes creation time when update is older" olderUpdateTime (entityCreatedAt olderUpdatedEntity),
-          assertBool "updateEntity preserves original time in history when update is older" $ mkTime 2000 `elem` entityUpdatedAt olderUpdatedEntity,
-          assertEqual "updateEntity merges names when update is older" olderExpectedNames (entityNames olderUpdatedEntity),
-          assertEqual "updateEntity merges labels when update is older" olderExpectedLabels (entityLabels olderUpdatedEntity)
+        [ assertEqual "updateEntity preserves creation time when update is newer" (mkTime 1000) updatedEntity.createdAt,
+          assertEqual "updateEntity adds update history when update is newer" expectedUpdates updatedEntity.updatedAt,
+          assertEqual "updateEntity merges names when update is newer" expectedNames updatedEntity.names,
+          assertEqual "updateEntity merges labels when update is newer" expectedLabels updatedEntity.labels,
+          assertEqual "updateEntity changes creation time when update is older" olderUpdateTime olderUpdatedEntity.createdAt,
+          assertBool "updateEntity preserves original time in history when update is older" $ mkTime 2000 `elem` olderUpdatedEntity.updatedAt,
+          assertEqual "updateEntity merges names when update is older" olderExpectedNames olderUpdatedEntity.names,
+          assertEqual "updateEntity merges labels when update is older" olderExpectedLabels olderUpdatedEntity.labels
         ]
 
 absorbEntityTests :: Test
@@ -104,11 +105,11 @@ absorbEntityTests =
       expectedLabels = Set.fromList [MkLabel "label1", MkLabel "label2"]
    in group
         "Entity absorption"
-        [ assertEqual "absorbEntity preserves original URI" (entityUri entity1) (entityUri absorbed),
-          assertEqual "absorbEntity preserves original creation time" (entityCreatedAt entity1) (entityCreatedAt absorbed),
-          assertBool "absorbEntity adds absorbed entity creation time to history" $ mkTime 2000 `elem` entityUpdatedAt absorbed,
-          assertEqual "absorbEntity merges entity names" expectedNames (entityNames absorbed),
-          assertEqual "absorbEntity merges entity labels" expectedLabels (entityLabels absorbed)
+        [ assertEqual "absorbEntity preserves original URI" entity1.uri absorbed.uri,
+          assertEqual "absorbEntity preserves original creation time" entity1.createdAt absorbed.createdAt,
+          assertBool "absorbEntity adds absorbed entity creation time to history" $ mkTime 2000 `elem` absorbed.updatedAt,
+          assertEqual "absorbEntity merges entity names" expectedNames absorbed.names,
+          assertEqual "absorbEntity merges entity labels" expectedLabels absorbed.labels
         ]
 
 emptyCollectionTests :: Test
@@ -117,9 +118,9 @@ emptyCollectionTests =
     "Empty collection"
     [ assertBool "empty collection is null" $ null empty,
       assertEqual "empty collection has zero length" 0 (length empty),
-      assertBool "empty collection has empty nodes vector" $ Vector.null (collectionNodes empty),
-      assertBool "empty collection has empty edges vector" $ Vector.null (collectionEdges empty),
-      assertBool "empty collection has empty URI map" $ Map.null (collectionUris empty)
+      assertBool "empty collection has empty nodes vector" $ Vector.null empty.nodes,
+      assertBool "empty collection has empty edges vector" $ Vector.null empty.edges,
+      assertBool "empty collection has empty URI map" $ Map.null empty.uris
     ]
 
 insertTests :: Test
@@ -137,7 +138,7 @@ insertTests =
           assertEqual "insert updates collection length" 1 (length collection),
           assertBool "insert makes collection non-empty" $ not (null collection),
           assertEqual "insert allows entity lookup by ID" entity (lookupEntity id collection),
-          assertEqual "insert allows ID lookup by URI" (Just id) (lookupId (entityUri entity) collection)
+          assertEqual "insert allows ID lookup by URI" (Just id) (lookupId entity.uri collection)
         ]
 
 multipleInsertTests :: Test
@@ -163,8 +164,8 @@ multipleInsertTests =
           assertEqual "collection length after two inserts" 2 (length collection2),
           assertEqual "first entity can be retrieved" entity1 (lookupEntity id1 collection2),
           assertEqual "second entity can be retrieved" entity2 (lookupEntity id2 collection2),
-          assertEqual "first URI lookup works" (Just id1) (lookupId (entityUri entity1) collection2),
-          assertEqual "second URI lookup works" (Just id2) (lookupId (entityUri entity2) collection2)
+          assertEqual "first URI lookup works" (Just id1) (lookupId entity1.uri collection2),
+          assertEqual "second URI lookup works" (Just id2) (lookupId entity2.uri collection2)
         ]
 
 upsertTests :: Test
@@ -221,17 +222,17 @@ edgeTests =
 
       -- Test directed edge
       collectionWithEdge = addEdge id1 id2 collection2
-      edgesFromId1 = collectionEdges collectionWithEdge ! unId id1
-      edgesFromId2 = collectionEdges collectionWithEdge ! unId id2
+      edgesFromId1 = collectionWithEdge.edges ! unId id1
+      edgesFromId2 = collectionWithEdge.edges ! unId id2
 
       -- Test duplicate edge
       collectionWithDuplicateEdge = addEdge id1 id2 collectionWithEdge
-      edgesFromId1AfterDuplicate = collectionEdges collectionWithDuplicateEdge ! unId id1
+      edgesFromId1AfterDuplicate = collectionWithDuplicateEdge.edges ! unId id1
 
       -- Test bidirectional edges
       collectionWithBidirectionalEdges = addEdges id1 id2 collection2
-      bidirectionalEdgesFromId1 = collectionEdges collectionWithBidirectionalEdges ! unId id1
-      bidirectionalEdgesFromId2 = collectionEdges collectionWithBidirectionalEdges ! unId id2
+      bidirectionalEdgesFromId1 = collectionWithBidirectionalEdges.edges ! unId id1
+      bidirectionalEdgesFromId2 = collectionWithBidirectionalEdges.edges ! unId id2
    in group
         "Edge operations"
         [ assertBool "ids are different for edge tests" $ id1 /= id2,
