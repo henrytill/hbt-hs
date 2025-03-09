@@ -38,7 +38,7 @@ entityTests =
       name = Just $ MkName "Test Entity"
       labels = Set.fromList [MkLabel "label1", MkLabel "label2"]
       entity = mkEntity uri time name labels
-      expectedNames = Set.singleton (MkName "Test Entity")
+      expectedNames = Set.singleton $ MkName "Test Entity"
    in group
         "Entity operations"
         [ assertEqual "mkEntity sets correct URI" uri entity.uri,
@@ -264,5 +264,6 @@ results = (buildString mempty, allPassed)
   where
     result = runTest allTests
     allPassed = resultIsPassed result
-    showSummary = showString "Summary: " . showString (if allPassed then "All tests passed!" else "Some tests failed.") . showChar '\n'
-    buildString = showString (resultToString result) . showChar '\n' . showSummary
+    showResults = showString (resultToString result)
+    showSummary = showString "Summary: " . showString (if allPassed then "All tests passed!" else "Some tests failed.")
+    buildString = showResults . showChar '\n' . showSummary . showChar '\n'
