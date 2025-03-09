@@ -134,23 +134,23 @@ insert entity collection = (id, MkCollection updatedNodes updatedEdges updatedUr
 
 upsert :: Entity -> Collection -> (Id, Collection)
 upsert entity collection
-  | let uri = entity.uri,
-    Just id@(MkId i) <- lookupId uri collection =
+  | Just id@(MkId i) <- lookupId entity.uri collection =
       if
-        | let existingNodes = collection.nodes,
-          let updatedEntity = absorbEntity entity (existingNodes ! i),
-          updatedEntity /= entity ->
-            (id, collection {nodes = existingNodes // [(i, updatedEntity)]})
+        | let nodes = collection.nodes,
+          let existing = nodes ! i,
+          let updated = absorbEntity entity existing,
+          updated /= existing ->
+            (id, collection {nodes = nodes // [(i, updated)]})
         | otherwise ->
             (id, collection)
   | otherwise = insert entity collection
 
 addEdge :: Id -> Id -> Collection -> Collection
 addEdge (MkId i) to collection
-  | let existingEdges = collection.edges,
-    let fromEdges = existingEdges ! i,
-    not $ Vector.elem to fromEdges =
-      collection {edges = existingEdges // [(i, Vector.snoc fromEdges to)]}
+  | let edges = collection.edges,
+    let entityEdges = edges ! i,
+    not $ Vector.elem to entityEdges =
+      collection {edges = edges // [(i, Vector.snoc entityEdges to)]}
   | otherwise = collection
 
 addEdges :: Id -> Id -> Collection -> Collection
