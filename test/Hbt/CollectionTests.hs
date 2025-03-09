@@ -9,6 +9,8 @@ import Data.Set qualified as Set
 import Data.Vector ((!))
 import Data.Vector qualified as Vector
 import Hbt.Collection
+import Hbt.Collection.Entity (Entity (..), Label (..), Name (..), Time (..))
+import Hbt.Collection.Entity qualified as Entity
 import Network.URI (URI)
 import Network.URI qualified as URI
 import Test.Dwergaz
@@ -22,14 +24,15 @@ mkTime = MkTime . fromIntegral
 
 emptyEntityTests :: Test
 emptyEntityTests =
-  group
-    "Entity operations on empty entity"
-    [ assertEqual "emptyEntity has null URI" URI.nullURI emptyEntity.uri,
-      assertEqual "emptyEntity has empty creation time" emptyTime emptyEntity.createdAt,
-      assertEqual "emptyEntity has empty update history" [] emptyEntity.updatedAt,
-      assertEqual "emptyEntity has empty names" Set.empty emptyEntity.names,
-      assertEqual "emptyEntity has empty labels" Set.empty emptyEntity.labels
-    ]
+  let entity = Entity.empty
+   in group
+        "Entity operations on empty entity"
+        [ assertEqual "emptyEntity has null URI" URI.nullURI entity.uri,
+          assertEqual "emptyEntity has empty creation time" (mkTime 0) entity.createdAt,
+          assertEqual "emptyEntity has empty update history" [] entity.updatedAt,
+          assertEqual "emptyEntity has empty names" Set.empty entity.names,
+          assertEqual "emptyEntity has empty labels" Set.empty entity.labels
+        ]
 
 entityTests :: Test
 entityTests =
@@ -37,7 +40,7 @@ entityTests =
       time = mkTime 1000
       name = Just $ MkName "Test Entity"
       labels = Set.fromList [MkLabel "label1", MkLabel "label2"]
-      entity = mkEntity uri time name labels
+      entity = Entity.mkEntity uri time name labels
       expectedNames = Set.singleton $ MkName "Test Entity"
    in group
         "Entity operations"
@@ -51,7 +54,7 @@ entityTests =
 updateEntityTests :: Test
 updateEntityTests =
   let baseEntity =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Original")
@@ -59,19 +62,19 @@ updateEntityTests =
       updateTime = mkTime 2000
       updateNames = Set.singleton $ MkName "Updated"
       updateLabels = Set.singleton $ MkLabel "label2"
-      updatedEntity = updateEntity updateTime updateNames updateLabels baseEntity
+      updatedEntity = Entity.update updateTime updateNames updateLabels baseEntity
       expectedNames = Set.fromList [MkName "Original", MkName "Updated"]
       expectedLabels = Set.fromList [MkLabel "label1", MkLabel "label2"]
       expectedUpdates = [mkTime 2000]
 
       olderBaseEntity =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com")
           (mkTime 2000)
           (Just $ MkName "Original")
           (Set.singleton $ MkLabel "label1")
       olderUpdateTime = mkTime 1000
-      olderUpdatedEntity = updateEntity olderUpdateTime updateNames updateLabels olderBaseEntity
+      olderUpdatedEntity = Entity.update olderUpdateTime updateNames updateLabels olderBaseEntity
       olderExpectedNames = Set.fromList [MkName "Original", MkName "Updated"]
       olderExpectedLabels = Set.fromList [MkLabel "label1", MkLabel "label2"]
    in group
@@ -89,18 +92,18 @@ updateEntityTests =
 absorbEntityTests :: Test
 absorbEntityTests =
   let entity1 =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
-      absorbed = absorbEntity entity2 entity1
+      absorbed = Entity.absorb entity2 entity1
       expectedNames = Set.fromList [MkName "Test1", MkName "Test2"]
       expectedLabels = Set.fromList [MkLabel "label1", MkLabel "label2"]
    in group
@@ -126,7 +129,7 @@ emptyCollectionTests =
 insertTests :: Test
 insertTests =
   let entity =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test")
@@ -144,13 +147,13 @@ insertTests =
 multipleInsertTests :: Test
 multipleInsertTests =
   let entity1 =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com/1")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com/2")
           (mkTime 2000)
           (Just $ MkName "Test2")
@@ -171,7 +174,7 @@ multipleInsertTests =
 upsertTests :: Test
 upsertTests =
   let newEntity =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test")
@@ -179,20 +182,20 @@ upsertTests =
       (newId, newCollection) = upsert newEntity empty
 
       entity1 =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com/existing")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com/existing")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
       (id1, collection1) = insert entity1 empty
       (id2, collection2) = upsert entity2 collection1
-      expectedEntity = absorbEntity entity2 entity1
+      expectedEntity = Entity.absorb entity2 entity1
    in group
         "Upsert operations"
         [ assertEqual "upsert of new entity assigns ID 0" (MkId 0) newId,
@@ -206,13 +209,13 @@ upsertTests =
 edgeTests :: Test
 edgeTests =
   let entity1 =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com/1")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
-        mkEntity
+        Entity.mkEntity
           (mkURI "https://example.com/2")
           (mkTime 2000)
           (Just $ MkName "Test2")
