@@ -22,7 +22,8 @@ common extensions
 
 library
     import:           warnings, extensions
-    exposed-modules:  Hbt
+    exposed-modules:  Data.Multimap
+                      Hbt
                       Hbt.Collection
                       Hbt.Collection.Entity
     -- other-modules:
@@ -49,7 +50,8 @@ test-suite hbt-test
     import:           warnings, extensions
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
-    other-modules:    Hbt.CollectionTest
+    other-modules:    Data.MultimapTest
+                      Hbt.CollectionTest
     -- other-extensions:
     build-depends:
         base ^>=4.17.2.1,
