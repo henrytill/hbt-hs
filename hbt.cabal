@@ -49,7 +49,7 @@ test-suite hbt-test
     import:           warnings, extensions
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
-    other-modules:    Hbt.CollectionTests
+    other-modules:    Hbt.CollectionTest
     -- other-extensions:
     build-depends:
         base ^>=4.17.2.1,

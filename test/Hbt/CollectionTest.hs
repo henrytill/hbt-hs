@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Hbt.CollectionTests where
+module Hbt.CollectionTest where
 
 import Data.Map qualified as Map
 import Data.Maybe qualified as Maybe

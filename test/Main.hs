@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Control.Monad (unless)
-import Hbt.CollectionTests (results)
+import Hbt.CollectionTest (results)
 import System.Exit (exitFailure)
 
 main :: IO ()
