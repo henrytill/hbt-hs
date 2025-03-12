@@ -268,5 +268,4 @@ results = (buildString mempty, allPassed)
     result = runTest allTests
     allPassed = resultIsPassed result
     showResults = showString (resultToString result)
-    showSummary = showString "Summary: " . showString (if allPassed then "All tests passed!" else "Some tests failed.")
-    buildString = showResults . showChar '\n' . showSummary . showChar '\n'
+    buildString = showResults . showChar '\n'

@@ -1,7 +1,4 @@
-module Data.MultimapTest
-  ( runTests,
-  )
-where
+module Data.MultimapTest where
 
 import Data.Multimap qualified as Multimap
 import Data.Set qualified as Set
@@ -21,21 +18,20 @@ inserter (k, v) = Multimap.insert k v
 
 emptyIsNull :: Test
 emptyIsNull =
-  Predicate
+  assertBool
     "null returns true on empty map"
     (Multimap.null Multimap.empty)
 
 nonEmptyIsNotNull :: Test
 nonEmptyIsNotNull =
-  Predicate
+  assertBool
     "null returns false on non-empty map"
     (not . Multimap.null $ Multimap.insert testKey1 1 empty)
 
 nonEmptyHasItem :: Test
 nonEmptyHasItem =
-  Expect
+  assertEqual
     "non-empty map has inserted item"
-    (==)
     (Multimap.lookup testKey1 testMap)
     (Set.fromList [1])
   where
@@ -43,9 +39,8 @@ nonEmptyHasItem =
 
 twoValuesUnderKey :: Test
 twoValuesUnderKey =
-  Expect
+  assertEqual
     "two values can be stored under the same key"
-    (==)
     (Multimap.lookup testKey1 testMap)
     (Set.fromList [1, 2])
   where
@@ -53,9 +48,8 @@ twoValuesUnderKey =
 
 deleteAllWorks :: Test
 deleteAllWorks =
-  Expect
+  assertEqual
     "deleteAll removes all values under a key"
-    (==)
     (Multimap.lookup testKey1 (Multimap.deleteAll testKey1 testMap))
     Set.empty
   where
@@ -63,9 +57,8 @@ deleteAllWorks =
 
 deleteWorks :: Test
 deleteWorks =
-  Expect
+  assertEqual
     "delete removes a specific value under a key"
-    (==)
     (Multimap.lookup testKey1 (Multimap.delete testKey1 1 testMap))
     (Set.fromList [2])
   where
@@ -73,33 +66,38 @@ deleteWorks =
 
 fromListWorks :: Test
 fromListWorks =
-  Expect
+  assertEqual
     "fromList constructs a map from a list of pairs"
-    (==)
     (Multimap.fromList [(testKey1, 1), (testKey1, 2)])
     (foldr inserter empty [(testKey1, 1), (testKey1, 2)])
 
 elemsWorks :: Test
 elemsWorks =
-  Expect
+  assertEqual
     "elems returns all values in the map"
-    (==)
     (Multimap.elems testMap)
     [1, 2, 3]
   where
     testMap = foldr inserter empty [(testKey1, 1), (testKey1, 2), (testKey2, 3)]
 
-tests :: [Test]
-tests =
-  [ emptyIsNull,
-    nonEmptyIsNotNull,
-    nonEmptyHasItem,
-    twoValuesUnderKey,
-    deleteAllWorks,
-    deleteWorks,
-    fromListWorks,
-    elemsWorks
-  ]
+allTests :: Test
+allTests =
+  group
+    "Multimap tests"
+    [ emptyIsNull,
+      nonEmptyIsNotNull,
+      nonEmptyHasItem,
+      twoValuesUnderKey,
+      deleteAllWorks,
+      deleteWorks,
+      fromListWorks,
+      elemsWorks
+    ]
 
-runTests :: [Result]
-runTests = runTest <$> tests
+results :: (String, Bool)
+results = (buildString mempty, allPassed)
+  where
+    result = runTest allTests
+    allPassed = resultIsPassed result
+    showResults = showString (resultToString result)
+    buildString = showResults . showChar '\n'
