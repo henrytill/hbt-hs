@@ -5,9 +5,8 @@ module Hbt.CollectionTest where
 
 import Data.Map qualified as Map
 import Data.Maybe qualified as Maybe
+import Data.Multimap qualified as Multimap
 import Data.Set qualified as Set
-import Data.Vector ((!))
-import Data.Vector qualified as Vector
 import Hbt.Collection
 import Hbt.Collection.Entity (Entity (..), Label (..), Name (..), Time (..))
 import Hbt.Collection.Entity qualified as Entity
@@ -121,9 +120,8 @@ emptyCollectionTests =
     "Empty collection"
     [ assertBool "empty collection is null" $ null empty,
       assertEqual "empty collection has zero length" 0 (length empty),
-      assertBool "empty collection has empty nodes vector" $ Vector.null empty.nodes,
-      assertBool "empty collection has empty edges vector" $ Vector.null empty.edges,
-      assertBool "empty collection has empty URI map" $ Map.null empty.uris
+      assertBool "empty collection has empty nodes vector" $ Map.null empty.entities,
+      assertBool "empty collection has empty edges vector" $ Multimap.null empty.edges
     ]
 
 insertTests :: Test
@@ -134,14 +132,12 @@ insertTests =
           (mkTime 1000)
           (Just $ MkName "Test")
           (Set.singleton $ MkLabel "label")
-      (id, collection) = insert entity empty
+      collection = insert entity empty
    in group
         "Insert operations"
-        [ assertEqual "insert assigns correct ID" (MkId 0) id,
-          assertEqual "insert updates collection length" 1 (length collection),
+        [ assertEqual "insert updates collection length" 1 (length collection),
           assertBool "insert makes collection non-empty" $ not (null collection),
-          assertEqual "insert allows entity lookup by ID" entity (lookupEntity id collection),
-          assertEqual "insert allows ID lookup by URI" (Just id) (lookupId entity.uri collection)
+          assertEqual "insert allows entity lookup by URI" (Just entity) (lookupEntity entity.uri collection)
         ]
 
 multipleInsertTests :: Test
@@ -158,17 +154,13 @@ multipleInsertTests =
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
-      (id1, collection1) = insert entity1 empty
-      (id2, collection2) = insert entity2 collection1
+      collection1 = insert entity1 empty
+      collection2 = insert entity2 collection1
    in group
         "Multiple insert operations"
-        [ assertEqual "first insert assigns ID 0" (MkId 0) id1,
-          assertEqual "second insert assigns ID 1" (MkId 1) id2,
-          assertEqual "collection length after two inserts" 2 (length collection2),
-          assertEqual "first entity can be retrieved" entity1 (lookupEntity id1 collection2),
-          assertEqual "second entity can be retrieved" entity2 (lookupEntity id2 collection2),
-          assertEqual "first URI lookup works" (Just id1) (lookupId entity1.uri collection2),
-          assertEqual "second URI lookup works" (Just id2) (lookupId entity2.uri collection2)
+        [ assertEqual "collection length after two inserts" 2 (length collection2),
+          assertEqual "first entity can be retrieved" (Just entity1) (lookupEntity entity1.uri collection2),
+          assertEqual "second entity can be retrieved" (Just entity2) (lookupEntity entity2.uri collection2)
         ]
 
 upsertTests :: Test
@@ -179,7 +171,7 @@ upsertTests =
           (mkTime 1000)
           (Just $ MkName "Test")
           (Set.singleton $ MkLabel "label")
-      (newId, newCollection) = upsert newEntity empty
+      newCollection = upsert newEntity empty
 
       entity1 =
         Entity.mkEntity
@@ -193,17 +185,16 @@ upsertTests =
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
-      (id1, collection1) = insert entity1 empty
-      (id2, collection2) = upsert entity2 collection1
+      collection1 = insert entity1 empty
+      collection2 = upsert entity2 collection1
       expectedEntity = Entity.absorb entity2 entity1
    in group
         "Upsert operations"
-        [ assertEqual "upsert of new entity assigns ID 0" (MkId 0) newId,
-          assertEqual "upsert of new entity updates collection length" 1 (length newCollection),
-          assertEqual "upsert of new entity allows entity lookup" newEntity (lookupEntity newId newCollection),
-          assertEqual "upsert of existing entity returns same ID" id1 id2,
+        [ assertEqual "upsert of new entity updates collection length" 1 (length newCollection),
+          assertEqual "upsert of new entity allows entity lookup" (Just newEntity) (lookupEntity newEntity.uri newCollection),
+          assertEqual "upsert of existing entity returns same URI" entity1.uri entity2.uri,
           assertEqual "collection length remains the same after upsert" 1 (length collection2),
-          assertEqual "entity data properly merged after upsert" expectedEntity (lookupEntity id2 collection2)
+          assertEqual "entity data properly merged after upsert" (Just expectedEntity) (lookupEntity entity2.uri collection2)
         ]
 
 edgeTests :: Test
@@ -220,31 +211,31 @@ edgeTests =
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
-      (id1, collection1) = insert entity1 empty
-      (id2, collection2) = insert entity2 collection1
+      collection1 = insert entity1 empty
+      collection2 = insert entity2 collection1
 
       -- Test directed edge
-      collectionWithEdge = addEdge id1 id2 collection2
-      edgesFromId1 = collectionWithEdge.edges ! unId id1
-      edgesFromId2 = collectionWithEdge.edges ! unId id2
+      collectionWithEdge = addEdge entity1.uri entity2.uri collection2
+      edgesFromURI1 = Multimap.lookup entity1.uri collectionWithEdge.edges
+      edgesFromURI2 = Multimap.lookup entity1.uri collectionWithEdge.edges
 
       -- Test duplicate edge
-      collectionWithDuplicateEdge = addEdge id1 id2 collectionWithEdge
-      edgesFromId1AfterDuplicate = collectionWithDuplicateEdge.edges ! unId id1
+      collectionWithDuplicateEdge = addEdge entity1.uri entity2.uri collectionWithEdge
+      edgesFromURI1AfterDuplicate = Multimap.lookup entity1.uri collectionWithDuplicateEdge.edges
 
       -- Test bidirectional edges
-      collectionWithBidirectionalEdges = addEdges id1 id2 collection2
-      bidirectionalEdgesFromId1 = collectionWithBidirectionalEdges.edges ! unId id1
-      bidirectionalEdgesFromId2 = collectionWithBidirectionalEdges.edges ! unId id2
+      collectionWithBidirectionalEdges = addEdges entity1.uri entity2.uri collection2
+      bidirectionalEdgesFromURI1 = Multimap.lookup entity1.uri collectionWithBidirectionalEdges.edges
+      bidirectionalEdgesFromURI2 = Multimap.lookup entity2.uri collectionWithBidirectionalEdges.edges
    in group
         "Edge operations"
-        [ assertBool "ids are different for edge tests" $ id1 /= id2,
-          assertBool "addEdge creates forward edge" $ Vector.elem id2 edgesFromId1,
-          assertBool "addEdge doesn't create backward edge" $ not (Vector.elem id1 edgesFromId2),
-          assertEqual "addEdge creates exactly one edge" 1 (Vector.length edgesFromId1),
-          assertEqual "duplicate addEdge doesn't create additional edges" 1 (Vector.length edgesFromId1AfterDuplicate),
-          assertBool "addEdges creates forward edge" $ Vector.elem id2 bidirectionalEdgesFromId1,
-          assertBool "addEdges creates backward edge" $ Vector.elem id1 bidirectionalEdgesFromId2
+        [ assertBool "ids are different for edge tests" $ entity1.uri /= entity2.uri,
+          assertBool "addEdge creates forward edge" $ Set.member entity2.uri edgesFromURI1,
+          assertBool "addEdge doesn't create backward edge" $ not (Set.member entity1.uri edgesFromURI2),
+          assertEqual "addEdge creates exactly one edge" 1 (Set.size edgesFromURI1),
+          assertEqual "duplicate addEdge doesn't create additional edges" 1 (Set.size edgesFromURI1AfterDuplicate),
+          assertBool "addEdges creates forward edge" $ Set.member entity2.uri bidirectionalEdgesFromURI1,
+          assertBool "addEdges creates backward edge" $ Set.member entity1.uri bidirectionalEdgesFromURI2
         ]
 
 allTests :: Test

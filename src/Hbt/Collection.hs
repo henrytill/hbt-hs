@@ -5,72 +5,60 @@ module Hbt.Collection where
 
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Vector (Vector, (!), (//))
-import Data.Vector qualified as Vector
+import Data.Multimap (Multimap)
+import Data.Multimap qualified as Multimap
 import Hbt.Collection.Entity (Entity (..))
 import Hbt.Collection.Entity qualified as Entity
 import Network.URI (URI)
 import Prelude hiding (id, length)
 
-newtype Id = MkId {unId :: Int}
-  deriving (Show, Eq, Ord)
-
-type Edges = Vector Id
-
 data Collection = MkCollection
-  { nodes :: Vector Entity,
-    edges :: Vector Edges,
-    uris :: Map URI Id
+  { entities :: Map URI Entity,
+    edges :: Multimap URI URI
   }
 
 empty :: Collection
 empty =
   MkCollection
-    { nodes = Vector.empty,
-      edges = Vector.empty,
-      uris = Map.empty
+    { entities = Map.empty,
+      edges = Multimap.empty
     }
 
 length :: Collection -> Int
-length = Vector.length . nodes
+length = Map.size . entities
 
 null :: Collection -> Bool
-null = Vector.null . nodes
+null = Map.null . entities
 
-lookupId :: URI -> Collection -> Maybe Id
-lookupId uri = Map.lookup uri . uris
+lookupEntity :: URI -> Collection -> Maybe Entity
+lookupEntity uri collection = Map.lookup uri collection.entities
 
-lookupEntity :: Id -> Collection -> Entity
-lookupEntity (MkId i) collection = collection.nodes ! i
-
-insert :: Entity -> Collection -> (Id, Collection)
-insert entity collection = (id, MkCollection updatedNodes updatedEdges updatedUris)
+insert :: Entity -> Collection -> Collection
+insert entity collection = MkCollection entities edges
   where
-    id = MkId $ length collection
-    updatedNodes = Vector.snoc collection.nodes entity
-    updatedEdges = Vector.snoc collection.edges Vector.empty
-    updatedUris = Map.insert entity.uri id collection.uris
+    entities = Map.insert entity.uri entity collection.entities
+    edges = Multimap.empty
 
-upsert :: Entity -> Collection -> (Id, Collection)
+upsert :: Entity -> Collection -> Collection
 upsert entity collection
-  | Just id@(MkId i) <- lookupId entity.uri collection =
+  | let uri = entity.uri,
+    let entities = collection.entities,
+    Just existing <- Map.lookup uri entities =
       if
-        | let nodes = collection.nodes,
-          let existing = nodes ! i,
-          let updated = Entity.absorb entity existing,
+        | let updated = Entity.absorb entity existing,
           updated /= existing ->
-            (id, collection {nodes = nodes // [(i, updated)]})
+            collection {entities = Map.insert uri updated entities}
         | otherwise ->
-            (id, collection)
+            collection
   | otherwise = insert entity collection
 
-addEdge :: Id -> Id -> Collection -> Collection
-addEdge (MkId i) to collection
-  | let edges = collection.edges,
-    let entityEdges = edges ! i,
-    not $ Vector.elem to entityEdges =
-      collection {edges = edges // [(i, Vector.snoc entityEdges to)]}
+addEdge :: URI -> URI -> Collection -> Collection
+addEdge from to collection
+  | let entities = collection.entities,
+    (Just _, Just _) <- (Map.lookup from entities, Map.lookup to entities),
+    let updatedEdges = Multimap.insert from to collection.edges =
+      collection {edges = updatedEdges}
   | otherwise = collection
 
-addEdges :: Id -> Id -> Collection -> Collection
+addEdges :: URI -> URI -> Collection -> Collection
 addEdges from to = addEdge to from . addEdge from to

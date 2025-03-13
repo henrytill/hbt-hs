@@ -32,8 +32,7 @@ library
                       containers ^>=0.6.7,
                       network-uri ^>=2.6.4.2,
                       text ^>=2.0.2,
-                      time ^>=1.12,
-                      vector ^>=0.13.2.0
+                      time ^>=1.12
     hs-source-dirs:   src
 
 executable hbt
@@ -57,7 +56,6 @@ test-suite hbt-test
         base ^>=4.17.2.1,
         containers ^>=0.6.7,
         network-uri ^>=2.6.4.2,
-        vector ^>=0.13.2.0,
         dwergaz ^>=0.3.1.0,
         hbt
     hs-source-dirs:   test
