@@ -119,7 +119,7 @@ emptyCollectionTests =
   group
     "Empty collection"
     [ assertBool "empty collection is null" $ null empty,
-      assertEqual "empty collection has zero length" 0 (length empty),
+      assertEqual "empty collection has zero length" 0 $ length empty,
       assertBool "empty collection has empty nodes vector" $ Map.null empty.entities,
       assertBool "empty collection has empty edges vector" $ Multimap.null empty.edges
     ]
@@ -135,8 +135,8 @@ insertTests =
       collection = insert entity empty
    in group
         "Insert operations"
-        [ assertEqual "insert updates collection length" 1 (length collection),
-          assertBool "insert makes collection non-empty" $ not (null collection),
+        [ assertEqual "insert updates collection length" 1 $ length collection,
+          assertBool "insert makes collection non-empty" . not $ null collection,
           assertEqual "insert allows entity lookup by URI" (Just entity) (lookupEntity entity.uri collection)
         ]
 
@@ -158,7 +158,7 @@ multipleInsertTests =
       collection2 = insert entity2 collection1
    in group
         "Multiple insert operations"
-        [ assertEqual "collection length after two inserts" 2 (length collection2),
+        [ assertEqual "collection length after two inserts" 2 $ length collection2,
           assertEqual "first entity can be retrieved" (Just entity1) (lookupEntity entity1.uri collection2),
           assertEqual "second entity can be retrieved" (Just entity2) (lookupEntity entity2.uri collection2)
         ]
@@ -190,10 +190,10 @@ upsertTests =
       expectedEntity = Entity.absorb entity2 entity1
    in group
         "Upsert operations"
-        [ assertEqual "upsert of new entity updates collection length" 1 (length newCollection),
+        [ assertEqual "upsert of new entity updates collection length" 1 $ length newCollection,
           assertEqual "upsert of new entity allows entity lookup" (Just newEntity) (lookupEntity newEntity.uri newCollection),
           assertEqual "upsert of existing entity returns same URI" entity1.uri entity2.uri,
-          assertEqual "collection length remains the same after upsert" 1 (length collection2),
+          assertEqual "collection length remains the same after upsert" 1 $ length collection2,
           assertEqual "entity data properly merged after upsert" (Just expectedEntity) (lookupEntity entity2.uri collection2)
         ]
 
@@ -231,9 +231,9 @@ edgeTests =
         "Edge operations"
         [ assertBool "ids are different for edge tests" $ entity1.uri /= entity2.uri,
           assertBool "addEdge creates forward edge" $ Set.member entity2.uri edgesFromURI1,
-          assertBool "addEdge doesn't create backward edge" $ not (Set.member entity1.uri edgesFromURI2),
-          assertEqual "addEdge creates exactly one edge" 1 (Set.size edgesFromURI1),
-          assertEqual "duplicate addEdge doesn't create additional edges" 1 (Set.size edgesFromURI1AfterDuplicate),
+          assertBool "addEdge doesn't create backward edge" . not $ Set.member entity1.uri edgesFromURI2,
+          assertEqual "addEdge creates exactly one edge" 1 $ Set.size edgesFromURI1,
+          assertEqual "duplicate addEdge doesn't create additional edges" 1 $ Set.size edgesFromURI1AfterDuplicate,
           assertBool "addEdges creates forward edge" $ Set.member entity2.uri bidirectionalEdgesFromURI1,
           assertBool "addEdges creates backward edge" $ Set.member entity1.uri bidirectionalEdgesFromURI2
         ]
