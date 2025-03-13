@@ -17,6 +17,13 @@ data Collection = MkCollection
     edges :: Multimap URI URI
   }
 
+instance Semigroup Collection where
+  a <> b = MkCollection (a.entities <> b.entities) (a.edges <> b.edges)
+
+instance Monoid Collection where
+  mempty = empty
+  mappend = (<>)
+
 empty :: Collection
 empty =
   MkCollection
