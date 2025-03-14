@@ -22,7 +22,6 @@ instance Semigroup Collection where
 
 instance Monoid Collection where
   mempty = empty
-  mappend = (<>)
 
 empty :: Collection
 empty =

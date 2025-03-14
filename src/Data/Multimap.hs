@@ -35,8 +35,6 @@ instance (Ord k, Ord v) => Semigroup (Multimap k v) where
 
 instance (Ord k, Ord v) => Monoid (Multimap k v) where
   mempty = empty
-  mconcat = unions
-  mappend = (<>)
 
 empty :: Multimap k v
 empty = MkMultimap Map.empty
