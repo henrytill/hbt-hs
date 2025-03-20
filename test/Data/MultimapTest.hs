@@ -1,5 +1,6 @@
 module Data.MultimapTest where
 
+import Data.Foldable qualified as Foldable
 import Data.Multimap (Multimap)
 import Data.Multimap qualified as Multimap
 import Data.Set qualified as Set
@@ -131,7 +132,7 @@ semigroupMonoidTests =
     [ assertEqual "associativity" ((map1 <> map2) <> map3) (map1 <> (map2 <> map3)),
       assertEqual "left identity" map1 $ mempty <> map1,
       assertEqual "right identity" map1 $ map1 <> mempty,
-      assertEqual "mconcat" (foldr (<>) mempty [map1, map2, map3]) (mconcat [map1, map2, map3])
+      assertEqual "mconcat" (Foldable.fold [map1, map2, map3]) (mconcat [map1, map2, map3])
     ]
   where
     map1, map2, map3 :: Multimap String Int
