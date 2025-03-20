@@ -11,6 +11,6 @@ main = do
   putStr multimapOutput
   let (collectionOutput, collectionPassed) = CollectionTest.results
   putStr collectionOutput
-  let allPassed = all id [multimapPassed, collectionPassed]
+  let allPassed = and [multimapPassed, collectionPassed]
   putStrLn $ "Summary: " ++ (if allPassed then "All tests passed!" else "Some tests failed.")
   unless allPassed exitFailure
