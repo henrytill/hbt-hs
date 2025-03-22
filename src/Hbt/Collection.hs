@@ -59,12 +59,15 @@ upsert entity collection
   | otherwise = insert entity collection
 
 addEdge :: URI -> URI -> Collection -> Collection
-addEdge from to collection
-  | let entities = collection.entities,
-    (Just _, Just _) <- (Map.lookup from entities, Map.lookup to entities),
-    let updatedEdges = Multimap.insert from to collection.edges =
-      collection {edges = updatedEdges}
-  | otherwise = collection
+addEdge from to collection =
+  let entities = collection.entities
+      validFrom = Map.member from entities
+      validTo = Map.member to entities
+   in if
+        | validFrom && validTo -> collection {edges = Multimap.insert from to collection.edges}
+        | not validFrom && validTo -> error $ "no entity for " ++ show from
+        | validFrom && not validTo -> error $ "no entity for " ++ show to
+        | otherwise -> error $ "no entities for " ++ show from ++ " and " ++ show to
 
 addEdges :: URI -> URI -> Collection -> Collection
 addEdges from to = addEdge to from . addEdge from to
