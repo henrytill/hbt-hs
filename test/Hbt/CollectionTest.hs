@@ -13,10 +13,11 @@ import Hbt.Collection.Entity qualified as Entity
 import Network.URI (URI)
 import Network.URI qualified as URI
 import Test.Dwergaz
+import Text.Printf (printf)
 import Prelude hiding (id, length, null)
 
 mkURI :: String -> URI
-mkURI s = Maybe.fromMaybe (error $ "Invalid URI: " ++ s) (URI.parseURI s)
+mkURI s = Maybe.fromMaybe (error $ printf "Invalid URI: %s" s) (URI.parseURI s)
 
 mkTime :: Integer -> Time
 mkTime = MkTime . fromIntegral

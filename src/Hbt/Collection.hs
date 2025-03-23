@@ -10,6 +10,7 @@ import Data.Multimap qualified as Multimap
 import Hbt.Collection.Entity (Entity (..))
 import Hbt.Collection.Entity qualified as Entity
 import Network.URI (URI)
+import Text.Printf (printf)
 import Prelude hiding (id, length)
 
 data Collection = MkCollection
@@ -65,9 +66,9 @@ addEdge from to collection =
       validTo = Map.member to entities
    in if
         | validFrom && validTo -> collection {edges = Multimap.insert from to collection.edges}
-        | not validFrom && validTo -> error $ "no entity for " ++ show from
-        | validFrom && not validTo -> error $ "no entity for " ++ show to
-        | otherwise -> error $ "no entities for " ++ show from ++ " and " ++ show to
+        | not validFrom && validTo -> error $ printf "no entity for %s" (show from)
+        | validFrom && not validTo -> error $ printf "no entity for %s" (show to)
+        | otherwise -> error $ printf "no entities for %s and %s" (show from) (show to)
 
 addEdges :: URI -> URI -> Collection -> Collection
 addEdges from to = addEdge to from . addEdge from to
