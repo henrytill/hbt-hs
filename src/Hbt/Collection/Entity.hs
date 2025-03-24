@@ -24,8 +24,8 @@ import Prelude hiding (id)
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
 
-emptyTime :: Time
-emptyTime = MkTime 0
+epoch :: Time
+epoch = MkTime 0
 
 newtype Name = MkName {unName :: Text}
   deriving (Show, Eq, Ord)
@@ -65,7 +65,7 @@ empty :: Entity
 empty =
   MkEntity
     { uri = URI.nullURI,
-      createdAt = emptyTime,
+      createdAt = epoch,
       updatedAt = [],
       names = Set.empty,
       labels = Set.empty,
