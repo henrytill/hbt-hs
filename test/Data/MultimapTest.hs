@@ -150,7 +150,8 @@ edgeCaseTests =
       assertEqual "size reduction" 1 . Multimap.size . Multimap.delete a 1 $ Multimap.fromList @String @Int [(a, 1), (a, 2)]
     ]
   where
-    empty = Multimap.empty @String @Int
+    empty, map1 :: Multimap String Int
+    empty = Multimap.empty
     map1 = Multimap.fromList [(a, 1), (b, 2)]
 
 allTests :: Test
