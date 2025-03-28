@@ -43,8 +43,8 @@ null :: Multimap k v -> Bool
 null (MkMultimap m) = Map.null m
 
 inserter :: (Ord v) => v -> Maybe (Set v) -> Maybe (Set v)
-inserter v Nothing = Just (Set.singleton v)
-inserter v (Just s) = Just (Set.insert v s)
+inserter v Nothing = Just $ Set.singleton v
+inserter v (Just s) = Just $ Set.insert v s
 
 insert :: (Ord k, Ord v) => k -> v -> Multimap k v -> Multimap k v
 insert k v (MkMultimap m) = MkMultimap $ Map.alter (inserter v) k m
@@ -64,7 +64,7 @@ deleteAll :: (Ord k) => k -> Multimap k v -> Multimap k v
 deleteAll k (MkMultimap m) = MkMultimap $ Map.delete k m
 
 lookup :: (Ord k) => k -> Multimap k v -> Set v
-lookup k (MkMultimap m) = Maybe.fromMaybe Set.empty (Map.lookup k m)
+lookup k (MkMultimap m) = Maybe.fromMaybe Set.empty $ Map.lookup k m
 
 fromList :: (Ord k, Ord v) => [(k, v)] -> Multimap k v
 fromList = Prelude.foldr f empty
