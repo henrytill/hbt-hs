@@ -38,7 +38,7 @@ null :: Collection -> Bool
 null = Map.null . entities
 
 lookupEntity :: URI -> Collection -> Maybe Entity
-lookupEntity uri collection = Map.lookup uri collection.entities
+lookupEntity uri = Map.lookup uri . entities
 
 insert :: Entity -> Collection -> Collection
 insert entity collection = MkCollection entities edges
