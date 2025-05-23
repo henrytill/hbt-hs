@@ -21,15 +21,15 @@ data Collection = MkCollection
 instance Semigroup Collection where
   a <> b = MkCollection (a.entities <> b.entities) (a.edges <> b.edges)
 
-instance Monoid Collection where
-  mempty = empty
-
 empty :: Collection
 empty =
   MkCollection
     { entities = Map.empty,
       edges = Multimap.empty
     }
+
+instance Monoid Collection where
+  mempty = empty
 
 length :: Collection -> Int
 length = Map.size . entities
