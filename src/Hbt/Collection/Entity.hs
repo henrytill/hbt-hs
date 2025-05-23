@@ -1,15 +1,15 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 
 module Hbt.Collection.Entity
-  ( Time (..),
-    Name (..),
-    Label (..),
-    Extended (..),
-    Entity (..),
-    mkEntity,
-    empty,
-    update,
-    absorb,
+  ( Time (..)
+  , Name (..)
+  , Label (..)
+  , Extended (..)
+  , Entity (..)
+  , mkEntity
+  , empty
+  , update
+  , absorb
   )
 where
 
@@ -37,58 +37,58 @@ newtype Extended = MkExtended {unExtended :: Text}
   deriving (Show, Eq, Ord)
 
 data Entity = MkEntity
-  { uri :: URI,
-    createdAt :: Time,
-    updatedAt :: [Time],
-    names :: Set Name,
-    labels :: Set Label,
-    extended :: Maybe Extended,
-    shared :: Bool,
-    toRead :: Bool
+  { uri :: URI
+  , createdAt :: Time
+  , updatedAt :: [Time]
+  , names :: Set Name
+  , labels :: Set Label
+  , extended :: Maybe Extended
+  , shared :: Bool
+  , toRead :: Bool
   }
   deriving (Show, Eq, Ord)
 
 mkEntity :: URI -> Time -> Maybe Name -> Set Label -> Entity
 mkEntity uri createdAt maybeName labels =
   MkEntity
-    { uri,
-      createdAt,
-      updatedAt = [],
-      names = maybe Set.empty Set.singleton maybeName,
-      labels,
-      extended = Nothing,
-      shared = False,
-      toRead = False
+    { uri
+    , createdAt
+    , updatedAt = []
+    , names = maybe Set.empty Set.singleton maybeName
+    , labels
+    , extended = Nothing
+    , shared = False
+    , toRead = False
     }
 
 empty :: Entity
 empty =
   MkEntity
-    { uri = URI.nullURI,
-      createdAt = epoch,
-      updatedAt = [],
-      names = Set.empty,
-      labels = Set.empty,
-      extended = Nothing,
-      shared = False,
-      toRead = False
+    { uri = URI.nullURI
+    , createdAt = epoch
+    , updatedAt = []
+    , names = Set.empty
+    , labels = Set.empty
+    , extended = Nothing
+    , shared = False
+    , toRead = False
     }
 
 update :: Time -> Set Name -> Set Label -> Entity -> Entity
 update updatedAt names labels entity
-  | let createdAt = entity.createdAt,
-    createdAt > updatedAt =
+  | let createdAt = entity.createdAt
+  , createdAt > updatedAt =
       entity
-        { updatedAt = createdAt : entity.updatedAt,
-          createdAt = updatedAt,
-          names = updatedNames,
-          labels = updatedLabels
+        { updatedAt = createdAt : entity.updatedAt
+        , createdAt = updatedAt
+        , names = updatedNames
+        , labels = updatedLabels
         }
   | otherwise =
       entity
-        { updatedAt = updatedAt : entity.updatedAt,
-          names = updatedNames,
-          labels = updatedLabels
+        { updatedAt = updatedAt : entity.updatedAt
+        , names = updatedNames
+        , labels = updatedLabels
         }
   where
     updatedNames = Set.union entity.names names

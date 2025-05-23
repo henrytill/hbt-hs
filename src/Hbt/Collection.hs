@@ -14,8 +14,8 @@ import Text.Printf (printf)
 import Prelude hiding (id, length)
 
 data Collection = MkCollection
-  { entities :: Map URI Entity,
-    edges :: Multimap URI URI
+  { entities :: Map URI Entity
+  , edges :: Multimap URI URI
   }
 
 instance Semigroup Collection where
@@ -24,8 +24,8 @@ instance Semigroup Collection where
 empty :: Collection
 empty =
   MkCollection
-    { entities = Map.empty,
-      edges = Multimap.empty
+    { entities = Map.empty
+    , edges = Multimap.empty
     }
 
 instance Monoid Collection where
@@ -48,12 +48,12 @@ insert entity collection = MkCollection entities edges
 
 upsert :: Entity -> Collection -> Collection
 upsert entity collection
-  | let uri = entity.uri,
-    let entities = collection.entities,
-    Just existing <- Map.lookup uri entities =
+  | let uri = entity.uri
+  , let entities = collection.entities
+  , Just existing <- Map.lookup uri entities =
       if
-        | let updated = Entity.absorb entity existing,
-          updated /= existing ->
+        | let updated = Entity.absorb entity existing
+        , updated /= existing ->
             collection {entities = Map.insert uri updated entities}
         | otherwise ->
             collection

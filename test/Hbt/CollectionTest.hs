@@ -27,11 +27,11 @@ emptyEntityTests =
   let entity = Entity.empty
    in group
         "Entity operations on empty entity"
-        [ assertEqual "emptyEntity has null URI" URI.nullURI entity.uri,
-          assertEqual "emptyEntity has empty creation time" (mkTime 0) entity.createdAt,
-          assertEqual "emptyEntity has empty update history" [] entity.updatedAt,
-          assertEqual "emptyEntity has empty names" Set.empty entity.names,
-          assertEqual "emptyEntity has empty labels" Set.empty entity.labels
+        [ assertEqual "emptyEntity has null URI" URI.nullURI entity.uri
+        , assertEqual "emptyEntity has empty creation time" (mkTime 0) entity.createdAt
+        , assertEqual "emptyEntity has empty update history" [] entity.updatedAt
+        , assertEqual "emptyEntity has empty names" Set.empty entity.names
+        , assertEqual "emptyEntity has empty labels" Set.empty entity.labels
         ]
 
 entityTests :: Test
@@ -44,11 +44,11 @@ entityTests =
       expectedNames = Set.singleton $ MkName "Test Entity"
    in group
         "Entity operations"
-        [ assertEqual "mkEntity sets correct URI" uri entity.uri,
-          assertEqual "mkEntity sets correct creation time" time entity.createdAt,
-          assertEqual "mkEntity sets empty update history" [] entity.updatedAt,
-          assertEqual "mkEntity sets correct names" expectedNames entity.names,
-          assertEqual "mkEntity sets correct labels" labels entity.labels
+        [ assertEqual "mkEntity sets correct URI" uri entity.uri
+        , assertEqual "mkEntity sets correct creation time" time entity.createdAt
+        , assertEqual "mkEntity sets empty update history" [] entity.updatedAt
+        , assertEqual "mkEntity sets correct names" expectedNames entity.names
+        , assertEqual "mkEntity sets correct labels" labels entity.labels
         ]
 
 updateEntityTests :: Test
@@ -79,14 +79,14 @@ updateEntityTests =
       olderExpectedLabels = Set.fromList [MkLabel "label1", MkLabel "label2"]
    in group
         "Entity update operations"
-        [ assertEqual "updateEntity preserves creation time when update is newer" (mkTime 1000) updatedEntity.createdAt,
-          assertEqual "updateEntity adds update history when update is newer" expectedUpdates updatedEntity.updatedAt,
-          assertEqual "updateEntity merges names when update is newer" expectedNames updatedEntity.names,
-          assertEqual "updateEntity merges labels when update is newer" expectedLabels updatedEntity.labels,
-          assertEqual "updateEntity changes creation time when update is older" olderUpdateTime olderUpdatedEntity.createdAt,
-          assertBool "updateEntity preserves original time in history when update is older" $ mkTime 2000 `elem` olderUpdatedEntity.updatedAt,
-          assertEqual "updateEntity merges names when update is older" olderExpectedNames olderUpdatedEntity.names,
-          assertEqual "updateEntity merges labels when update is older" olderExpectedLabels olderUpdatedEntity.labels
+        [ assertEqual "updateEntity preserves creation time when update is newer" (mkTime 1000) updatedEntity.createdAt
+        , assertEqual "updateEntity adds update history when update is newer" expectedUpdates updatedEntity.updatedAt
+        , assertEqual "updateEntity merges names when update is newer" expectedNames updatedEntity.names
+        , assertEqual "updateEntity merges labels when update is newer" expectedLabels updatedEntity.labels
+        , assertEqual "updateEntity changes creation time when update is older" olderUpdateTime olderUpdatedEntity.createdAt
+        , assertBool "updateEntity preserves original time in history when update is older" $ mkTime 2000 `elem` olderUpdatedEntity.updatedAt
+        , assertEqual "updateEntity merges names when update is older" olderExpectedNames olderUpdatedEntity.names
+        , assertEqual "updateEntity merges labels when update is older" olderExpectedLabels olderUpdatedEntity.labels
         ]
 
 absorbEntityTests :: Test
@@ -108,21 +108,21 @@ absorbEntityTests =
       expectedLabels = Set.fromList [MkLabel "label1", MkLabel "label2"]
    in group
         "Entity absorption"
-        [ assertEqual "absorbEntity preserves original URI" entity1.uri absorbed.uri,
-          assertEqual "absorbEntity preserves original creation time" entity1.createdAt absorbed.createdAt,
-          assertBool "absorbEntity adds absorbed entity creation time to history" $ mkTime 2000 `elem` absorbed.updatedAt,
-          assertEqual "absorbEntity merges entity names" expectedNames absorbed.names,
-          assertEqual "absorbEntity merges entity labels" expectedLabels absorbed.labels
+        [ assertEqual "absorbEntity preserves original URI" entity1.uri absorbed.uri
+        , assertEqual "absorbEntity preserves original creation time" entity1.createdAt absorbed.createdAt
+        , assertBool "absorbEntity adds absorbed entity creation time to history" $ mkTime 2000 `elem` absorbed.updatedAt
+        , assertEqual "absorbEntity merges entity names" expectedNames absorbed.names
+        , assertEqual "absorbEntity merges entity labels" expectedLabels absorbed.labels
         ]
 
 emptyCollectionTests :: Test
 emptyCollectionTests =
   group
     "Empty collection"
-    [ assertBool "empty collection is null" $ null empty,
-      assertEqual "empty collection has zero length" 0 $ length empty,
-      assertBool "empty collection has empty nodes vector" $ Map.null empty.entities,
-      assertBool "empty collection has empty edges vector" $ Multimap.null empty.edges
+    [ assertBool "empty collection is null" $ null empty
+    , assertEqual "empty collection has zero length" 0 $ length empty
+    , assertBool "empty collection has empty nodes vector" $ Map.null empty.entities
+    , assertBool "empty collection has empty edges vector" $ Multimap.null empty.edges
     ]
 
 insertTests :: Test
@@ -136,9 +136,9 @@ insertTests =
       collection = insert entity empty
    in group
         "Insert operations"
-        [ assertEqual "insert updates collection length" 1 $ length collection,
-          assertBool "insert makes collection non-empty" . not $ null collection,
-          assertEqual "insert allows entity lookup by URI" (Just entity) (lookupEntity entity.uri collection)
+        [ assertEqual "insert updates collection length" 1 $ length collection
+        , assertBool "insert makes collection non-empty" . not $ null collection
+        , assertEqual "insert allows entity lookup by URI" (Just entity) (lookupEntity entity.uri collection)
         ]
 
 multipleInsertTests :: Test
@@ -159,9 +159,9 @@ multipleInsertTests =
       collection2 = insert entity2 collection1
    in group
         "Multiple insert operations"
-        [ assertEqual "collection length after two inserts" 2 $ length collection2,
-          assertEqual "first entity can be retrieved" (Just entity1) (lookupEntity entity1.uri collection2),
-          assertEqual "second entity can be retrieved" (Just entity2) (lookupEntity entity2.uri collection2)
+        [ assertEqual "collection length after two inserts" 2 $ length collection2
+        , assertEqual "first entity can be retrieved" (Just entity1) (lookupEntity entity1.uri collection2)
+        , assertEqual "second entity can be retrieved" (Just entity2) (lookupEntity entity2.uri collection2)
         ]
 
 upsertTests :: Test
@@ -191,11 +191,11 @@ upsertTests =
       expectedEntity = Entity.absorb entity2 entity1
    in group
         "Upsert operations"
-        [ assertEqual "upsert of new entity updates collection length" 1 $ length newCollection,
-          assertEqual "upsert of new entity allows entity lookup" (Just newEntity) (lookupEntity newEntity.uri newCollection),
-          assertEqual "upsert of existing entity returns same URI" entity1.uri entity2.uri,
-          assertEqual "collection length remains the same after upsert" 1 $ length collection2,
-          assertEqual "entity data properly merged after upsert" (Just expectedEntity) (lookupEntity entity2.uri collection2)
+        [ assertEqual "upsert of new entity updates collection length" 1 $ length newCollection
+        , assertEqual "upsert of new entity allows entity lookup" (Just newEntity) (lookupEntity newEntity.uri newCollection)
+        , assertEqual "upsert of existing entity returns same URI" entity1.uri entity2.uri
+        , assertEqual "collection length remains the same after upsert" 1 $ length collection2
+        , assertEqual "entity data properly merged after upsert" (Just expectedEntity) (lookupEntity entity2.uri collection2)
         ]
 
 edgeTests :: Test
@@ -230,28 +230,28 @@ edgeTests =
       bidirectionalEdgesFromURI2 = Multimap.lookup entity2.uri collectionWithBidirectionalEdges.edges
    in group
         "Edge operations"
-        [ assertBool "ids are different for edge tests" $ entity1.uri /= entity2.uri,
-          assertBool "addEdge creates forward edge" $ Set.member entity2.uri edgesFromURI1,
-          assertBool "addEdge doesn't create backward edge" . not $ Set.member entity1.uri edgesFromURI2,
-          assertEqual "addEdge creates exactly one edge" 1 $ Set.size edgesFromURI1,
-          assertEqual "duplicate addEdge doesn't create additional edges" 1 $ Set.size edgesFromURI1AfterDuplicate,
-          assertBool "addEdges creates forward edge" $ Set.member entity2.uri bidirectionalEdgesFromURI1,
-          assertBool "addEdges creates backward edge" $ Set.member entity1.uri bidirectionalEdgesFromURI2
+        [ assertBool "ids are different for edge tests" $ entity1.uri /= entity2.uri
+        , assertBool "addEdge creates forward edge" $ Set.member entity2.uri edgesFromURI1
+        , assertBool "addEdge doesn't create backward edge" . not $ Set.member entity1.uri edgesFromURI2
+        , assertEqual "addEdge creates exactly one edge" 1 $ Set.size edgesFromURI1
+        , assertEqual "duplicate addEdge doesn't create additional edges" 1 $ Set.size edgesFromURI1AfterDuplicate
+        , assertBool "addEdges creates forward edge" $ Set.member entity2.uri bidirectionalEdgesFromURI1
+        , assertBool "addEdges creates backward edge" $ Set.member entity1.uri bidirectionalEdgesFromURI2
         ]
 
 allTests :: Test
 allTests =
   group
     "Collection tests"
-    [ emptyEntityTests,
-      entityTests,
-      updateEntityTests,
-      absorbEntityTests,
-      emptyCollectionTests,
-      insertTests,
-      multipleInsertTests,
-      upsertTests,
-      edgeTests
+    [ emptyEntityTests
+    , entityTests
+    , updateEntityTests
+    , absorbEntityTests
+    , emptyCollectionTests
+    , insertTests
+    , multipleInsertTests
+    , upsertTests
+    , edgeTests
     ]
 
 results :: (String, Bool)

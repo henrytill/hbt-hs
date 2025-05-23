@@ -1,21 +1,21 @@
 module Data.Multimap
-  ( Multimap,
-    empty,
-    null,
-    insert,
-    delete,
-    deleteAll,
-    lookup,
-    fromList,
-    elems,
-    size,
-    foldr,
-    foldl,
-    foldrWithKey,
-    foldlWithKey,
-    foldMapWithKey,
-    union,
-    unions,
+  ( Multimap
+  , empty
+  , null
+  , insert
+  , delete
+  , deleteAll
+  , lookup
+  , fromList
+  , elems
+  , size
+  , foldr
+  , foldl
+  , foldrWithKey
+  , foldlWithKey
+  , foldMapWithKey
+  , union
+  , unions
   )
 where
 
