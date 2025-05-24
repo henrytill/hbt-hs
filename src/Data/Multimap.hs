@@ -1,5 +1,6 @@
 module Data.Multimap
   ( Multimap
+  , union
   , empty
   , null
   , insert
@@ -14,7 +15,6 @@ module Data.Multimap
   , foldrWithKey
   , foldlWithKey
   , foldMapWithKey
-  , union
   , unions
   )
 where
@@ -30,14 +30,17 @@ import Prelude qualified
 newtype Multimap k v = MkMultimap {unMultimap :: Map k (Set v)}
   deriving (Eq, Ord, Show)
 
+union :: (Ord k, Ord v) => Multimap k v -> Multimap k v -> Multimap k v
+union (MkMultimap m1) (MkMultimap m2) = MkMultimap $ Map.unionWith Set.union m1 m2
+
 instance (Ord k, Ord v) => Semigroup (Multimap k v) where
   (<>) = union
 
-instance (Ord k, Ord v) => Monoid (Multimap k v) where
-  mempty = empty
-
 empty :: Multimap k v
 empty = MkMultimap Map.empty
+
+instance (Ord k, Ord v) => Monoid (Multimap k v) where
+  mempty = empty
 
 null :: Multimap k v -> Bool
 null (MkMultimap m) = Map.null m
@@ -91,9 +94,6 @@ foldlWithKey f a (MkMultimap m) = Map.foldlWithKey f a m
 
 foldMapWithKey :: (Monoid m) => (k -> Set a -> m) -> Multimap k a -> m
 foldMapWithKey f (MkMultimap m) = Map.foldMapWithKey f m
-
-union :: (Ord k, Ord v) => Multimap k v -> Multimap k v -> Multimap k v
-union (MkMultimap m1) (MkMultimap m2) = MkMultimap $ Map.unionWith Set.union m1 m2
 
 unions :: (Foldable f, Ord k, Ord v) => f (Multimap k v) -> Multimap k v
 unions = Prelude.foldr union empty
