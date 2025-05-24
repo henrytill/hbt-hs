@@ -1,5 +1,6 @@
 module Main (main) where
 
+import Commonmark.InitialTest qualified as InitialTest
 import Control.Monad (unless)
 import Data.MultimapTest qualified as MultimapTest
 import Hbt.CollectionTest qualified as CollectionTest
@@ -12,6 +13,8 @@ main = do
   putStr multimapOutput
   let (collectionOutput, collectionPassed) = CollectionTest.results
   putStr collectionOutput
-  let allPassed = and [multimapPassed, collectionPassed]
+  let (initialOutput, initialPassed) = InitialTest.results
+  putStr initialOutput
+  let allPassed = and [multimapPassed, collectionPassed, initialPassed]
   printf "Summary: %s\n" (if allPassed then "All tests passed!" else "Some tests failed.")
   unless allPassed exitFailure

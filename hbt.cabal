@@ -22,13 +22,15 @@ common extensions
 
 library
     import:           warnings, extensions
-    exposed-modules:  Data.Multimap
+    exposed-modules:  Commonmark.Initial
+                      Data.Multimap
                       Hbt
                       Hbt.Collection
                       Hbt.Collection.Entity
     -- other-modules:
     -- other-extensions:
     build-depends:    base >=4.17.2.1 && <4.19,
+                      commonmark ^>=0.2.6.1,
                       containers ^>=0.6.7,
                       network-uri ^>=2.6.4.2,
                       text ^>=2.0.2,
@@ -49,7 +51,8 @@ test-suite hbt-test
     import:           warnings, extensions
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
-    other-modules:    Data.MultimapTest
+    other-modules:    Commonmark.InitialTest
+                      Data.MultimapTest
                       Hbt.CollectionTest
     -- other-extensions:
     build-depends:
@@ -57,5 +60,7 @@ test-suite hbt-test
         containers ^>=0.6.7,
         network-uri ^>=2.6.4.2,
         dwergaz ^>=0.3.1.0,
+        commonmark ^>=0.2.6.1,
+        text ^>=2.0.2,
         hbt
     hs-source-dirs:   test
