@@ -102,8 +102,8 @@ instance ToHttpApiData ApiToken where
   toQueryParam (MkApiToken t) = t
 
 data Config = MkConfig
-  { configVersion :: ConfigVersion,
-    configApiToken :: ApiToken
+  { configVersion :: ConfigVersion
+  , configApiToken :: ApiToken
   }
   deriving (Eq, Show, Generic)
 
@@ -116,8 +116,8 @@ configOptions :: Options
 configOptions = Aeson.defaultOptions {Aeson.fieldLabelModifier = remapField mappings}
   where
     mappings =
-      [ ("configVersion", "version"),
-        ("configApiToken", "apiToken")
+      [ ("configVersion", "version")
+      , ("configApiToken", "apiToken")
       ]
 
 instance ToJSON Config where
