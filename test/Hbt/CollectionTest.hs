@@ -41,7 +41,7 @@ entityTests =
       name = Just $ MkName "Test Entity"
       labels = Set.fromList [MkLabel "label1", MkLabel "label2"]
       entity = Entity.mkEntity uri time name labels
-      expectedNames = Set.singleton $ MkName "Test Entity"
+      expectedNames = Set.fromList $ Maybe.maybeToList name
    in group
         "Entity operations"
         [ assertEqual "mkEntity sets correct URI" uri entity.uri
@@ -63,9 +63,9 @@ updateEntityTests =
       updateNames = Set.singleton $ MkName "Updated"
       updateLabels = Set.singleton $ MkLabel "label2"
       updatedEntity = Entity.update updateTime updateNames updateLabels baseEntity
-      expectedNames = Set.fromList [MkName "Original", MkName "Updated"]
-      expectedLabels = Set.fromList [MkLabel "label1", MkLabel "label2"]
-      expectedUpdates = [mkTime 2000]
+      expectedNames = Set.union baseEntity.names updateNames
+      expectedLabels = Set.union baseEntity.labels updateLabels
+      expectedUpdates = [updateTime]
 
       olderBaseEntity =
         Entity.mkEntity
@@ -75,8 +75,8 @@ updateEntityTests =
           (Set.singleton $ MkLabel "label1")
       olderUpdateTime = mkTime 1000
       olderUpdatedEntity = Entity.update olderUpdateTime updateNames updateLabels olderBaseEntity
-      olderExpectedNames = Set.fromList [MkName "Original", MkName "Updated"]
-      olderExpectedLabels = Set.fromList [MkLabel "label1", MkLabel "label2"]
+      olderExpectedNames = Set.union olderBaseEntity.names updateNames
+      olderExpectedLabels = Set.union olderBaseEntity.labels updateLabels
    in group
         "Entity update operations"
         [ assertEqual "updateEntity preserves creation time when update is newer" (mkTime 1000) updatedEntity.createdAt
@@ -104,8 +104,8 @@ absorbEntityTests =
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
       absorbed = Entity.absorb entity2 entity1
-      expectedNames = Set.fromList [MkName "Test1", MkName "Test2"]
-      expectedLabels = Set.fromList [MkLabel "label1", MkLabel "label2"]
+      expectedNames = Set.union entity1.names entity2.names
+      expectedLabels = Set.union entity1.labels entity2.labels
    in group
         "Entity absorption"
         [ assertEqual "absorbEntity preserves original URI" entity1.uri absorbed.uri
@@ -242,7 +242,7 @@ edgeTests =
 allTests :: Test
 allTests =
   group
-    "Collection tests"
+    "Hbt.Collection tests"
     [ emptyEntityTests
     , entityTests
     , updateEntityTests
@@ -259,5 +259,5 @@ results = (buildString mempty, allPassed)
   where
     result = runTest allTests
     allPassed = resultIsPassed result
-    showResults = showString (resultToString result)
+    showResults = showString $ resultToString result
     buildString = showResults . showChar '\n'

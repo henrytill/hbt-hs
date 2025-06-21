@@ -30,5 +30,5 @@ results = (buildString mempty, allPassed)
   where
     result = runTest allTests
     allPassed = resultIsPassed result
-    showResults = showString (resultToString result)
+    showResults = showString $ resultToString result
     buildString = showResults . showChar '\n'

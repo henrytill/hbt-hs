@@ -157,7 +157,7 @@ edgeCaseTests =
 allTests :: Test
 allTests =
   group
-    "Multimap tests"
+    "Data.Multimap tests"
     [ emptyTests
     , insertTests
     , deleteTests
@@ -175,5 +175,5 @@ results = (buildString mempty, allPassed)
   where
     result = runTest allTests
     allPassed = resultIsPassed result
-    showResults = showString (resultToString result)
+    showResults = showString $ resultToString result
     buildString = showResults . showChar '\n'
