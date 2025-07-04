@@ -1,60 +1,56 @@
 cabal-version:      3.0
 name:               hbt
 version:            0.1.0.0
-synopsis:           Heterogeneous Bookmark Transformation
--- description:
 license:            Unlicense
 license-file:       UNLICENSE
-author:             Henry Till
 maintainer:         henrytill@gmail.com
--- copyright:
+author:             Henry Till
+tested-with:        ghc ==9.4.8 || ==9.6.7
+synopsis:           Heterogeneous Bookmark Transformation
 category:           Web
 build-type:         Simple
-extra-doc-files:    CHANGELOG.md
 extra-source-files: cabal.project
-tested-with:        GHC ==9.4.8 || ==9.6.7
-
-common warnings
-    ghc-options: -Wall
-
-common extensions
-    default-language: GHC2021
+extra-doc-files:    CHANGELOG.md
 
 library
-    import:           warnings, extensions
-    exposed-modules:  Commonmark.Initial
-                      Data.Multimap
-                      Hbt
-                      Hbt.Collection
-                      Hbt.Collection.Entity
-    -- other-modules:
-    -- other-extensions:
-    build-depends:    base >=4.17.2.1 && <4.19,
-                      commonmark ^>=0.2.6.1,
-                      containers ^>=0.6.7,
-                      network-uri ^>=2.6.4.2,
-                      text ^>=2.0.2,
-                      time ^>=1.12
+    exposed-modules:
+        Commonmark.Initial
+        Data.Multimap
+        Hbt
+        Hbt.Collection
+        Hbt.Collection.Entity
+
     hs-source-dirs:   src
+    default-language: GHC2021
+    ghc-options:      -Wall
+    build-depends:
+        base >=4.17.2.1 && <4.19,
+        commonmark ^>=0.2.6.1,
+        containers ^>=0.6.7,
+        network-uri ^>=2.6.4.2,
+        text ^>=2.0.2,
+        time ^>=1.12
 
 executable hbt
-    import:           warnings, extensions
     main-is:          Main.hs
-    -- other-modules:
-    -- other-extensions:
+    hs-source-dirs:   exe
+    default-language: GHC2021
+    ghc-options:      -Wall
     build-depends:
         base >=4.17.2.1 && <4.19,
         hbt
-    hs-source-dirs:   exe
 
 test-suite hbt-test
-    import:           warnings, extensions
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
-    other-modules:    Commonmark.InitialTest
-                      Data.MultimapTest
-                      Hbt.CollectionTest
-    -- other-extensions:
+    hs-source-dirs:   test
+    other-modules:
+        Commonmark.InitialTest
+        Data.MultimapTest
+        Hbt.CollectionTest
+
+    default-language: GHC2021
+    ghc-options:      -Wall
     build-depends:
         base >=4.17.2.1 && <4.19,
         commonmark ^>=0.2.6.1,
@@ -63,4 +59,3 @@ test-suite hbt-test
         network-uri ^>=2.6.4.2,
         text ^>=2.0.2,
         hbt
-    hs-source-dirs:   test
