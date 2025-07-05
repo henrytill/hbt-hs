@@ -54,8 +54,10 @@ test-suite hbt-test
     build-depends:
         base >=4.17.2.1 && <4.19,
         commonmark ^>=0.2.6.1,
+        commonmark-extensions ^>=0.2.6,
         containers ^>=0.6.7,
         dwergaz ^>=0.3.1.0,
         network-uri ^>=2.6.4.2,
+        parsec ^>=3.1.16.1,
         text ^>=2.0.2,
         hbt

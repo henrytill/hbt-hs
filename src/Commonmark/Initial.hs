@@ -11,6 +11,7 @@ import Commonmark.Types
   , Rangeable (..)
   , SourceRange
   )
+import Data.Bifunctor
 import Data.Data (Data)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
@@ -21,6 +22,12 @@ data Annotated a b = MkAnnotated
   }
   deriving (Show, Eq, Functor, Typeable, Data)
 
+instance Bifunctor Annotated where
+  bimap f g (MkAnnotated a b) = MkAnnotated (f a) (g b)
+
+updateAnnotation :: (a -> a) -> Annotated a b -> Annotated a b
+updateAnnotation = first
+
 data Ann = MkAnn
   { range :: SourceRange
   , attributes :: Attributes
@@ -29,6 +36,12 @@ data Ann = MkAnn
 
 emptyAnn :: Ann
 emptyAnn = MkAnn mempty []
+
+updateRange :: SourceRange -> Ann -> Ann
+updateRange range ann = ann {range}
+
+updateAttributes :: Attributes -> Ann -> Ann
+updateAttributes as ann = ann {attributes = as ++ attributes ann}
 
 data Inline a
   = LineBreak
@@ -56,10 +69,12 @@ instance Monoid Inlines where
   mempty = MkInlines mempty
 
 instance Rangeable Inlines where
-  ranged _ is = is
+  ranged sr (MkInlines inlines) =
+    MkInlines (map (updateAnnotation (updateRange sr)) inlines)
 
 instance HasAttributes Inlines where
-  addAttributes _ is = is
+  addAttributes attrs (MkInlines inlines) =
+    MkInlines (map (updateAnnotation (updateAttributes attrs)) inlines)
 
 mkInline :: Inline Inlines -> AnnotatedInline
 mkInline = MkAnnotated emptyAnn
@@ -101,10 +116,12 @@ instance Monoid Blocks where
   mempty = MkBlocks mempty
 
 instance Rangeable Blocks where
-  ranged _ bs = bs
+  ranged sr (MkBlocks blocks) =
+    MkBlocks (map (updateAnnotation (updateRange sr)) blocks)
 
 instance HasAttributes Blocks where
-  addAttributes _ bs = bs
+  addAttributes attrs (MkBlocks blocks) =
+    MkBlocks (map (updateAnnotation (updateAttributes attrs)) blocks)
 
 mkBlock :: Block Inlines Blocks -> AnnotatedBlock
 mkBlock = MkAnnotated emptyAnn
