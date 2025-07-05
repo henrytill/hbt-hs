@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Commonmark.Initial where
 
 import Commonmark.Types
@@ -11,73 +13,60 @@ import Commonmark.Types
   , Rangeable (..)
   , SourceRange
   )
-import Data.Bifunctor
+import Control.Comonad.Cofree
 import Data.Data (Data)
+import Data.Eq.Deriving
 import Data.Text (Text)
-import Data.Typeable (Typeable)
-
-data Annotated a b = MkAnnotated
-  { annotation :: a
-  , value :: b
-  }
-  deriving (Show, Eq, Functor, Typeable, Data)
-
-instance Bifunctor Annotated where
-  bimap f g (MkAnnotated a b) = MkAnnotated (f a) (g b)
-
-updateAnnotation :: (a -> a) -> Annotated a b -> Annotated a b
-updateAnnotation = first
+import Text.Show.Deriving
 
 data Ann = MkAnn
   { range :: SourceRange
   , attributes :: Attributes
   }
-  deriving (Show, Eq, Typeable, Data)
+  deriving (Show, Eq, Data)
 
-emptyAnn :: Ann
-emptyAnn = MkAnn mempty []
+instance Semigroup Ann where
+  MkAnn a b <> MkAnn c d = MkAnn (a <> c) (b <> d)
 
-updateRange :: SourceRange -> Ann -> Ann
-updateRange range ann = ann {range}
+instance Monoid Ann where
+  mempty = MkAnn mempty mempty
 
-updateAttributes :: Attributes -> Ann -> Ann
-updateAttributes as ann = ann {attributes = as ++ attributes ann}
-
-data Inline a
+data InlineF a
   = LineBreak
   | SoftBreak
   | Str Text
   | Entity Text
   | EscapedChar Char
-  | Emph a
-  | Strong a
-  | Link Text Text a
-  | Image Text Text a
+  | Emph [a]
+  | Strong [a]
+  | Link Text Text [a]
+  | Image Text Text [a]
   | Code Text
   | RawInline Format Text
-  deriving (Show, Eq, Functor, Foldable, Traversable, Typeable, Data)
+  deriving (Show, Eq, Functor, Foldable, Traversable, Data)
 
-type AnnotatedInline = Annotated Ann (Inline Inlines)
+$(deriveShow1 ''InlineF)
+$(deriveEq1 ''InlineF)
 
-newtype Inlines = MkInlines {unInlines :: [AnnotatedInline]}
-  deriving (Show, Eq)
+type Inline a = Cofree InlineF a
 
-instance Semigroup Inlines where
-  MkInlines xs <> MkInlines ys = MkInlines (xs <> ys)
+newtype Inlines = MkInlines {unInlines :: [Inline Ann]}
+  deriving (Show, Eq, Data, Semigroup, Monoid)
 
-instance Monoid Inlines where
-  mempty = MkInlines mempty
+rangedInline :: SourceRange -> Inline Ann -> Inline Ann
+rangedInline sr (ann :< body) = ann <> MkAnn sr mempty :< body
+
+addAttributesInline :: Attributes -> Inline Ann -> Inline Ann
+addAttributesInline attrs (ann :< body) = ann <> MkAnn mempty attrs :< body
 
 instance Rangeable Inlines where
-  ranged sr (MkInlines inlines) =
-    MkInlines (map (updateAnnotation (updateRange sr)) inlines)
+  ranged sr (MkInlines ils) = MkInlines (map (rangedInline sr) ils)
 
 instance HasAttributes Inlines where
-  addAttributes attrs (MkInlines inlines) =
-    MkInlines (map (updateAnnotation (updateAttributes attrs)) inlines)
+  addAttributes attrs (MkInlines ils) = MkInlines (map (addAttributesInline attrs) ils)
 
-mkInline :: Inline Inlines -> AnnotatedInline
-mkInline = MkAnnotated emptyAnn
+mkInline :: (Monoid a) => InlineF (Inline a) -> Inline a
+mkInline il = mempty :< il
 
 instance IsInline Inlines where
   lineBreak = MkInlines [mkInline LineBreak]
@@ -85,54 +74,55 @@ instance IsInline Inlines where
   str t = MkInlines [mkInline (Str t)]
   entity t = MkInlines [mkInline (Entity t)]
   escapedChar c = MkInlines [mkInline (EscapedChar c)]
-  emph ils = MkInlines [mkInline (Emph ils)]
-  strong ils = MkInlines [mkInline (Strong ils)]
-  link d t desc = MkInlines [mkInline (Link d t desc)]
-  image s t desc = MkInlines [mkInline (Image s t desc)]
+  emph ils = MkInlines [mkInline (Emph (unInlines ils))]
+  strong ils = MkInlines [mkInline (Strong (unInlines ils))]
+  link d t desc = MkInlines [mkInline (Link d t (unInlines desc))]
+  image s t desc = MkInlines [mkInline (Image s t (unInlines desc))]
   code t = MkInlines [mkInline (Code t)]
   rawInline f t = MkInlines [mkInline (RawInline f t)]
 
-data Block il a
-  = Paragraph il
-  | Plain il
+data BlockF a
+  = Paragraph Inlines
+  | Plain Inlines
   | ThematicBreak
-  | BlockQuote a
+  | BlockQuote [a]
   | CodeBlock Text Text
-  | Heading Int il
+  | Heading Int Inlines
   | RawBlock Format Text
   | ReferenceLinkDefinition Text (Text, Text)
-  | List ListType ListSpacing [a]
-  deriving (Show, Eq, Functor, Foldable, Traversable, Typeable, Data)
+  | List ListType ListSpacing [[a]]
+  deriving (Show, Eq, Functor, Foldable, Traversable, Data)
 
-type AnnotatedBlock = Annotated Ann (Block Inlines Blocks)
+$(deriveShow1 ''BlockF)
+$(deriveEq1 ''BlockF)
 
-newtype Blocks = MkBlocks {unBlocks :: [AnnotatedBlock]}
-  deriving (Show, Eq)
+type Block a = Cofree BlockF a
 
-instance Semigroup Blocks where
-  MkBlocks xs <> MkBlocks ys = MkBlocks (xs <> ys)
+newtype Blocks = MkBlocks {unBlocks :: [Block Ann]}
+  deriving (Show, Eq, Semigroup, Monoid)
 
-instance Monoid Blocks where
-  mempty = MkBlocks mempty
+rangedBlock :: SourceRange -> Block Ann -> Block Ann
+rangedBlock sr (ann :< body) = ann <> MkAnn sr mempty :< body
+
+addAttributesBlock :: Attributes -> Block Ann -> Block Ann
+addAttributesBlock attrs (ann :< body) = ann <> MkAnn mempty attrs :< body
 
 instance Rangeable Blocks where
-  ranged sr (MkBlocks blocks) =
-    MkBlocks (map (updateAnnotation (updateRange sr)) blocks)
+  ranged sr (MkBlocks bs) = MkBlocks (map (rangedBlock sr) bs)
 
 instance HasAttributes Blocks where
-  addAttributes attrs (MkBlocks blocks) =
-    MkBlocks (map (updateAnnotation (updateAttributes attrs)) blocks)
+  addAttributes attrs (MkBlocks bs) = MkBlocks (map (addAttributesBlock attrs) bs)
 
-mkBlock :: Block Inlines Blocks -> AnnotatedBlock
-mkBlock = MkAnnotated emptyAnn
+mkBlock :: (Monoid a) => BlockF (Block a) -> Block a
+mkBlock b = mempty :< b
 
 instance IsBlock Inlines Blocks where
   paragraph ils = MkBlocks [mkBlock (Paragraph ils)]
   plain ils = MkBlocks [mkBlock (Plain ils)]
   thematicBreak = MkBlocks [mkBlock ThematicBreak]
-  blockQuote bs = MkBlocks [mkBlock (BlockQuote bs)]
+  blockQuote bs = MkBlocks [mkBlock (BlockQuote (unBlocks bs))]
   codeBlock info c = MkBlocks [mkBlock (CodeBlock info c)]
   heading level ils = MkBlocks [mkBlock (Heading level ils)]
   rawBlock f t = MkBlocks [mkBlock (RawBlock f t)]
   referenceLinkDefinition l dt = MkBlocks [mkBlock (ReferenceLinkDefinition l dt)]
-  list lt ls bss = MkBlocks [mkBlock (List lt ls bss)]
+  list lt ls bss = MkBlocks [mkBlock (List lt ls (map unBlocks bss))]

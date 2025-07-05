@@ -5,6 +5,7 @@ module Commonmark.InitialTest where
 import Commonmark
 import Commonmark.Extensions.Attributes (attributesSpec)
 import Commonmark.Initial
+import Control.Comonad.Cofree
 import Data.Functor.Identity (runIdentity)
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -28,61 +29,42 @@ testHeading = assertEqual "Test Heading" expected actual
       Right
         ( MkBlocks
             { unBlocks =
-                [ MkAnnotated
-                    { annotation =
-                        MkAnn
-                          { range = SourceRange [(newPos parseName 1 1, newPos parseName 2 1)]
-                          , attributes = []
-                          }
-                    , value =
-                        Heading
-                          1
-                          ( MkInlines
-                              { unInlines =
-                                  [ MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 3, newPos parseName 1 8)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "Hello"
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 8, newPos parseName 1 9)]
-                                            , attributes = []
-                                            }
-                                      , value = Str ","
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 9, newPos parseName 1 10)]
-                                            , attributes = []
-                                            }
-                                      , value = Str " "
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 10, newPos parseName 1 15)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "world"
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 15, newPos parseName 1 16)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "!"
-                                      }
-                                  ]
-                              }
-                          )
+                [ MkAnn
+                    { range = SourceRange [(newPos parseName 1 1, newPos parseName 2 1)]
+                    , attributes = []
                     }
+                    :< Heading
+                      1
+                      ( MkInlines
+                          { unInlines =
+                              [ MkAnn
+                                  { range = SourceRange [(newPos parseName 1 3, newPos parseName 1 8)]
+                                  , attributes = []
+                                  }
+                                  :< Str "Hello"
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 8, newPos parseName 1 9)]
+                                  , attributes = []
+                                  }
+                                  :< Str ","
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 9, newPos parseName 1 10)]
+                                  , attributes = []
+                                  }
+                                  :< Str " "
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 10, newPos parseName 1 15)]
+                                  , attributes = []
+                                  }
+                                  :< Str "world"
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 15, newPos parseName 1 16)]
+                                  , attributes = []
+                                  }
+                                  :< Str "!"
+                              ]
+                          }
+                      )
                 ]
             }
         )
@@ -95,61 +77,42 @@ testHeadingAttributes = assertEqual "Test Heading w/attributes" expected actual
       Right
         ( MkBlocks
             { unBlocks =
-                [ MkAnnotated
-                    { annotation =
-                        MkAnn
-                          { range = SourceRange [(newPos parseName 1 1, newPos parseName 2 1)]
-                          , attributes = [("id", "foo")]
-                          }
-                    , value =
-                        Heading
-                          1
-                          ( MkInlines
-                              { unInlines =
-                                  [ MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 3, newPos parseName 1 8)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "Hello"
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 8, newPos parseName 1 9)]
-                                            , attributes = []
-                                            }
-                                      , value = Str ","
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 9, newPos parseName 1 10)]
-                                            , attributes = []
-                                            }
-                                      , value = Str " "
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 10, newPos parseName 1 15)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "world"
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 15, newPos parseName 1 16)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "!"
-                                      }
-                                  ]
-                              }
-                          )
+                [ MkAnn
+                    { range = SourceRange [(newPos parseName 1 1, newPos parseName 2 1)]
+                    , attributes = [("id", "foo")]
                     }
+                    :< Heading
+                      1
+                      ( MkInlines
+                          { unInlines =
+                              [ MkAnn
+                                  { range = SourceRange [(newPos parseName 1 3, newPos parseName 1 8)]
+                                  , attributes = []
+                                  }
+                                  :< Str "Hello"
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 8, newPos parseName 1 9)]
+                                  , attributes = []
+                                  }
+                                  :< Str ","
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 9, newPos parseName 1 10)]
+                                  , attributes = []
+                                  }
+                                  :< Str " "
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 10, newPos parseName 1 15)]
+                                  , attributes = []
+                                  }
+                                  :< Str "world"
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 15, newPos parseName 1 16)]
+                                  , attributes = []
+                                  }
+                                  :< Str "!"
+                              ]
+                          }
+                      )
                 ]
             }
         )
@@ -162,60 +125,41 @@ testParagraph = assertEqual "Test Paragraph" expected actual
       Right
         ( MkBlocks
             { unBlocks =
-                [ MkAnnotated
-                    { annotation =
-                        MkAnn
-                          { range = SourceRange [(newPos parseName 1 1, newPos parseName 2 1)]
-                          , attributes = []
-                          }
-                    , value =
-                        Paragraph
-                          ( MkInlines
-                              { unInlines =
-                                  [ MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 1, newPos parseName 1 6)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "Hello"
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 6, newPos parseName 1 7)]
-                                            , attributes = []
-                                            }
-                                      , value = Str ","
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 7, newPos parseName 1 8)]
-                                            , attributes = []
-                                            }
-                                      , value = Str " "
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 8, newPos parseName 1 13)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "world"
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 13, newPos parseName 1 14)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "!"
-                                      }
-                                  ]
-                              }
-                          )
+                [ MkAnn
+                    { range = SourceRange [(newPos parseName 1 1, newPos parseName 2 1)]
+                    , attributes = []
                     }
+                    :< Paragraph
+                      ( MkInlines
+                          { unInlines =
+                              [ MkAnn
+                                  { range = SourceRange [(newPos parseName 1 1, newPos parseName 1 6)]
+                                  , attributes = []
+                                  }
+                                  :< Str "Hello"
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 6, newPos parseName 1 7)]
+                                  , attributes = []
+                                  }
+                                  :< Str ","
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 7, newPos parseName 1 8)]
+                                  , attributes = []
+                                  }
+                                  :< Str " "
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 8, newPos parseName 1 13)]
+                                  , attributes = []
+                                  }
+                                  :< Str "world"
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 13, newPos parseName 1 14)]
+                                  , attributes = []
+                                  }
+                                  :< Str "!"
+                              ]
+                          }
+                      )
                 ]
             }
         )
@@ -234,115 +178,77 @@ testDocument = assertEqual "Test Document" expected actual
       Right
         ( MkBlocks
             { unBlocks =
-                [ MkAnnotated
-                    { annotation =
-                        MkAnn
-                          { range = SourceRange [(newPos parseName 1 1, newPos parseName 2 1)]
-                          , attributes = [("id", "foo")]
-                          }
-                    , value =
-                        Heading
-                          1
-                          ( MkInlines
-                              { unInlines =
-                                  [ MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 3, newPos parseName 1 8)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "Hello"
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 8, newPos parseName 1 9)]
-                                            , attributes = []
-                                            }
-                                      , value = Str ","
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 9, newPos parseName 1 10)]
-                                            , attributes = []
-                                            }
-                                      , value = Str " "
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 10, newPos parseName 1 15)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "world"
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 15, newPos parseName 1 16)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "!"
-                                      }
-                                  ]
-                              }
-                          )
+                [ MkAnn
+                    { range = SourceRange [(newPos parseName 1 1, newPos parseName 2 1)]
+                    , attributes = [("id", "foo")]
                     }
-                , MkAnnotated
-                    { annotation =
-                        MkAnn
-                          { range = SourceRange [(newPos parseName 3 1, newPos parseName 4 1)]
-                          , attributes = []
+                    :< Heading
+                      1
+                      ( MkInlines
+                          { unInlines =
+                              [ MkAnn
+                                  { range = SourceRange [(newPos parseName 1 3, newPos parseName 1 8)]
+                                  , attributes = []
+                                  }
+                                  :< Str "Hello"
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 8, newPos parseName 1 9)]
+                                  , attributes = []
+                                  }
+                                  :< Str ","
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 9, newPos parseName 1 10)]
+                                  , attributes = []
+                                  }
+                                  :< Str " "
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 10, newPos parseName 1 15)]
+                                  , attributes = []
+                                  }
+                                  :< Str "world"
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 1 15, newPos parseName 1 16)]
+                                  , attributes = []
+                                  }
+                                  :< Str "!"
+                              ]
                           }
-                    , value =
-                        Paragraph
-                          ( MkInlines
-                              { unInlines =
-                                  [ MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 3 1, newPos parseName 3 6)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "Hello"
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 3 6, newPos parseName 3 7)]
-                                            , attributes = []
-                                            }
-                                      , value = Str ","
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 3 7, newPos parseName 3 8)]
-                                            , attributes = []
-                                            }
-                                      , value = Str " "
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 3 8, newPos parseName 3 13)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "world"
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 3 13, newPos parseName 3 14)]
-                                            , attributes = []
-                                            }
-                                      , value = Str "!"
-                                      }
-                                  ]
-                              }
-                          )
+                      )
+                , MkAnn
+                    { range = SourceRange [(newPos parseName 3 1, newPos parseName 4 1)]
+                    , attributes = []
                     }
+                    :< Paragraph
+                      ( MkInlines
+                          { unInlines =
+                              [ MkAnn
+                                  { range = SourceRange [(newPos parseName 3 1, newPos parseName 3 6)]
+                                  , attributes = []
+                                  }
+                                  :< Str "Hello"
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 3 6, newPos parseName 3 7)]
+                                  , attributes = []
+                                  }
+                                  :< Str ","
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 3 7, newPos parseName 3 8)]
+                                  , attributes = []
+                                  }
+                                  :< Str " "
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 3 8, newPos parseName 3 13)]
+                                  , attributes = []
+                                  }
+                                  :< Str "world"
+                              , MkAnn
+                                  { range = SourceRange [(newPos parseName 3 13, newPos parseName 3 14)]
+                                  , attributes = []
+                                  }
+                                  :< Str "!"
+                              ]
+                          }
+                      )
                 ]
             }
         )
@@ -362,124 +268,95 @@ testList = assertEqual "Test List" expected actual
       Right
         ( MkBlocks
             { unBlocks =
-                [ MkAnnotated
-                    { annotation =
-                        MkAnn
-                          { range = SourceRange [(newPos parseName 1 1, newPos parseName 5 1)]
-                          , attributes = []
-                          }
-                    , value =
-                        List
-                          (BulletList '-')
-                          LooseList
-                          [ MkBlocks
-                              { unBlocks =
-                                  [ MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 1 1, newPos parseName 2 1)]
-                                            , attributes = []
-                                            }
-                                      , value =
-                                          Paragraph
-                                            ( MkInlines
-                                                { unInlines =
-                                                    [ MkAnnotated
-                                                        { annotation =
-                                                            MkAnn
-                                                              { range = SourceRange [(newPos parseName 1 3, newPos parseName 1 8)]
-                                                              , attributes = []
-                                                              }
-                                                        , value = Str "Hello"
-                                                        }
-                                                    , MkAnnotated
-                                                        { annotation =
-                                                            MkAnn
-                                                              { range = SourceRange [(newPos parseName 1 8, newPos parseName 1 9)]
-                                                              , attributes = []
-                                                              }
-                                                        , value = Str ","
-                                                        }
-                                                    , MkAnnotated
-                                                        { annotation =
-                                                            MkAnn
-                                                              { range = SourceRange [(newPos parseName 1 9, newPos parseName 1 10)]
-                                                              , attributes = []
-                                                              }
-                                                        , value = Str " "
-                                                        }
-                                                    , MkAnnotated
-                                                        { annotation =
-                                                            MkAnn
-                                                              { range = SourceRange [(newPos parseName 1 10, newPos parseName 1 15)]
-                                                              , attributes = []
-                                                              }
-                                                        , value = Str "world"
-                                                        }
-                                                    , MkAnnotated
-                                                        { annotation =
-                                                            MkAnn
-                                                              { range = SourceRange [(newPos parseName 1 15, newPos parseName 1 16)]
-                                                              , attributes = []
-                                                              }
-                                                        , value = Str "!"
-                                                        }
-                                                    ]
-                                                }
-                                            )
-                                      }
-                                  ]
-                              }
-                          , MkBlocks
-                              { unBlocks =
-                                  [ MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 2 1, newPos parseName 5 1)]
-                                            , attributes = []
-                                            }
-                                      , value =
-                                          Paragraph
-                                            ( MkInlines
-                                                { unInlines =
-                                                    [ MkAnnotated
-                                                        { annotation =
-                                                            MkAnn
-                                                              { range = SourceRange [(newPos parseName 2 3, newPos parseName 2 9)]
-                                                              , attributes = []
-                                                              }
-                                                        , value = Str "Goobye"
-                                                        }
-                                                    ]
-                                                }
-                                            )
-                                      }
-                                  , MkAnnotated
-                                      { annotation =
-                                          MkAnn
-                                            { range = SourceRange [(newPos parseName 2 1, newPos parseName 5 1)]
-                                            , attributes = []
-                                            }
-                                      , value =
-                                          Paragraph
-                                            ( MkInlines
-                                                { unInlines =
-                                                    [ MkAnnotated
-                                                        { annotation =
-                                                            MkAnn
-                                                              { range = SourceRange [(newPos parseName 4 3, newPos parseName 4 8)]
-                                                              , attributes = []
-                                                              }
-                                                        , value = Str "Again"
-                                                        }
-                                                    ]
-                                                }
-                                            )
-                                      }
-                                  ]
-                              }
-                          ]
+                [ MkAnn
+                    { range = SourceRange [(newPos parseName 1 1, newPos parseName 5 1)]
+                    , attributes = []
                     }
+                    :< List
+                      (BulletList '-')
+                      LooseList
+                      [
+                        [ MkAnn
+                            { range =
+                                SourceRange
+                                  [ (newPos parseName 1 3, newPos parseName 2 1)
+                                  , (newPos parseName 1 1, newPos parseName 2 1)
+                                  ]
+                            , attributes = []
+                            }
+                            :< Paragraph
+                              ( MkInlines
+                                  { unInlines =
+                                      [ MkAnn
+                                          { range = SourceRange [(newPos parseName 1 3, newPos parseName 1 8)]
+                                          , attributes = []
+                                          }
+                                          :< Str "Hello"
+                                      , MkAnn
+                                          { range = SourceRange [(newPos parseName 1 8, newPos parseName 1 9)]
+                                          , attributes = []
+                                          }
+                                          :< Str ","
+                                      , MkAnn
+                                          { range = SourceRange [(newPos parseName 1 9, newPos parseName 1 10)]
+                                          , attributes = []
+                                          }
+                                          :< Str " "
+                                      , MkAnn
+                                          { range = SourceRange [(newPos parseName 1 10, newPos parseName 1 15)]
+                                          , attributes = []
+                                          }
+                                          :< Str "world"
+                                      , MkAnn
+                                          { range = SourceRange [(newPos parseName 1 15, newPos parseName 1 16)]
+                                          , attributes = []
+                                          }
+                                          :< Str "!"
+                                      ]
+                                  }
+                              )
+                        ]
+                      ,
+                        [ MkAnn
+                            { range =
+                                SourceRange
+                                  [ (newPos parseName 2 3, newPos parseName 3 1)
+                                  , (newPos parseName 2 1, newPos parseName 5 1)
+                                  ]
+                            , attributes = []
+                            }
+                            :< Paragraph
+                              ( MkInlines
+                                  { unInlines =
+                                      [ MkAnn
+                                          { range = SourceRange [(newPos parseName 2 3, newPos parseName 2 9)]
+                                          , attributes = []
+                                          }
+                                          :< Str "Goobye"
+                                      ]
+                                  }
+                              )
+                        , MkAnn
+                            { range =
+                                SourceRange
+                                  [ (newPos parseName 4 3, newPos parseName 5 1)
+                                  , (newPos parseName 2 1, newPos parseName 5 1)
+                                  ]
+                            , attributes = []
+                            }
+                            :< Paragraph
+                              ( MkInlines
+                                  { unInlines =
+                                      [ MkAnn
+                                          { range = SourceRange [(newPos parseName 4 3, newPos parseName 4 8)]
+                                          , attributes = []
+                                          }
+                                          :< Str "Again"
+                                      ]
+                                  }
+                              )
+                        ]
+                      ]
                 ]
             }
         )
