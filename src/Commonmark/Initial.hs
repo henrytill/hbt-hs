@@ -50,8 +50,7 @@ $(deriveEq1 ''InlineF)
 
 type Inline a = Cofree InlineF a
 
-newtype Inlines = MkInlines {unInlines :: [Inline Ann]}
-  deriving (Show, Eq, Data, Semigroup, Monoid)
+type Inlines = [Inline Ann]
 
 rangedInline :: SourceRange -> Inline Ann -> Inline Ann
 rangedInline sr (ann :< body) = ann <> MkAnn sr mempty :< body
@@ -60,26 +59,26 @@ addAttributesInline :: Attributes -> Inline Ann -> Inline Ann
 addAttributesInline attrs (ann :< body) = ann <> MkAnn mempty attrs :< body
 
 instance Rangeable Inlines where
-  ranged sr (MkInlines ils) = MkInlines (map (rangedInline sr) ils)
+  ranged sr = map (rangedInline sr)
 
 instance HasAttributes Inlines where
-  addAttributes attrs (MkInlines ils) = MkInlines (map (addAttributesInline attrs) ils)
+  addAttributes attrs = map (addAttributesInline attrs)
 
 mkInline :: (Monoid a) => InlineF (Inline a) -> Inline a
 mkInline il = mempty :< il
 
 instance IsInline Inlines where
-  lineBreak = MkInlines [mkInline LineBreak]
-  softBreak = MkInlines [mkInline SoftBreak]
-  str t = MkInlines [mkInline (Str t)]
-  entity t = MkInlines [mkInline (Entity t)]
-  escapedChar c = MkInlines [mkInline (EscapedChar c)]
-  emph ils = MkInlines [mkInline (Emph (unInlines ils))]
-  strong ils = MkInlines [mkInline (Strong (unInlines ils))]
-  link d t desc = MkInlines [mkInline (Link d t (unInlines desc))]
-  image s t desc = MkInlines [mkInline (Image s t (unInlines desc))]
-  code t = MkInlines [mkInline (Code t)]
-  rawInline f t = MkInlines [mkInline (RawInline f t)]
+  lineBreak = [mkInline LineBreak]
+  softBreak = [mkInline SoftBreak]
+  str t = [mkInline (Str t)]
+  entity t = [mkInline (Entity t)]
+  escapedChar c = [mkInline (EscapedChar c)]
+  emph ils = [mkInline (Emph ils)]
+  strong ils = [mkInline (Strong ils)]
+  link d t desc = [mkInline (Link d t desc)]
+  image s t desc = [mkInline (Image s t desc)]
+  code t = [mkInline (Code t)]
+  rawInline f t = [mkInline (RawInline f t)]
 
 data BlockF a
   = Paragraph Inlines
@@ -98,8 +97,7 @@ $(deriveEq1 ''BlockF)
 
 type Block a = Cofree BlockF a
 
-newtype Blocks = MkBlocks {unBlocks :: [Block Ann]}
-  deriving (Show, Eq, Semigroup, Monoid)
+type Blocks = [Block Ann]
 
 rangedBlock :: SourceRange -> Block Ann -> Block Ann
 rangedBlock sr (ann :< body) = ann <> MkAnn sr mempty :< body
@@ -108,21 +106,21 @@ addAttributesBlock :: Attributes -> Block Ann -> Block Ann
 addAttributesBlock attrs (ann :< body) = ann <> MkAnn mempty attrs :< body
 
 instance Rangeable Blocks where
-  ranged sr (MkBlocks bs) = MkBlocks (map (rangedBlock sr) bs)
+  ranged sr = map (rangedBlock sr)
 
 instance HasAttributes Blocks where
-  addAttributes attrs (MkBlocks bs) = MkBlocks (map (addAttributesBlock attrs) bs)
+  addAttributes attrs = map (addAttributesBlock attrs)
 
 mkBlock :: (Monoid a) => BlockF (Block a) -> Block a
 mkBlock b = mempty :< b
 
 instance IsBlock Inlines Blocks where
-  paragraph ils = MkBlocks [mkBlock (Paragraph ils)]
-  plain ils = MkBlocks [mkBlock (Plain ils)]
-  thematicBreak = MkBlocks [mkBlock ThematicBreak]
-  blockQuote bs = MkBlocks [mkBlock (BlockQuote (unBlocks bs))]
-  codeBlock info c = MkBlocks [mkBlock (CodeBlock info c)]
-  heading level ils = MkBlocks [mkBlock (Heading level ils)]
-  rawBlock f t = MkBlocks [mkBlock (RawBlock f t)]
-  referenceLinkDefinition l dt = MkBlocks [mkBlock (ReferenceLinkDefinition l dt)]
-  list lt ls bss = MkBlocks [mkBlock (List lt ls (map unBlocks bss))]
+  paragraph ils = [mkBlock (Paragraph ils)]
+  plain ils = [mkBlock (Plain ils)]
+  thematicBreak = [mkBlock ThematicBreak]
+  blockQuote bs = [mkBlock (BlockQuote bs)]
+  codeBlock info c = [mkBlock (CodeBlock info c)]
+  heading level ils = [mkBlock (Heading level ils)]
+  rawBlock f t = [mkBlock (RawBlock f t)]
+  referenceLinkDefinition l dt = [mkBlock (ReferenceLinkDefinition l dt)]
+  list lt ls bss = [mkBlock (List lt ls bss)]
