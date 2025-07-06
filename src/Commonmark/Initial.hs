@@ -14,7 +14,6 @@ import Commonmark.Types
   , SourceRange
   )
 import Control.Comonad.Cofree
-import Data.Data (Data)
 import Data.Eq.Deriving
 import Data.Text (Text)
 import Text.Show.Deriving
@@ -23,7 +22,7 @@ data Ann = MkAnn
   { range :: SourceRange
   , attributes :: Attributes
   }
-  deriving (Show, Eq, Data)
+  deriving (Show, Eq)
 
 instance Semigroup Ann where
   MkAnn a b <> MkAnn c d = MkAnn (a <> c) (b <> d)
@@ -43,7 +42,7 @@ data InlineF r
   | Image Text Text [r]
   | Code Text
   | RawInline Format Text
-  deriving (Show, Eq, Functor, Foldable, Traversable, Data)
+  deriving (Show, Eq, Functor, Foldable, Traversable)
 
 $(deriveShow1 ''InlineF)
 $(deriveEq1 ''InlineF)
@@ -90,7 +89,7 @@ data BlockF a r
   | RawBlock Format Text
   | ReferenceLinkDefinition Text (Text, Text)
   | List ListType ListSpacing [[r]]
-  deriving (Show, Eq, Functor, Foldable, Traversable, Data)
+  deriving (Show, Eq, Functor, Foldable, Traversable)
 
 $(deriveShow1 ''BlockF)
 $(deriveEq1 ''BlockF)
