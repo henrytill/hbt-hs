@@ -17,16 +17,13 @@ data Collection = MkCollection
   { entities :: Map URI Entity
   , edges :: Multimap URI URI
   }
+  deriving (Eq, Ord, Show)
 
 instance Semigroup Collection where
   a <> b = MkCollection (a.entities <> b.entities) (a.edges <> b.edges)
 
 empty :: Collection
-empty =
-  MkCollection
-    { entities = Map.empty
-    , edges = Multimap.empty
-    }
+empty = MkCollection Map.empty Multimap.empty
 
 instance Monoid Collection where
   mempty = empty
