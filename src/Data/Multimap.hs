@@ -19,6 +19,7 @@ module Data.Multimap
   )
 where
 
+import Data.Foldable qualified as Foldable
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe qualified as Maybe
@@ -96,4 +97,4 @@ foldMapWithKey :: (Monoid m) => (k -> Set a -> m) -> Multimap k a -> m
 foldMapWithKey f (MkMultimap m) = Map.foldMapWithKey f m
 
 unions :: (Foldable f, Ord k, Ord v) => f (Multimap k v) -> Multimap k v
-unions = Prelude.foldr union empty
+unions = Foldable.fold
