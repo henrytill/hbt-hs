@@ -59,10 +59,10 @@ addAttributesInline :: Attributes -> Inline Ann -> Inline Ann
 addAttributesInline attrs (ann :< body) = ann <> MkAnn mempty attrs :< body
 
 instance Rangeable Inlines where
-  ranged sr = map (rangedInline sr)
+  ranged sr = map $ rangedInline sr
 
 instance HasAttributes Inlines where
-  addAttributes attrs = map (addAttributesInline attrs)
+  addAttributes attrs = map $ addAttributesInline attrs
 
 mkInline :: (Monoid a) => InlineF (Inline a) -> Inline a
 mkInline il = mempty :< il
@@ -70,15 +70,15 @@ mkInline il = mempty :< il
 instance IsInline Inlines where
   lineBreak = [mkInline LineBreak]
   softBreak = [mkInline SoftBreak]
-  str t = [mkInline (Str t)]
-  entity t = [mkInline (Entity t)]
-  escapedChar c = [mkInline (EscapedChar c)]
-  emph ils = [mkInline (Emph ils)]
-  strong ils = [mkInline (Strong ils)]
-  link d t desc = [mkInline (Link d t desc)]
-  image s t desc = [mkInline (Image s t desc)]
-  code t = [mkInline (Code t)]
-  rawInline f t = [mkInline (RawInline f t)]
+  str t = [mkInline $ Str t]
+  entity t = [mkInline $ Entity t]
+  escapedChar c = [mkInline $ EscapedChar c]
+  emph ils = [mkInline $ Emph ils]
+  strong ils = [mkInline $ Strong ils]
+  link d t desc = [mkInline $ Link d t desc]
+  image s t desc = [mkInline $ Image s t desc]
+  code t = [mkInline $ Code t]
+  rawInline f t = [mkInline $ RawInline f t]
 
 data BlockF a r
   = Paragraph [Inline a]
@@ -106,21 +106,21 @@ addAttributesBlock :: Attributes -> Block Ann -> Block Ann
 addAttributesBlock attrs (ann :< body) = ann <> MkAnn mempty attrs :< body
 
 instance Rangeable Blocks where
-  ranged sr = map (rangedBlock sr)
+  ranged sr = map $ rangedBlock sr
 
 instance HasAttributes Blocks where
-  addAttributes attrs = map (addAttributesBlock attrs)
+  addAttributes attrs = map $ addAttributesBlock attrs
 
 mkBlock :: (Monoid a) => BlockF a (Block a) -> Block a
 mkBlock b = mempty :< b
 
 instance IsBlock Inlines Blocks where
-  paragraph ils = [mkBlock (Paragraph ils)]
-  plain ils = [mkBlock (Plain ils)]
+  paragraph ils = [mkBlock $ Paragraph ils]
+  plain ils = [mkBlock $ Plain ils]
   thematicBreak = [mkBlock ThematicBreak]
-  blockQuote bs = [mkBlock (BlockQuote bs)]
-  codeBlock info c = [mkBlock (CodeBlock info c)]
-  heading level ils = [mkBlock (Heading level ils)]
-  rawBlock f t = [mkBlock (RawBlock f t)]
-  referenceLinkDefinition l dt = [mkBlock (ReferenceLinkDefinition l dt)]
-  list lt ls bss = [mkBlock (List lt ls bss)]
+  blockQuote bs = [mkBlock $ BlockQuote bs]
+  codeBlock info c = [mkBlock $ CodeBlock info c]
+  heading level ils = [mkBlock $ Heading level ils]
+  rawBlock f t = [mkBlock $ RawBlock f t]
+  referenceLinkDefinition l dt = [mkBlock $ ReferenceLinkDefinition l dt]
+  list lt ls bss = [mkBlock $ List lt ls bss]
