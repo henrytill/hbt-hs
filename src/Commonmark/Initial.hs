@@ -31,16 +31,16 @@ instance Semigroup Ann where
 instance Monoid Ann where
   mempty = MkAnn mempty mempty
 
-data InlineF a
+data InlineF r
   = LineBreak
   | SoftBreak
   | Str Text
   | Entity Text
   | EscapedChar Char
-  | Emph [a]
-  | Strong [a]
-  | Link Text Text [a]
-  | Image Text Text [a]
+  | Emph [r]
+  | Strong [r]
+  | Link Text Text [r]
+  | Image Text Text [r]
   | Code Text
   | RawInline Format Text
   deriving (Show, Eq, Functor, Foldable, Traversable, Data)
@@ -80,22 +80,22 @@ instance IsInline Inlines where
   code t = [mkInline (Code t)]
   rawInline f t = [mkInline (RawInline f t)]
 
-data BlockF a
-  = Paragraph Inlines
-  | Plain Inlines
+data BlockF a r
+  = Paragraph [Inline a]
+  | Plain [Inline a]
   | ThematicBreak
-  | BlockQuote [a]
+  | BlockQuote [r]
   | CodeBlock Text Text
-  | Heading Int Inlines
+  | Heading Int [Inline a]
   | RawBlock Format Text
   | ReferenceLinkDefinition Text (Text, Text)
-  | List ListType ListSpacing [[a]]
+  | List ListType ListSpacing [[r]]
   deriving (Show, Eq, Functor, Foldable, Traversable, Data)
 
 $(deriveShow1 ''BlockF)
 $(deriveEq1 ''BlockF)
 
-type Block a = Cofree BlockF a
+type Block a = Cofree (BlockF a) a
 
 type Blocks = [Block Ann]
 
@@ -111,7 +111,7 @@ instance Rangeable Blocks where
 instance HasAttributes Blocks where
   addAttributes attrs = map (addAttributesBlock attrs)
 
-mkBlock :: (Monoid a) => BlockF (Block a) -> Block a
+mkBlock :: (Monoid a) => BlockF a (Block a) -> Block a
 mkBlock b = mempty :< b
 
 instance IsBlock Inlines Blocks where
