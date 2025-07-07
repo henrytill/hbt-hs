@@ -25,14 +25,13 @@ data MarkdownError
 
 type Acc = (Collection, FoldState)
 
-saveEntity :: Collection -> FoldState -> Acc
-saveEntity c st =
-  ( foldr addEdges (Collection.upsert entity c) (Maybe.listToMaybe st.parents)
+saveEntity :: Acc -> Acc
+saveEntity (c, st) =
+  ( foldr (Collection.addEdges entity.uri) (Collection.upsert entity c) (Maybe.listToMaybe st.parents)
   , st {uri = Nothing, name = Nothing, maybeParent = Just entity.uri}
   )
   where
     entity = Maybe.fromJust (FoldState.toEntity st)
-    addEdges parent = Collection.addEdges parent entity.uri
 
 inlinesToText :: [Inline a] -> Text
 inlinesToText = foldMap go
@@ -52,7 +51,7 @@ inlinesToText = foldMap go
       RawInline _ t -> t
 
 handleLink :: Text -> Text -> [Inline a] -> Acc -> Acc
-handleLink d _ desc (c, st) = saveEntity c (st {name, uri})
+handleLink d _ desc (c, st) = saveEntity (c, st {name, uri})
   where
     uri = Just . mkURI $ Text.unpack d
     linkText = inlinesToText desc
@@ -62,14 +61,14 @@ handleLink d _ desc (c, st) = saveEntity c (st {name, uri})
       | otherwise = Just $ MkName linkText
 
 inlineFolder :: Acc -> Inline Ann -> Acc
-inlineFolder (c, st) (_ :< il) = case il of
-  Link d t desc -> handleLink d t desc (c, st)
-  _ -> (c, st)
+inlineFolder acc (_ :< il) = case il of
+  Link d t desc -> handleLink d t desc acc
+  _ -> acc
 
 blockFolder :: Acc -> Block Ann -> Acc
-blockFolder (c, st) (_ :< b) = case b of
+blockFolder acc@(c, st) (_ :< b) = case b of
   Plain ils ->
-    foldl' inlineFolder (c, st) ils
+    foldl' inlineFolder acc ils
   Heading 1 ils ->
     (c, st {time, maybeParent = Nothing, labels = []})
     where
@@ -81,11 +80,11 @@ blockFolder (c, st) (_ :< b) = case b of
       headingText = inlinesToText ils
       labels = MkLabel headingText : take (level - 2) st.labels
   List _ _ bss ->
-    f <$> foldl' (foldl' blockFolder) acc bss
+    f <$> foldl' (foldl' blockFolder) acc' bss
     where
-      acc = (c, foldr (\parent s -> s {parents = parent : s.parents}) st st.maybeParent)
+      acc' = (c, foldr (\parent s -> s {parents = parent : s.parents}) st st.maybeParent)
       f s = s {maybeParent = Nothing, parents = drop 1 $ s.parents}
-  _ -> (c, st)
+  _ -> acc
 
 collectionFromBlocks :: Blocks -> Collection
 collectionFromBlocks = fst . foldl' blockFolder (Collection.empty, FoldState.empty)
