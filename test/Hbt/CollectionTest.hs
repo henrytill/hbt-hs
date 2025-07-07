@@ -10,14 +10,9 @@ import Data.Set qualified as Set
 import Hbt.Collection
 import Hbt.Collection.Entity (Entity (..), Label (..), Name (..), Time (..))
 import Hbt.Collection.Entity qualified as Entity
-import Network.URI (URI)
 import Network.URI qualified as URI
 import Test.Dwergaz
-import Text.Printf (printf)
 import Prelude hiding (id, length, null)
-
-mkURI :: String -> URI
-mkURI s = Maybe.fromMaybe (error $ printf "Invalid URI: %s" s) (URI.parseURI s)
 
 mkTime :: Integer -> Time
 mkTime = MkTime . fromIntegral
@@ -36,7 +31,7 @@ emptyEntityTests =
 
 entityTests :: Test
 entityTests =
-  let uri = mkURI "https://example.com"
+  let uri = Entity.mkURI "https://example.com"
       time = mkTime 1000
       name = Just $ MkName "Test Entity"
       labels = Set.fromList [MkLabel "label1", MkLabel "label2"]
@@ -55,7 +50,7 @@ updateEntityTests :: Test
 updateEntityTests =
   let baseEntity =
         Entity.mkEntity
-          (mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Original")
           (Set.singleton $ MkLabel "label1")
@@ -69,7 +64,7 @@ updateEntityTests =
 
       olderBaseEntity =
         Entity.mkEntity
-          (mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 2000)
           (Just $ MkName "Original")
           (Set.singleton $ MkLabel "label1")
@@ -93,13 +88,13 @@ absorbEntityTests :: Test
 absorbEntityTests =
   let entity1 =
         Entity.mkEntity
-          (mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
@@ -129,7 +124,7 @@ insertTests :: Test
 insertTests =
   let entity =
         Entity.mkEntity
-          (mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test")
           (Set.singleton $ MkLabel "label")
@@ -145,13 +140,13 @@ multipleInsertTests :: Test
 multipleInsertTests =
   let entity1 =
         Entity.mkEntity
-          (mkURI "https://example.com/1")
+          (Entity.mkURI "https://example.com/1")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (mkURI "https://example.com/2")
+          (Entity.mkURI "https://example.com/2")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
@@ -168,7 +163,7 @@ upsertTests :: Test
 upsertTests =
   let newEntity =
         Entity.mkEntity
-          (mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test")
           (Set.singleton $ MkLabel "label")
@@ -176,13 +171,13 @@ upsertTests =
 
       entity1 =
         Entity.mkEntity
-          (mkURI "https://example.com/existing")
+          (Entity.mkURI "https://example.com/existing")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (mkURI "https://example.com/existing")
+          (Entity.mkURI "https://example.com/existing")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
@@ -202,13 +197,13 @@ edgeTests :: Test
 edgeTests =
   let entity1 =
         Entity.mkEntity
-          (mkURI "https://example.com/1")
+          (Entity.mkURI "https://example.com/1")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (mkURI "https://example.com/2")
+          (Entity.mkURI "https://example.com/2")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")

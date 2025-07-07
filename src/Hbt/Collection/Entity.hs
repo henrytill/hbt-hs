@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 
 module Hbt.Collection.Entity
-  ( Time (..)
+  ( mkURI
+  , Time (..)
+  , mkTime
   , Name (..)
   , Label (..)
   , Extended (..)
@@ -13,19 +15,31 @@ module Hbt.Collection.Entity
   )
 where
 
+import Data.Maybe qualified as Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
-import Data.Time.Clock.POSIX (POSIXTime)
+import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
+import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 import Network.URI (URI)
 import Network.URI qualified as URI
+import Text.Printf (printf)
 import Prelude hiding (id)
+
+mkURI :: String -> URI
+mkURI s = Maybe.fromMaybe (error $ printf "Invalid URI: %s" s) (URI.parseURI s)
 
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
 
 epoch :: Time
 epoch = MkTime 0
+
+parsePOSIXTime :: String -> POSIXTime
+parsePOSIXTime = utcTimeToPOSIXSeconds . parseTimeOrError True defaultTimeLocale "%B %e, %Y"
+
+mkTime :: String -> Time
+mkTime = MkTime . parsePOSIXTime
 
 newtype Name = MkName {unName :: Text}
   deriving (Show, Eq, Ord)

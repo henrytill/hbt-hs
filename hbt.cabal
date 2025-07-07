@@ -19,8 +19,10 @@ library
         Hbt
         Hbt.Collection
         Hbt.Collection.Entity
+        Hbt.Markdown
 
     hs-source-dirs:   src
+    other-modules:    Hbt.Markdown.FoldState
     default-language: GHC2021
     ghc-options:      -Wall
     build-depends:
@@ -50,6 +52,7 @@ test-suite hbt-test
         Commonmark.InitialTest
         Data.MultimapTest
         Hbt.CollectionTest
+        Hbt.MarkdownTest
 
     default-language: GHC2021
     ghc-options:      -Wall

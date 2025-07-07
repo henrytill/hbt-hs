@@ -38,10 +38,9 @@ lookupEntity :: URI -> Collection -> Maybe Entity
 lookupEntity uri = Map.lookup uri . entities
 
 insert :: Entity -> Collection -> Collection
-insert entity collection = MkCollection entities edges
+insert entity collection = MkCollection entities collection.edges
   where
     entities = Map.insert entity.uri entity collection.entities
-    edges = Multimap.empty
 
 upsert :: Entity -> Collection -> Collection
 upsert entity collection

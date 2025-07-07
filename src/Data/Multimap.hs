@@ -29,7 +29,7 @@ import Prelude hiding (foldl, foldr, lookup, null)
 import Prelude qualified
 
 newtype Multimap k v = MkMultimap {unMultimap :: Map k (Set v)}
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Foldable)
 
 union :: (Ord k, Ord v) => Multimap k v -> Multimap k v -> Multimap k v
 union (MkMultimap m1) (MkMultimap m2) = MkMultimap $ Map.unionWith Set.union m1 m2
