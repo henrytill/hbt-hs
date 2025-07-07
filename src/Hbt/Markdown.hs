@@ -33,8 +33,8 @@ saveEntity (c, st) =
   where
     entity = Maybe.fromJust (FoldState.toEntity st) -- throws
 
-inlinesToText :: [Inline a] -> Text
-inlinesToText = foldMap go
+textFromInlines :: [Inline a] -> Text
+textFromInlines = foldMap go
   where
     go :: Inline a -> Text
     go (_ :< il) = case il of
@@ -43,10 +43,10 @@ inlinesToText = foldMap go
       Str t -> t
       Entity t -> t
       EscapedChar c -> Text.singleton c
-      Emph ils -> inlinesToText ils
-      Strong ils -> inlinesToText ils
-      Link _ _ ils -> inlinesToText ils
-      Image _ _ ils -> inlinesToText ils
+      Emph ils -> textFromInlines ils
+      Strong ils -> textFromInlines ils
+      Link _ _ ils -> textFromInlines ils
+      Image _ _ ils -> textFromInlines ils
       Code t -> "`" <> t <> "`"
       RawInline _ t -> t
 
@@ -54,7 +54,7 @@ handleLink :: Text -> Text -> [Inline a] -> Acc -> Acc
 handleLink d _ desc (c, st) = saveEntity (c, st {name, uri})
   where
     uri = Just . mkURI $ Text.unpack d -- throws
-    linkText = inlinesToText desc
+    linkText = textFromInlines desc
     name
       | linkText == d = Nothing
       | Text.null linkText = Nothing
@@ -72,12 +72,12 @@ blockFolder acc@(c, st) (_ :< b) = case b of
   Heading 1 ils ->
     (c, st {time, maybeParent = Nothing, labels = []})
     where
-      headingText = inlinesToText ils
+      headingText = textFromInlines ils
       time = Just . mkTime $ Text.unpack headingText -- throws
   Heading level ils ->
     (c, st {labels})
     where
-      headingText = inlinesToText ils
+      headingText = textFromInlines ils
       labels = MkLabel headingText : take (level - 2) st.labels
   List _ _ bss ->
     f <$> foldl' (foldl' blockFolder) acc' bss
