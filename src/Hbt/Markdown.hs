@@ -61,32 +61,30 @@ handleLink d _ desc (c, st) = saveEntity c (st {name, uri})
       | otherwise = Just $ MkName linkText
 
 inlineFolder :: Acc -> Inline Ann -> Acc
-inlineFolder (c, st) il =
-  case il of
-    (_ :< Link d t desc) -> handleLink d t desc (c, st)
-    _ -> (c, st)
+inlineFolder (c, st) (_ :< il) = case il of
+  Link d t desc -> handleLink d t desc (c, st)
+  _ -> (c, st)
 
 blockFolder :: Acc -> Block Ann -> Acc
-blockFolder (c, st) b =
-  case b of
-    (_ :< Plain ils) ->
-      foldl' inlineFolder (c, st) ils
-    (_ :< Heading 1 ils) ->
-      (c, st {time, maybeParent = Nothing, labels = []})
-      where
-        headingText = inlinesToText ils
-        time = Just . mkTime $ Text.unpack headingText
-    (_ :< Heading level ils) ->
-      (c, st {labels = updatedLabels})
-      where
-        headingText = inlinesToText ils
-        updatedLabels = MkLabel headingText : take (level - 2) (labels st)
-    (_ :< List _ _ bss) ->
-      f <$> foldl' (foldl' blockFolder) acc bss
-      where
-        acc = (c, foldr (\parent s -> s {parents = parent : parents s}) st (maybeParent st))
-        f s = s {maybeParent = Nothing, parents = drop 1 $ parents s}
-    _ -> (c, st)
+blockFolder (c, st) (_ :< b) = case b of
+  Plain ils ->
+    foldl' inlineFolder (c, st) ils
+  Heading 1 ils ->
+    (c, st {time, maybeParent = Nothing, labels = []})
+    where
+      headingText = inlinesToText ils
+      time = Just . mkTime $ Text.unpack headingText
+  Heading level ils ->
+    (c, st {labels = updatedLabels})
+    where
+      headingText = inlinesToText ils
+      updatedLabels = MkLabel headingText : take (level - 2) (labels st)
+  List _ _ bss ->
+    f <$> foldl' (foldl' blockFolder) acc bss
+    where
+      acc = (c, foldr (\parent s -> s {parents = parent : parents s}) st (maybeParent st))
+      f s = s {maybeParent = Nothing, parents = drop 1 $ parents s}
+  _ -> (c, st)
 
 collectionFromBlocks :: Blocks -> Collection
 collectionFromBlocks = fst . foldl' blockFolder (Collection.empty, FoldState.empty)
