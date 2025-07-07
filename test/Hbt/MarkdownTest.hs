@@ -438,9 +438,9 @@ testMixedDates =
         name
         [ assertEqual "expected length" 1 (Collection.length actual)
         , assertEqual "same collection" expected actual
-        , assertEqual "expected labels" (Just $ mconcat [labelsFoo, labelsBar, labelsBaz]) (labels <$> Collection.lookupEntity uri actual)
-        , assertEqual "expected created" (Just initialTime) (createdAt <$> Collection.lookupEntity uri actual)
-        , assertEqual "expected updated" (Just [finalTime, updatedTime]) (updatedAt <$> Collection.lookupEntity uri actual)
+        , assertEqual "expected labels" (Just $ mconcat [labelsFoo, labelsBar, labelsBaz]) ((.labels) <$> Collection.lookupEntity uri actual)
+        , assertEqual "expected created" (Just initialTime) ((.createdAt) <$> Collection.lookupEntity uri actual)
+        , assertEqual "expected updated" (Just [finalTime, updatedTime]) ((.updatedAt) <$> Collection.lookupEntity uri actual)
         ]
 
 testBasic :: Test
