@@ -1,5 +1,4 @@
 {-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE OverloadedRecordDot #-}
 
 module Hbt.Collection where
 
@@ -29,13 +28,13 @@ instance Monoid Collection where
   mempty = empty
 
 length :: Collection -> Int
-length = Map.size . entities
+length = Map.size . (.entities)
 
 null :: Collection -> Bool
-null = Map.null . entities
+null = Map.null . (.entities)
 
 lookupEntity :: URI -> Collection -> Maybe Entity
-lookupEntity uri = Map.lookup uri . entities
+lookupEntity uri = Map.lookup uri . (.entities)
 
 insert :: Entity -> Collection -> Collection
 insert entity collection = MkCollection entities collection.edges

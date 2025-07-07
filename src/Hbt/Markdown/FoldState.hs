@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedRecordDot #-}
-{-# LANGUAGE NoFieldSelectors #-}
-
 module Hbt.Markdown.FoldState where
 
 import Data.Set qualified as Set

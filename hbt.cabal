@@ -12,7 +12,14 @@ build-type:         Simple
 extra-source-files: cabal.project
 extra-doc-files:    CHANGELOG.md
 
+common exts
+    default-extensions:
+        DuplicateRecordFields
+        NoFieldSelectors
+        OverloadedRecordDot
+
 library
+    import: exts
     exposed-modules:
         Commonmark.Initial
         Data.Multimap
@@ -36,6 +43,7 @@ library
         time ^>=1.12
 
 executable hbt
+    import:           exts
     main-is:          Main.hs
     hs-source-dirs:   exe
     default-language: GHC2021
@@ -45,6 +53,7 @@ executable hbt
         hbt
 
 test-suite hbt-test
+    import:           exts
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
     hs-source-dirs:   test
