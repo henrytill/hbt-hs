@@ -49,8 +49,8 @@ textFromInlines = foldMap go
       Code t -> "`" <> t <> "`"
       RawInline _ t -> t
 
-handleLink :: Text -> Text -> [Inline a] -> Acc -> Acc
-handleLink d _ desc (c, st) = saveEntity (c, st {name, uri})
+extractLink :: Text -> Text -> [Inline a] -> Acc -> Acc
+extractLink d _ desc (c, st) = (c, st {name, uri})
   where
     uri = Just . mkURI $ Text.unpack d -- throws
     linkText = textFromInlines desc
@@ -61,7 +61,7 @@ handleLink d _ desc (c, st) = saveEntity (c, st {name, uri})
 
 inlineFolder :: Acc -> Inline a -> Acc
 inlineFolder acc (_ :< il) = case il of
-  Link d t desc -> handleLink d t desc acc
+  Link d t desc -> saveEntity $ extractLink d t desc acc
   _ -> acc
 
 blockFolder :: Acc -> Block a -> Acc
