@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Markdown where
@@ -26,12 +27,12 @@ type Acc = (Collection, FoldState)
 
 saveEntity :: Collection -> FoldState -> Acc
 saveEntity c st =
-  ( foldr addEdges (Collection.upsert entity c) (Maybe.listToMaybe (parents st))
-  , st {uri = Nothing, name = Nothing, maybeParent = Just (Entity.uri entity)}
+  ( foldr addEdges (Collection.upsert entity c) (Maybe.listToMaybe st.parents)
+  , st {uri = Nothing, name = Nothing, maybeParent = Just entity.uri}
   )
   where
     entity = Maybe.fromJust (FoldState.toEntity st)
-    addEdges parent = Collection.addEdges parent (Entity.uri entity)
+    addEdges parent = Collection.addEdges parent entity.uri
 
 inlinesToText :: [Inline a] -> Text
 inlinesToText = foldMap go
@@ -75,15 +76,15 @@ blockFolder (c, st) (_ :< b) = case b of
       headingText = inlinesToText ils
       time = Just . mkTime $ Text.unpack headingText
   Heading level ils ->
-    (c, st {labels = updatedLabels})
+    (c, st {labels})
     where
       headingText = inlinesToText ils
-      updatedLabels = MkLabel headingText : take (level - 2) (labels st)
+      labels = MkLabel headingText : take (level - 2) st.labels
   List _ _ bss ->
     f <$> foldl' (foldl' blockFolder) acc bss
     where
-      acc = (c, foldr (\parent s -> s {parents = parent : parents s}) st (maybeParent st))
-      f s = s {maybeParent = Nothing, parents = drop 1 $ parents s}
+      acc = (c, foldr (\parent s -> s {parents = parent : s.parents}) st st.maybeParent)
+      f s = s {maybeParent = Nothing, parents = drop 1 $ s.parents}
   _ -> (c, st)
 
 collectionFromBlocks :: Blocks -> Collection
