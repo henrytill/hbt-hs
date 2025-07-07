@@ -31,7 +31,7 @@ saveEntity (c, st) =
   , st {uri = Nothing, name = Nothing, maybeParent = Just entity.uri}
   )
   where
-    entity = Maybe.fromJust (FoldState.toEntity st)
+    entity = Maybe.fromJust (FoldState.toEntity st) -- throws
 
 inlinesToText :: [Inline a] -> Text
 inlinesToText = foldMap go
@@ -53,7 +53,7 @@ inlinesToText = foldMap go
 handleLink :: Text -> Text -> [Inline a] -> Acc -> Acc
 handleLink d _ desc (c, st) = saveEntity (c, st {name, uri})
   where
-    uri = Just . mkURI $ Text.unpack d
+    uri = Just . mkURI $ Text.unpack d -- throws
     linkText = inlinesToText desc
     name
       | linkText == d = Nothing
@@ -73,7 +73,7 @@ blockFolder acc@(c, st) (_ :< b) = case b of
     (c, st {time, maybeParent = Nothing, labels = []})
     where
       headingText = inlinesToText ils
-      time = Just . mkTime $ Text.unpack headingText
+      time = Just . mkTime $ Text.unpack headingText -- throws
   Heading level ils ->
     (c, st {labels})
     where
