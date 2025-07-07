@@ -37,16 +37,16 @@ inlinesToText :: [Inline a] -> Text
 inlinesToText = foldMap go
   where
     go :: Inline a -> Text
-    go (_ :< inline) = case inline of
+    go (_ :< il) = case il of
       LineBreak -> "\n"
       SoftBreak -> " "
       Str t -> t
       Entity t -> t
       EscapedChar c -> Text.singleton c
-      Emph inlines -> inlinesToText inlines
-      Strong inlines -> inlinesToText inlines
-      Link _ _ inlines -> inlinesToText inlines
-      Image _ _ inlines -> inlinesToText inlines
+      Emph ils -> inlinesToText ils
+      Strong ils -> inlinesToText ils
+      Link _ _ ils -> inlinesToText ils
+      Image _ _ ils -> inlinesToText ils
       Code t -> "`" <> t <> "`"
       RawInline _ t -> t
 
@@ -83,7 +83,7 @@ blockFolder acc@(c, st) (_ :< b) = case b of
     f <$> foldl' (foldl' blockFolder) acc' bss
     where
       acc' = (c, foldr (\parent s -> s {parents = parent : s.parents}) st st.maybeParent)
-      f s = s {maybeParent = Nothing, parents = drop 1 $ s.parents}
+      f s = s {maybeParent = Nothing, parents = drop 1 s.parents}
   _ -> acc
 
 collectionFromBlocks :: Blocks -> Collection
