@@ -309,6 +309,113 @@ testList = assertEqual "Test List" expected actual
               ]
         ]
 
+testTightList :: Test
+testTightList = assertEqual "Test Tight List" expected actual
+  where
+    actual =
+      parse $
+        Text.unlines
+          [ "- Hello, world!"
+          , "- [Foo{#bar .klass baz=\"quux\"} is foo](https://www.foo.com/)"
+          ]
+    expected =
+      Right
+        [ MkAnn
+            { range = SourceRange [(newPos parseName 1 1, newPos parseName 3 1)]
+            , attributes = []
+            }
+            :< List
+              (BulletList '-')
+              TightList
+              [
+                [ MkAnn
+                    { range =
+                        SourceRange
+                          [ (newPos parseName 1 3, newPos parseName 2 1)
+                          , (newPos parseName 1 1, newPos parseName 2 1)
+                          ]
+                    , attributes = []
+                    }
+                    :< Plain
+                      [ MkAnn
+                          { range = SourceRange [(newPos parseName 1 3, newPos parseName 1 8)]
+                          , attributes = []
+                          }
+                          :< Str "Hello"
+                      , MkAnn
+                          { range = SourceRange [(newPos parseName 1 8, newPos parseName 1 9)]
+                          , attributes = []
+                          }
+                          :< Str ","
+                      , MkAnn
+                          { range = SourceRange [(newPos parseName 1 9, newPos parseName 1 10)]
+                          , attributes = []
+                          }
+                          :< Str " "
+                      , MkAnn
+                          { range = SourceRange [(newPos parseName 1 10, newPos parseName 1 15)]
+                          , attributes = []
+                          }
+                          :< Str "world"
+                      , MkAnn
+                          { range = SourceRange [(newPos parseName 1 15, newPos parseName 1 16)]
+                          , attributes = []
+                          }
+                          :< Str "!"
+                      ]
+                ]
+              ,
+                [ MkAnn
+                    { range =
+                        SourceRange
+                          [ (newPos parseName 2 3, newPos parseName 3 1)
+                          , (newPos parseName 2 1, newPos parseName 3 1)
+                          ]
+                    , attributes = []
+                    }
+                    :< Plain
+                      [ MkAnn
+                          { range = SourceRange [(newPos parseName 2 3, newPos parseName 2 61)]
+                          , attributes = []
+                          }
+                          :< Link
+                            "https://www.foo.com/"
+                            mempty
+                            [ MkAnn
+                                { range = SourceRange [(newPos parseName 2 4, newPos parseName 2 7)]
+                                , attributes =
+                                    [ ("id", "bar")
+                                    , ("class", "klass")
+                                    , ("baz", "quux")
+                                    ]
+                                }
+                                :< Str "Foo"
+                            , MkAnn
+                                { range = SourceRange [(newPos parseName 2 31, newPos parseName 2 32)]
+                                , attributes = []
+                                }
+                                :< Str " "
+                            , MkAnn
+                                { range = SourceRange [(newPos parseName 2 32, newPos parseName 2 34)]
+                                , attributes = []
+                                }
+                                :< Str "is"
+                            , MkAnn
+                                { range = SourceRange [(newPos parseName 2 34, newPos parseName 2 35)]
+                                , attributes = []
+                                }
+                                :< Str " "
+                            , MkAnn
+                                { range = SourceRange [(newPos parseName 2 35, newPos parseName 2 38)]
+                                , attributes = []
+                                }
+                                :< Str "foo"
+                            ]
+                      ]
+                ]
+              ]
+        ]
+
 allTests :: Test
 allTests =
   group
@@ -318,6 +425,7 @@ allTests =
     , testParagraph
     , testDocument
     , testList
+    , testTightList
     ]
 
 results :: (String, Bool)
