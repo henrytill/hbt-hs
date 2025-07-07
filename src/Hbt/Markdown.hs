@@ -4,7 +4,7 @@
 module Hbt.Markdown where
 
 import Commonmark (ParseError, commonmarkWith, defaultSyntaxSpec)
-import Commonmark.Initial (Ann (..), Block, BlockF (..), Blocks, Inline, InlineF (..))
+import Commonmark.Initial (Block, BlockF (..), Blocks, Inline, InlineF (..))
 import Control.Comonad.Cofree
 import Data.Bifunctor
 import Data.Foldable (foldl')
@@ -60,12 +60,12 @@ handleLink d _ desc (c, st) = saveEntity (c, st {name, uri})
       | Text.null linkText = Nothing
       | otherwise = Just $ MkName linkText
 
-inlineFolder :: Acc -> Inline Ann -> Acc
+inlineFolder :: Acc -> Inline a -> Acc
 inlineFolder acc (_ :< il) = case il of
   Link d t desc -> handleLink d t desc acc
   _ -> acc
 
-blockFolder :: Acc -> Block Ann -> Acc
+blockFolder :: Acc -> Block a -> Acc
 blockFolder acc@(c, st) (_ :< b) = case b of
   Plain ils ->
     foldl' inlineFolder acc ils
@@ -86,7 +86,7 @@ blockFolder acc@(c, st) (_ :< b) = case b of
       f s = s {maybeParent = Nothing, parents = drop 1 s.parents}
   _ -> acc
 
-collectionFromBlocks :: Blocks -> Collection
+collectionFromBlocks :: [Block a] -> Collection
 collectionFromBlocks = fst . foldl' blockFolder (Collection.empty, FoldState.empty)
 
 parseBlocks :: String -> Text -> Either ParseError Blocks
