@@ -13,6 +13,9 @@ import Data.Functor.Identity (runIdentity)
 import Data.Maybe qualified as Maybe
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Text.Lazy qualified as LazyText
+import Data.Text.Lazy.Builder (Builder)
+import Data.Text.Lazy.Builder qualified as Builder
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Label (..), Name (..))
@@ -37,21 +40,21 @@ saveEntity (c, st) = do
   return (e, st {uri = Nothing, name = Nothing, maybeParent = Just entity.uri})
 
 textFromInlines :: [Inline a] -> Text
-textFromInlines = foldMap go
+textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
   where
-    go :: Inline a -> Text
+    go :: Inline a -> Builder
     go (_ :< il) = case il of
       Initial.LineBreak -> "\n"
       Initial.SoftBreak -> " "
-      Initial.Str t -> t
-      Initial.Entity t -> t
-      Initial.EscapedChar c -> Text.singleton c
-      Initial.Emph ils -> textFromInlines ils
-      Initial.Strong ils -> textFromInlines ils
-      Initial.Link _ _ ils -> textFromInlines ils
-      Initial.Image _ _ ils -> textFromInlines ils
-      Initial.Code t -> "`" <> t <> "`"
-      Initial.RawInline _ t -> t
+      Initial.Str t -> Builder.fromText t
+      Initial.Entity t -> Builder.fromText t
+      Initial.EscapedChar c -> Builder.singleton c
+      Initial.Emph ils -> foldMap go ils
+      Initial.Strong ils -> foldMap go ils
+      Initial.Link _ _ ils -> foldMap go ils
+      Initial.Image _ _ ils -> foldMap go ils
+      Initial.Code t -> "`" <> Builder.fromText t <> "`"
+      Initial.RawInline _ t -> Builder.fromText t
 
 extractLink :: Text -> Text -> [Inline a] -> Acc -> Either Error Acc
 extractLink d _ desc (c, st) = do
