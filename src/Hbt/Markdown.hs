@@ -21,9 +21,9 @@ import Hbt.Markdown.FoldState (FoldState (..))
 import Hbt.Markdown.FoldState qualified as FoldState
 
 data Error
-  = Commonmark Commonmark.ParseError
-  | Collection Collection.Error
-  | Entity Entity.Error
+  = CommonmarkError Commonmark.ParseError
+  | CollectionError Collection.Error
+  | EntityError Entity.Error
   | NoSaveableEntity
   deriving (Show, Eq)
 
@@ -32,9 +32,9 @@ type Acc = (Collection, FoldState)
 saveEntity :: Acc -> Either Error Acc
 saveEntity (c, st) = do
   entity <- maybe (Left NoSaveableEntity) Right (FoldState.toEntity st)
-  let ca = Collection.upsert entity c
-  cb <- first Collection $ foldrM (Collection.addEdges entity.uri) ca (Maybe.listToMaybe st.parents)
-  return (cb, st {uri = Nothing, name = Nothing, maybeParent = Just entity.uri})
+  let d = Collection.upsert entity c
+  e <- first CollectionError $ foldrM (Collection.addEdges entity.uri) d (Maybe.listToMaybe st.parents)
+  return (e, st {uri = Nothing, name = Nothing, maybeParent = Just entity.uri})
 
 textFromInlines :: [Inline a] -> Text
 textFromInlines = foldMap go
@@ -55,13 +55,13 @@ textFromInlines = foldMap go
 
 extractLink :: Text -> Text -> [Inline a] -> Acc -> Either Error Acc
 extractLink d _ desc (c, st) = do
-  uri <- first Entity . Entity.mkURI $ Text.unpack d
+  uri <- first EntityError . Entity.mkURI $ Text.unpack d
   return (c, st {name, uri = Just uri})
   where
     linkText = textFromInlines desc
     name
-      | linkText == d = Nothing
       | Text.null linkText = Nothing
+      | linkText == d = Nothing
       | otherwise = Just $ MkName linkText
 
 inlineFolder :: Acc -> Inline a -> Either Error Acc
@@ -74,7 +74,7 @@ blockFolder acc@(c, st) (_ :< b) = case b of
   Initial.Plain ils ->
     foldlM inlineFolder acc ils
   Initial.Heading 1 ils -> do
-    time <- first Entity . Entity.mkTime $ Text.unpack headingText
+    time <- first EntityError . Entity.mkTime $ Text.unpack headingText
     return (c, st {time = Just time, maybeParent = Nothing, labels = []})
     where
       headingText = textFromInlines ils
@@ -97,4 +97,4 @@ parseBlocks :: String -> Text -> Either Commonmark.ParseError Blocks
 parseBlocks name = runIdentity . Commonmark.commonmarkWith Commonmark.defaultSyntaxSpec name
 
 parse :: String -> Text -> Either Error Collection
-parse name input = first Commonmark (parseBlocks name input) >>= collectionFromBlocks
+parse name input = first CommonmarkError (parseBlocks name input) >>= collectionFromBlocks
