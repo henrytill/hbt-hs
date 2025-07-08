@@ -67,7 +67,7 @@ testNoTitle =
           ]
       actual = either (error . show) id $ parse name input
       entity = mkEntity (unwrap $ mkURI "https://foo.com") (unwrap $ mkTime "November 15, 2023") Nothing Set.empty
-      expected = Collection.upsert entity $ Collection.empty
+      expected = Collection.upsert entity Collection.empty
    in assertEqual name expected actual
 
 testIndented :: Test
@@ -81,7 +81,7 @@ testIndented =
           ]
       actual = either (error . show) id $ parse name input
       entity = mkEntity (unwrap $ mkURI "https://foo.com") (unwrap $ mkTime "November 15, 2023") (Just $ MkName "Foo") Set.empty
-      expected = Collection.upsert entity $ Collection.empty
+      expected = Collection.upsert entity Collection.empty
    in assertEqual name expected actual
 
 testIndentedDouble :: Test
