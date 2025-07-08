@@ -25,7 +25,7 @@ data Ann = MkAnn
   deriving (Show, Eq)
 
 instance Semigroup Ann where
-  MkAnn a b <> MkAnn c d = MkAnn (a <> c) (b <> d)
+  a <> b = MkAnn (a.range <> b.range) (a.attributes <> b.attributes)
 
 instance Monoid Ann where
   mempty = MkAnn mempty mempty
