@@ -11,6 +11,7 @@ import Data.Foldable (foldlM, foldrM)
 import Data.Functor ((<&>))
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe qualified as Maybe
+import Data.Monoid (Last (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Lazy qualified as LazyText
@@ -37,7 +38,7 @@ saveEntity (c, st) = do
   entity <- maybe (Left NoSaveableEntity) Right (FoldState.toEntity st)
   let d = Collection.upsert entity c
   e <- first CollectionError $ foldrM (Collection.addEdges entity.uri) d (Maybe.listToMaybe st.parents)
-  return (e, st {uri = Nothing, name = Nothing, maybeParent = Just entity.uri})
+  return (e, st {uri = mempty, name = mempty, maybeParent = Last $ Just entity.uri})
 
 textFromInlines :: [Inline a] -> Text
 textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
@@ -59,13 +60,12 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
 extractLink :: Text -> Text -> [Inline a] -> Acc -> Either Error Acc
 extractLink d _ desc (c, st) = do
   uri <- first EntityError . Entity.mkURI $ Text.unpack d
-  return (c, st {name, uri = Just uri})
+  return (c, st {name, uri = Last $ Just uri})
   where
     linkText = textFromInlines desc
     name
-      | Text.null linkText = Nothing
-      | linkText == d = Nothing
-      | otherwise = Just $ MkName linkText
+      | Text.null linkText || linkText == d = mempty
+      | otherwise = Last . Just $ MkName linkText
 
 inlineFolder :: Acc -> Inline a -> Either Error Acc
 inlineFolder acc (_ :< il) = case il of
@@ -78,7 +78,7 @@ blockFolder acc@(c, st) (_ :< b) = case b of
     foldlM inlineFolder acc ils
   Initial.Heading 1 ils -> do
     time <- first EntityError . Entity.mkTime $ Text.unpack headingText
-    return (c, st {time = Just time, maybeParent = Nothing, labels = []})
+    return (c, st {time = Last $ Just time, maybeParent = mempty, labels = []})
     where
       headingText = textFromInlines ils
   Initial.Heading level ils ->
@@ -90,7 +90,7 @@ blockFolder acc@(c, st) (_ :< b) = case b of
     foldlM (foldlM blockFolder) acc' bss <&> fmap f
     where
       acc' = (c, foldr (\parent s -> s {parents = parent : s.parents}) st st.maybeParent)
-      f s = s {maybeParent = Nothing, parents = drop 1 s.parents}
+      f s = s {maybeParent = mempty, parents = drop 1 s.parents}
   _ -> return acc
 
 collectionFromBlocks :: [Block a] -> Either Error Collection
