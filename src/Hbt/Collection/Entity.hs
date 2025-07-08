@@ -1,5 +1,6 @@
 module Hbt.Collection.Entity
-  ( mkURI
+  ( Error (..)
+  , mkURI
   , Time (..)
   , mkTime
   , Name (..)
@@ -13,19 +14,23 @@ module Hbt.Collection.Entity
   )
 where
 
-import Data.Maybe qualified as Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
+import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
-import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
+import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Network.URI (URI)
 import Network.URI qualified as URI
-import Text.Printf (printf)
 import Prelude hiding (id)
 
-mkURI :: String -> URI
-mkURI s = Maybe.fromMaybe (error $ printf "Invalid URI: %s" s) (URI.parseURI s)
+data Error
+  = InvalidURI String
+  | InvalidTime String
+  deriving (Show, Eq)
+
+mkURI :: String -> Either Error URI
+mkURI s = maybe (Left $ InvalidURI s) Right (URI.parseURI s)
 
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
@@ -33,11 +38,13 @@ newtype Time = MkTime {unTime :: POSIXTime}
 epoch :: Time
 epoch = MkTime 0
 
-parsePOSIXTime :: String -> POSIXTime
-parsePOSIXTime = utcTimeToPOSIXSeconds . parseTimeOrError True defaultTimeLocale "%B %e, %Y"
+parsePOSIXTime :: String -> Either Error POSIXTime
+parsePOSIXTime s = case parseTimeM True defaultTimeLocale "%B %e, %Y" s :: Maybe UTCTime of
+  Nothing -> Left $ InvalidTime s
+  Just utcTime -> Right $ utcTimeToPOSIXSeconds utcTime
 
-mkTime :: String -> Time
-mkTime = MkTime . parsePOSIXTime
+mkTime :: String -> Either Error Time
+mkTime s = MkTime <$> parsePOSIXTime s
 
 newtype Name = MkName {unName :: Text}
   deriving (Show, Eq, Ord)
