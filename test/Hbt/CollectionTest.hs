@@ -13,9 +13,6 @@ import Network.URI qualified as URI
 import Test.Dwergaz
 import Prelude hiding (length, null)
 
-unwrap :: (Show a) => Either a b -> b
-unwrap = either (error . show) id
-
 mkTime :: Integer -> Time
 mkTime = MkTime . fromIntegral
 
@@ -33,7 +30,7 @@ emptyEntityTests =
 
 entityTests :: Test
 entityTests =
-  let uri = unwrap $ Entity.mkURI "https://example.com"
+  let uri = Entity.mkURI "https://example.com"
       time = mkTime 1000
       name = Just $ MkName "Test Entity"
       labels = Set.fromList [MkLabel "label1", MkLabel "label2"]
@@ -52,7 +49,7 @@ updateEntityTests :: Test
 updateEntityTests =
   let baseEntity =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Original")
           (Set.singleton $ MkLabel "label1")
@@ -66,7 +63,7 @@ updateEntityTests =
 
       olderBaseEntity =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 2000)
           (Just $ MkName "Original")
           (Set.singleton $ MkLabel "label1")
@@ -90,13 +87,13 @@ absorbEntityTests :: Test
 absorbEntityTests =
   let entity1 =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
@@ -126,7 +123,7 @@ insertTests :: Test
 insertTests =
   let entity =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test")
           (Set.singleton $ MkLabel "label")
@@ -142,13 +139,13 @@ multipleInsertTests :: Test
 multipleInsertTests =
   let entity1 =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com/1")
+          (Entity.mkURI "https://example.com/1")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com/2")
+          (Entity.mkURI "https://example.com/2")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
@@ -165,7 +162,7 @@ upsertTests :: Test
 upsertTests =
   let newEntity =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com")
+          (Entity.mkURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test")
           (Set.singleton $ MkLabel "label")
@@ -173,13 +170,13 @@ upsertTests =
 
       entity1 =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com/existing")
+          (Entity.mkURI "https://example.com/existing")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com/existing")
+          (Entity.mkURI "https://example.com/existing")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
@@ -199,13 +196,13 @@ edgeTests :: Test
 edgeTests =
   let entity1 =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com/1")
+          (Entity.mkURI "https://example.com/1")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (unwrap $ Entity.mkURI "https://example.com/2")
+          (Entity.mkURI "https://example.com/2")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
@@ -213,16 +210,16 @@ edgeTests =
       collection2 = insert entity2 collection1
 
       -- Test directed edge
-      collectionWithEdge = unwrap $ addEdge entity1.uri entity2.uri collection2
+      collectionWithEdge = addEdge entity1.uri entity2.uri collection2
       edgesFromURI1 = Multimap.lookup entity1.uri collectionWithEdge.edges
       edgesFromURI2 = Multimap.lookup entity1.uri collectionWithEdge.edges
 
       -- Test duplicate edge
-      collectionWithDuplicateEdge = unwrap $ addEdge entity1.uri entity2.uri collectionWithEdge
+      collectionWithDuplicateEdge = addEdge entity1.uri entity2.uri collectionWithEdge
       edgesFromURI1AfterDuplicate = Multimap.lookup entity1.uri collectionWithDuplicateEdge.edges
 
       -- Test bidirectional edges
-      collectionWithBidirectionalEdges = unwrap $ addEdges entity1.uri entity2.uri collection2
+      collectionWithBidirectionalEdges = addEdges entity1.uri entity2.uri collection2
       bidirectionalEdgesFromURI1 = Multimap.lookup entity1.uri collectionWithBidirectionalEdges.edges
       bidirectionalEdgesFromURI2 = Multimap.lookup entity2.uri collectionWithBidirectionalEdges.edges
    in group

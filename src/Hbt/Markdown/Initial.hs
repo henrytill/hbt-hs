@@ -6,9 +6,9 @@ import Commonmark qualified
 import Commonmark.Initial (Block, Blocks, Inline)
 import Commonmark.Initial qualified as Initial
 import Control.Comonad.Cofree
-import Data.Bifunctor
-import Data.Foldable (foldlM, foldrM)
-import Data.Functor ((<&>))
+import Control.Exception (Exception, throw)
+import Data.Foldable (foldl')
+import Data.Function ((&))
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe qualified as Maybe
 import Data.Monoid (Last (..))
@@ -24,21 +24,19 @@ import Hbt.Collection.Entity qualified as Entity
 import Hbt.Markdown.Initial.FoldState (FoldState (..))
 import Hbt.Markdown.Initial.FoldState qualified as FoldState
 
-data Error
-  = CommonmarkError Commonmark.ParseError
-  | CollectionError Collection.Error
-  | EntityError Entity.Error
-  | NoSaveableEntity
+data Error = NoSaveableEntity
   deriving (Show, Eq)
+
+instance Exception Error
 
 type Acc = (Collection, FoldState)
 
-saveEntity :: Acc -> Either Error Acc
+saveEntity :: Acc -> Acc
 saveEntity (c, st) = do
-  entity <- maybe (Left NoSaveableEntity) Right (FoldState.toEntity st)
-  let d = Collection.upsert entity c
-  e <- first CollectionError $ foldrM (Collection.addEdges entity.uri) d (Maybe.listToMaybe st.parents)
-  return (e, st {uri = mempty, name = mempty, maybeParent = Last $ Just entity.uri})
+  let entity = maybe (throw NoSaveableEntity) id (FoldState.toEntity st)
+      d = Collection.upsert entity c
+   in foldr (Collection.addEdges entity.uri) d (Maybe.listToMaybe st.parents)
+        & (,st {uri = mempty, name = mempty, maybeParent = Last $ Just entity.uri})
 
 textFromInlines :: [Inline a] -> Text
 textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
@@ -57,47 +55,47 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
       Initial.Code t -> "`" <> Builder.fromText t <> "`"
       Initial.RawInline _ t -> Builder.fromText t
 
-extractLink :: Text -> Text -> [Inline a] -> Acc -> Either Error Acc
-extractLink d _ desc (c, st) = do
-  uri <- first EntityError . Entity.mkURI $ Text.unpack d
-  return (c, st {name, uri = Last $ Just uri})
+extractLink :: Text -> Text -> [Inline a] -> Acc -> Acc
+extractLink d _ desc (c, st) =
+  (c, st {name, uri = Last $ Just uri})
   where
+    uri = Entity.mkURI $ Text.unpack d
     linkText = textFromInlines desc
     name
       | Text.null linkText || linkText == d = mempty
       | otherwise = Last . Just $ MkName linkText
 
-inlineFolder :: Acc -> Inline a -> Either Error Acc
+inlineFolder :: Acc -> Inline a -> Acc
 inlineFolder acc (_ :< il) = case il of
-  Initial.Link d t desc -> extractLink d t desc acc >>= saveEntity
-  _ -> return acc
+  Initial.Link d t desc -> saveEntity $ extractLink d t desc acc
+  _ -> acc
 
-blockFolder :: Acc -> Block a -> Either Error Acc
+blockFolder :: Acc -> Block a -> Acc
 blockFolder acc@(c, st) (_ :< b) = case b of
   Initial.Plain ils ->
-    foldlM inlineFolder acc ils
-  Initial.Heading 1 ils -> do
-    time <- first EntityError . Entity.mkTime $ Text.unpack headingText
-    return (c, st {time = Last $ Just time, maybeParent = mempty, labels = []})
+    foldl' inlineFolder acc ils
+  Initial.Heading 1 ils ->
+    (c, st {time = Last $ Just time, maybeParent = mempty, labels = []})
     where
+      time = Entity.mkTime $ Text.unpack headingText
       headingText = textFromInlines ils
   Initial.Heading level ils ->
-    return (c, st {labels})
+    (c, st {labels})
     where
       headingText = textFromInlines ils
       labels = MkLabel headingText : take (level - 2) st.labels
   Initial.List _ _ bss ->
-    foldlM (foldlM blockFolder) acc' bss <&> fmap f
+    foldl' (foldl' blockFolder) acc' bss & fmap f
     where
       acc' = (c, foldr (\parent s -> s {parents = parent : s.parents}) st st.maybeParent)
       f s = s {maybeParent = mempty, parents = drop 1 s.parents}
-  _ -> return acc
+  _ -> acc
 
-collectionFromBlocks :: [Block a] -> Either Error Collection
-collectionFromBlocks bs = foldlM blockFolder (Collection.empty, FoldState.empty) bs <&> fst
+collectionFromBlocks :: [Block a] -> Collection
+collectionFromBlocks bs = foldl' blockFolder (Collection.empty, FoldState.empty) bs & fst
 
 parseBlocks :: String -> Text -> Either Commonmark.ParseError Blocks
 parseBlocks name = runIdentity . Commonmark.commonmarkWith Commonmark.defaultSyntaxSpec name
 
-parse :: String -> Text -> Either Error Collection
-parse name input = first CommonmarkError (parseBlocks name input) >>= collectionFromBlocks
+parse :: String -> Text -> Either Commonmark.ParseError Collection
+parse name input = collectionFromBlocks <$> parseBlocks name input

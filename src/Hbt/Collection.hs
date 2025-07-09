@@ -2,6 +2,7 @@
 
 module Hbt.Collection where
 
+import Control.Exception (Exception, throw)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Multimap (Multimap)
@@ -13,6 +14,8 @@ import Prelude hiding (id, length)
 
 data Error = MissingEntities [URI]
   deriving (Show, Eq)
+
+instance Exception Error
 
 data Collection = MkCollection
   { entities :: Map URI Entity
@@ -56,16 +59,16 @@ upsert entity collection
             collection
   | otherwise = insert entity collection
 
-addEdge :: URI -> URI -> Collection -> Either Error Collection
+addEdge :: URI -> URI -> Collection -> Collection
 addEdge from to collection =
   let entities = collection.entities
       validFrom = Map.member from entities
       validTo = Map.member to entities
    in if
-        | validFrom && validTo -> Right $ collection {edges = Multimap.insert from to collection.edges}
-        | not validFrom && validTo -> Left $ MissingEntities [from]
-        | validFrom && not validTo -> Left $ MissingEntities [to]
-        | otherwise -> Left $ MissingEntities [from, to]
+        | validFrom && validTo -> collection {edges = Multimap.insert from to collection.edges}
+        | not validFrom && validTo -> throw $ MissingEntities [from]
+        | validFrom && not validTo -> throw $ MissingEntities [to]
+        | otherwise -> throw $ MissingEntities [from, to]
 
-addEdges :: URI -> URI -> Collection -> Either Error Collection
-addEdges from to collection = addEdge from to collection >>= addEdge to from
+addEdges :: URI -> URI -> Collection -> Collection
+addEdges from to = addEdge from to . addEdge to from

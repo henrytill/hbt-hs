@@ -14,6 +14,7 @@ module Hbt.Collection.Entity
   )
 where
 
+import Control.Exception (Exception, throw)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -23,14 +24,17 @@ import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Network.URI (URI)
 import Network.URI qualified as URI
 import Prelude hiding (id)
+import Prelude qualified
 
 data Error
   = InvalidURI String
   | InvalidTime String
   deriving (Show, Eq)
 
-mkURI :: String -> Either Error URI
-mkURI s = maybe (Left $ InvalidURI s) Right (URI.parseURI s)
+instance Exception Error
+
+mkURI :: String -> URI
+mkURI s = maybe (throw $ InvalidURI s) Prelude.id (URI.parseURI s)
 
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
@@ -38,13 +42,13 @@ newtype Time = MkTime {unTime :: POSIXTime}
 epoch :: Time
 epoch = MkTime 0
 
-parsePOSIXTime :: String -> Either Error POSIXTime
+parsePOSIXTime :: String -> POSIXTime
 parsePOSIXTime s = case parseTimeM True defaultTimeLocale "%B %e, %Y" s :: Maybe UTCTime of
-  Nothing -> Left $ InvalidTime s
-  Just utcTime -> Right $ utcTimeToPOSIXSeconds utcTime
+  Nothing -> throw $ InvalidTime s
+  Just utcTime -> utcTimeToPOSIXSeconds utcTime
 
-mkTime :: String -> Either Error Time
-mkTime s = MkTime <$> parsePOSIXTime s
+mkTime :: String -> Time
+mkTime s = MkTime $ parsePOSIXTime s
 
 newtype Name = MkName {unName :: Text}
   deriving (Show, Eq, Ord)

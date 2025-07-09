@@ -3,6 +3,7 @@
 module Hbt.Markdown.Direct where
 
 import Commonmark
+import Control.Exception (Exception, throw)
 import Control.Monad.Trans.State.Strict (State)
 import Control.Monad.Trans.State.Strict qualified as State
 import Data.Function ((&))
@@ -16,6 +17,11 @@ import Hbt.Collection.Entity (Label (..), Name (..))
 import Hbt.Collection.Entity qualified as Entity
 import Hbt.Markdown.Direct.FoldState (FoldState (..))
 import Hbt.Markdown.Direct.FoldState qualified as FoldState
+
+data Error = NoSaveableEntity
+  deriving (Show, Eq)
+
+instance Exception Error
 
 type Acc = (Collection, FoldState)
 
@@ -49,13 +55,10 @@ instance Rangeable (Harvester ()) where
 instance HasAttributes (Harvester ()) where
   addAttributes _ m = m
 
-unwrap :: (Show a) => Either a b -> b
-unwrap = either (error . show) id
-
 saveEntity :: Harvester ()
 saveEntity = modify $ \(c, st) ->
-  let e = Maybe.fromJust $ FoldState.toEntity st
-      addEdges collection = foldr (\f acc -> unwrap $ Collection.addEdges e.uri f acc) collection (Maybe.listToMaybe st.parents)
+  let e = maybe (throw NoSaveableEntity) id $ FoldState.toEntity st
+      addEdges collection = foldr (\f acc -> Collection.addEdges e.uri f acc) collection (Maybe.listToMaybe st.parents)
    in Collection.upsert e c
         & addEdges
         & (,st {uri = mempty, name = mempty, maybeParent = Last $ Just e.uri})
@@ -92,16 +95,14 @@ instance IsInline (Harvester ()) where
     desc
     (c1, st2) <- get
 
-    case Entity.mkURI (Text.unpack d) of
-      Left _ -> put (c1, st0)
-      Right uri -> do
-        let linkText = FoldState.flushBuffer st2
-        let name
-              | Text.null linkText || linkText == d = mempty
-              | otherwise = Last . Just $ MkName linkText
-        put (c1, st0 {name, uri = Last $ Just uri})
-        saveEntity
-        return ()
+    let uri = Entity.mkURI (Text.unpack d)
+    let linkText = FoldState.flushBuffer st2
+    let name
+          | Text.null linkText || linkText == d = mempty
+          | otherwise = Last . Just $ MkName linkText
+    put (c1, st0 {name, uri = Last $ Just uri})
+    saveEntity
+    return ()
 
   image _ _ desc = desc
 
@@ -124,7 +125,7 @@ instance IsBlock (Harvester ()) (Harvester ()) where
 
   heading 1 ils = do
     headingText <- collectInlineText ils
-    let time = unwrap $ Entity.mkTime (Text.unpack headingText)
+    let time = Entity.mkTime (Text.unpack headingText)
     modify . fmap $ \st -> st {time = Last $ Just time, maybeParent = mempty, labels = []}
   heading level ils = do
     headingText <- collectInlineText ils

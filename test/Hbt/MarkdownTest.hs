@@ -13,9 +13,6 @@ import Hbt.Markdown.Direct qualified as Direct
 import Hbt.Markdown.Initial qualified as Initial
 import Test.Dwergaz
 
-unwrap :: (Show a) => Either a b -> b
-unwrap = either (error . show) id
-
 data Parser = forall a. (Show a) => MkParser (String -> Text -> Either a Collection)
 
 testEmpty :: Parser -> Test
@@ -43,9 +40,9 @@ testNoLabels (MkParser parse) =
           , "- [Bar](https://bar.com)"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 15, 2023"
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
+      time = mkTime "November 15, 2023"
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
+      bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
       expected = Collection.upsert bar . Collection.upsert foo $ Collection.empty
    in assertEqual name expected actual
 
@@ -71,7 +68,7 @@ testNoTitle (MkParser parse) =
           , "- <https://foo.com>"
           ]
       actual = either (error . show) id $ parse name input
-      entity = mkEntity (unwrap $ mkURI "https://foo.com") (unwrap $ mkTime "November 15, 2023") Nothing Set.empty
+      entity = mkEntity (mkURI "https://foo.com") (mkTime "November 15, 2023") Nothing Set.empty
       expected = Collection.upsert entity Collection.empty
    in assertEqual name expected actual
 
@@ -85,7 +82,7 @@ testIndented (MkParser parse) =
           , "  - [Foo](https://foo.com)"
           ]
       actual = either (error . show) id $ parse name input
-      entity = mkEntity (unwrap $ mkURI "https://foo.com") (unwrap $ mkTime "November 15, 2023") (Just $ MkName "Foo") Set.empty
+      entity = mkEntity (mkURI "https://foo.com") (mkTime "November 15, 2023") (Just $ MkName "Foo") Set.empty
       expected = Collection.upsert entity Collection.empty
    in assertEqual name expected actual
 
@@ -112,15 +109,14 @@ testParent (MkParser parse) =
           , "  - [Bar](https://bar.com)"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 15, 2023"
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
+      time = mkTime "November 15, 2023"
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
+      bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
       expected =
         Collection.empty
           & Collection.upsert foo
           & Collection.upsert bar
           & Collection.addEdges foo.uri bar.uri
-          & unwrap
    in assertEqual name expected actual
 
 testParents :: Parser -> Test
@@ -135,19 +131,17 @@ testParents (MkParser parse) =
           , "    - [Baz](https://baz.com)"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 15, 2023"
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
-      baz = mkEntity (unwrap $ mkURI "https://baz.com") time (Just $ MkName "Baz") Set.empty
+      time = mkTime "November 15, 2023"
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
+      bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
+      baz = mkEntity (mkURI "https://baz.com") time (Just $ MkName "Baz") Set.empty
       expected =
         Collection.empty
           & Collection.upsert foo
           & Collection.upsert bar
           & Collection.addEdges foo.uri bar.uri
-          & unwrap
           & Collection.upsert baz
           & Collection.addEdges bar.uri baz.uri
-          & unwrap
    in assertEqual name expected actual
 
 testParentsIndented :: Parser -> Test
@@ -162,19 +156,17 @@ testParentsIndented (MkParser parse) =
           , "      - [Baz](https://baz.com)"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 15, 2023"
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
-      baz = mkEntity (unwrap $ mkURI "https://baz.com") time (Just $ MkName "Baz") Set.empty
+      time = mkTime "November 15, 2023"
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
+      bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
+      baz = mkEntity (mkURI "https://baz.com") time (Just $ MkName "Baz") Set.empty
       expected =
         Collection.empty
           & Collection.upsert foo
           & Collection.upsert bar
           & Collection.addEdges foo.uri bar.uri
-          & unwrap
           & Collection.upsert baz
           & Collection.addEdges bar.uri baz.uri
-          & unwrap
    in assertEqual name expected actual
 
 testSingleParent :: Parser -> Test
@@ -190,23 +182,20 @@ testSingleParent (MkParser parse) =
           , "  - [Quux](https://quux.com)"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 15, 2023"
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
-      baz = mkEntity (unwrap $ mkURI "https://baz.com") time (Just $ MkName "Baz") Set.empty
-      quux = mkEntity (unwrap $ mkURI "https://quux.com") time (Just $ MkName "Quux") Set.empty
+      time = mkTime "November 15, 2023"
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
+      bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
+      baz = mkEntity (mkURI "https://baz.com") time (Just $ MkName "Baz") Set.empty
+      quux = mkEntity (mkURI "https://quux.com") time (Just $ MkName "Quux") Set.empty
       expected =
         Collection.empty
           & Collection.upsert foo
           & Collection.upsert bar
           & Collection.addEdges foo.uri bar.uri
-          & unwrap
           & Collection.upsert baz
           & Collection.addEdges foo.uri baz.uri
-          & unwrap
           & Collection.upsert quux
           & Collection.addEdges foo.uri quux.uri
-          & unwrap
    in assertEqual name expected actual
 
 testInvertedParent :: Parser -> Test
@@ -220,9 +209,9 @@ testInvertedParent (MkParser parse) =
           , "- [Bar](https://bar.com)"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 15, 2023"
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
+      time = mkTime "November 15, 2023"
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
+      bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
       expected =
         Collection.empty
           & Collection.upsert foo
@@ -241,10 +230,10 @@ testInvertedSingleParent (MkParser parse) =
           , "- [Baz](https://baz.com)"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 15, 2023"
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
-      baz = mkEntity (unwrap $ mkURI "https://baz.com") time (Just $ MkName "Baz") Set.empty
+      time = mkTime "November 15, 2023"
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
+      bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
+      baz = mkEntity (mkURI "https://baz.com") time (Just $ MkName "Baz") Set.empty
       expected =
         Collection.empty
           & Collection.upsert foo
@@ -265,10 +254,10 @@ testLabel (MkParser parse) =
           , "- [Bar](https://bar.com)"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 15, 2023"
+      time = mkTime "November 15, 2023"
       labels = Set.fromList [MkLabel "Foo"]
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") labels
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time (Just $ MkName "Bar") labels
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") labels
+      bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") labels
       expected =
         Collection.empty
           & Collection.upsert foo
@@ -293,13 +282,13 @@ testLabels (MkParser parse) =
           , "- [Quux](https://quux.com)"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 15, 2023"
+      time = mkTime "November 15, 2023"
       labelsFoo = Set.fromList [MkLabel "Foo"]
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") labelsFoo
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time (Just $ MkName "Bar") labelsFoo
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") labelsFoo
+      bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") labelsFoo
       labelsBaz = Set.fromList [MkLabel "Baz"]
-      baz = mkEntity (unwrap $ mkURI "https://baz.com") time (Just $ MkName "Baz") labelsBaz
-      quux = mkEntity (unwrap $ mkURI "https://quux.com") time (Just $ MkName "Quux") labelsBaz
+      baz = mkEntity (mkURI "https://baz.com") time (Just $ MkName "Baz") labelsBaz
+      quux = mkEntity (mkURI "https://quux.com") time (Just $ MkName "Quux") labelsBaz
       expected =
         Collection.empty
           & Collection.upsert foo
@@ -328,13 +317,13 @@ testMultipleLabels (MkParser parse) =
           , "- [Baz](https://baz.com)"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 15, 2023"
+      time = mkTime "November 15, 2023"
       labelsFoo = Set.fromList [MkLabel "Foo"]
       labelsBar = Set.insert (MkLabel "Bar") labelsFoo
       labelsBaz = Set.insert (MkLabel "Baz") labelsBar
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") labelsFoo
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time (Just $ MkName "Bar") labelsBar
-      baz = mkEntity (unwrap $ mkURI "https://baz.com") time (Just $ MkName "Baz") labelsBaz
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") labelsFoo
+      bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") labelsBar
+      baz = mkEntity (mkURI "https://baz.com") time (Just $ MkName "Baz") labelsBaz
       expected =
         Collection.empty
           & Collection.upsert foo
@@ -360,12 +349,12 @@ testUpdated (MkParser parse) =
           , "- [Bar](https://foo.com)"
           ]
       actual = either (error . show) id $ parse name input
-      initialTime = unwrap $ mkTime "December 5, 2023"
-      updatedTime = unwrap $ mkTime "December 6, 2023"
+      initialTime = mkTime "December 5, 2023"
+      updatedTime = mkTime "December 6, 2023"
       labelsFoo = Set.fromList [MkLabel "Foo"]
       labelsBar = Set.fromList [MkLabel "Bar"]
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") initialTime (Just $ MkName "Foo") labelsFoo
-      bar = mkEntity (unwrap $ mkURI "https://foo.com") updatedTime (Just $ MkName "Bar") labelsBar
+      foo = mkEntity (mkURI "https://foo.com") initialTime (Just $ MkName "Foo") labelsFoo
+      bar = mkEntity (mkURI "https://foo.com") updatedTime (Just $ MkName "Bar") labelsBar
       expected =
         Collection.empty
           & Collection.upsert foo
@@ -394,12 +383,12 @@ testDescendingDates (MkParser parse) =
           , "- [Bar](https://foo.com)"
           ]
       actual = either (error . show) id $ parse name input
-      initialTime = unwrap $ mkTime "December 5, 2023"
-      updatedTime = unwrap $ mkTime "December 6, 2023"
+      initialTime = mkTime "December 5, 2023"
+      updatedTime = mkTime "December 6, 2023"
       labelsFoo = Set.fromList [MkLabel "Foo"]
       labelsBar = Set.fromList [MkLabel "Bar"]
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") updatedTime (Just $ MkName "Foo") labelsFoo
-      bar = mkEntity (unwrap $ mkURI "https://foo.com") initialTime (Just $ MkName "Bar") labelsBar
+      foo = mkEntity (mkURI "https://foo.com") updatedTime (Just $ MkName "Foo") labelsFoo
+      bar = mkEntity (mkURI "https://foo.com") initialTime (Just $ MkName "Bar") labelsBar
       expected =
         Collection.empty
           & Collection.upsert foo
@@ -434,13 +423,13 @@ testMixedDates (MkParser parse) =
           , "- [Baz](https://foo.com)"
           ]
       actual = either (error . show) id $ parse name input
-      initialTime = unwrap $ mkTime "December 5, 2023"
-      updatedTime = unwrap $ mkTime "December 6, 2023"
-      finalTime = unwrap $ mkTime "December 7, 2023"
+      initialTime = mkTime "December 5, 2023"
+      updatedTime = mkTime "December 6, 2023"
+      finalTime = mkTime "December 7, 2023"
       labelsFoo = Set.fromList [MkLabel "Foo"]
       labelsBar = Set.fromList [MkLabel "Bar"]
       labelsBaz = Set.fromList [MkLabel "Baz"]
-      uri = unwrap $ mkURI "https://foo.com"
+      uri = mkURI "https://foo.com"
       foo = mkEntity uri updatedTime (Just $ MkName "Foo") labelsFoo
       bar = mkEntity uri initialTime (Just $ MkName "Bar") labelsBar
       baz = mkEntity uri finalTime (Just $ MkName "Baz") labelsBaz
@@ -477,13 +466,13 @@ testBasic (MkParser parse) =
           , "- [Hello, world!](https://example.com/)"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 16, 2023"
+      time = mkTime "November 16, 2023"
       labelsFoo = Set.fromList [MkLabel "Foo"]
       labelsBar = Set.insert (MkLabel "Bar") labelsFoo
       labelsBaz = Set.fromList [MkLabel "Misc"]
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") labelsFoo
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time Nothing labelsBar
-      baz = mkEntity (unwrap $ mkURI "https://example.com/") time (Just $ MkName "Hello, world!") labelsBaz
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") labelsFoo
+      bar = mkEntity (mkURI "https://bar.com") time Nothing labelsBar
+      baz = mkEntity (mkURI "https://example.com/") time (Just $ MkName "Hello, world!") labelsBaz
       expected =
         Collection.empty
           & Collection.upsert foo
@@ -506,28 +495,24 @@ testNested (MkParser parse) =
           , "  - <https://baz.com>"
           ]
       actual = either (error . show) id $ parse name input
-      time = unwrap $ mkTime "November 17, 2023"
+      time = mkTime "November 17, 2023"
       labels = Set.fromList [MkLabel "Foo"]
-      foo = mkEntity (unwrap $ mkURI "https://foo.com") time (Just $ MkName "Foo") labels
-      bar = mkEntity (unwrap $ mkURI "https://bar.com") time Nothing labels
-      hello = mkEntity (unwrap $ mkURI "https://example.com/") time (Just $ MkName "Hello, world!") labels
-      quux = mkEntity (unwrap $ mkURI "https://quux.com") time (Just $ MkName "Quux") labels
-      baz = mkEntity (unwrap $ mkURI "https://baz.com") time Nothing labels
+      foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") labels
+      bar = mkEntity (mkURI "https://bar.com") time Nothing labels
+      hello = mkEntity (mkURI "https://example.com/") time (Just $ MkName "Hello, world!") labels
+      quux = mkEntity (mkURI "https://quux.com") time (Just $ MkName "Quux") labels
+      baz = mkEntity (mkURI "https://baz.com") time Nothing labels
       expected =
         Collection.empty
           & Collection.upsert foo
           & Collection.upsert bar
           & Collection.addEdges foo.uri bar.uri
-          & unwrap
           & Collection.upsert hello
           & Collection.addEdges foo.uri hello.uri
-          & unwrap
           & Collection.upsert quux
           & Collection.addEdges hello.uri quux.uri
-          & unwrap
           & Collection.upsert baz
           & Collection.addEdges foo.uri baz.uri
-          & unwrap
    in assertEqual name expected actual
 
 testEmptyLink :: Parser -> Test
@@ -540,7 +525,7 @@ testEmptyLink (MkParser parse) =
           , "- [](https://foo.com)"
           ]
       actual = either (error . show) id $ parse name input
-      entity = mkEntity (unwrap $ mkURI "https://foo.com") (unwrap $ mkTime "November 15, 2023") Nothing Set.empty
+      entity = mkEntity (mkURI "https://foo.com") (mkTime "November 15, 2023") Nothing Set.empty
       expected = Collection.upsert entity Collection.empty
    in assertEqual name expected actual
 
@@ -554,7 +539,7 @@ testLinkTextWithBackticks (MkParser parse) =
           , "- [`Foo`](https://foo.com)"
           ]
       actual = either (error . show) id $ parse name input
-      entity = mkEntity (unwrap $ mkURI "https://foo.com") (unwrap $ mkTime "November 15, 2023") (Just $ MkName "`Foo`") Set.empty
+      entity = mkEntity (mkURI "https://foo.com") (mkTime "November 15, 2023") (Just $ MkName "`Foo`") Set.empty
       expected = Collection.upsert entity Collection.empty
    in assertEqual name expected actual
 
@@ -568,7 +553,7 @@ testMixedLinkTextWithBackticks (MkParser parse) =
           , "- [Hello `Foo`, world!](https://foo.com)"
           ]
       actual = either (error . show) id $ parse name input
-      entity = mkEntity (unwrap $ mkURI "https://foo.com") (unwrap $ mkTime "November 15, 2023") (Just $ MkName "Hello `Foo`, world!") Set.empty
+      entity = mkEntity (mkURI "https://foo.com") (mkTime "November 15, 2023") (Just $ MkName "Hello `Foo`, world!") Set.empty
       expected = Collection.upsert entity Collection.empty
    in assertEqual name expected actual
 
