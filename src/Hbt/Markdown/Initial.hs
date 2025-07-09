@@ -9,7 +9,6 @@ import Control.Comonad.Cofree
 import Control.Exception (Exception, throw)
 import Data.Foldable (foldl')
 import Data.Function ((&))
-import Data.Functor.Identity (runIdentity)
 import Data.Maybe qualified as Maybe
 import Data.Monoid (Last (..))
 import Data.Text (Text)
@@ -92,10 +91,10 @@ blockFolder acc@(c, st) (_ :< b) = case b of
   _ -> acc
 
 collectionFromBlocks :: [Block a] -> Collection
-collectionFromBlocks bs = foldl' blockFolder (Collection.empty, FoldState.empty) bs & fst
+collectionFromBlocks bs = fst $ foldl' blockFolder mempty bs
 
 parseBlocks :: String -> Text -> Either Commonmark.ParseError Blocks
-parseBlocks name = runIdentity . Commonmark.commonmarkWith Commonmark.defaultSyntaxSpec name
+parseBlocks = Commonmark.commonmark
 
 parse :: String -> Text -> Either Commonmark.ParseError Collection
 parse name input = collectionFromBlocks <$> parseBlocks name input

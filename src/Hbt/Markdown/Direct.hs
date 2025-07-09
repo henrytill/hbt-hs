@@ -139,4 +139,4 @@ instance IsBlock (Harvester ()) (Harvester ()) where
 parse :: String -> Text -> Either ParseError Collection
 parse name input = do
   harvester <- commonmark name input :: Either ParseError (Harvester ())
-  return . fst $ execHarvester harvester (mempty, mempty)
+  return . fst $ execHarvester harvester mempty
