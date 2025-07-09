@@ -15,6 +15,7 @@ module Hbt.Collection.Entity
 where
 
 import Control.Exception (Exception, throw)
+import Data.Maybe qualified as Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -24,7 +25,6 @@ import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Network.URI (URI)
 import Network.URI qualified as URI
 import Prelude hiding (id)
-import Prelude qualified
 
 data Error
   = InvalidURI String
@@ -34,7 +34,7 @@ data Error
 instance Exception Error
 
 mkURI :: String -> URI
-mkURI s = maybe (throw $ InvalidURI s) Prelude.id (URI.parseURI s)
+mkURI s = Maybe.fromMaybe (throw $ InvalidURI s) (URI.parseURI s)
 
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)

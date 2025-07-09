@@ -44,10 +44,10 @@ instance Show (Harvester ()) where
   show _ = show ()
 
 instance Semigroup (Harvester ()) where
-  (MkHarvester a) <> (MkHarvester b) = MkHarvester $ a >> b
+  MkHarvester a <> MkHarvester b = MkHarvester $ a >> b
 
 instance Monoid (Harvester ()) where
-  mempty = MkHarvester (pure ())
+  mempty = MkHarvester $ pure ()
 
 instance Rangeable (Harvester ()) where
   ranged _ m = m
@@ -57,10 +57,9 @@ instance HasAttributes (Harvester ()) where
 
 saveEntity :: Harvester ()
 saveEntity = modify $ \(c, st) ->
-  let e = maybe (throw NoSaveableEntity) id $ FoldState.toEntity st
-      addEdges collection = foldr (\f acc -> Collection.addEdges e.uri f acc) collection (Maybe.listToMaybe st.parents)
-   in Collection.upsert e c
-        & addEdges
+  let e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity st)
+      d = Collection.upsert e c
+   in foldr (Collection.addEdges e.uri) d (Maybe.listToMaybe st.parents)
         & (,st {uri = mempty, name = mempty, maybeParent = Last $ Just e.uri})
 
 collectInlineText :: Harvester () -> Harvester Text
@@ -89,18 +88,12 @@ instance IsInline (Harvester ()) where
   strong ils = ils
 
   link d _ desc = do
-    (c0, st0) <- get
-    let st1 = FoldState.clearBuffer st0
-    put (c0, st1)
-    desc
-    (c1, st2) <- get
-
-    let uri = Entity.mkURI (Text.unpack d)
-    let linkText = FoldState.flushBuffer st2
+    let uri = Entity.mkURI $ Text.unpack d
+    linkText <- collectInlineText desc
     let name
           | Text.null linkText || linkText == d = mempty
           | otherwise = Last . Just $ MkName linkText
-    put (c1, st0 {name, uri = Last $ Just uri})
+    modify . fmap $ \st -> st {name, uri = Last $ Just uri}
     saveEntity
     return ()
 
@@ -125,7 +118,7 @@ instance IsBlock (Harvester ()) (Harvester ()) where
 
   heading 1 ils = do
     headingText <- collectInlineText ils
-    let time = Entity.mkTime (Text.unpack headingText)
+    let time = Entity.mkTime $ Text.unpack headingText
     modify . fmap $ \st -> st {time = Last $ Just time, maybeParent = mempty, labels = []}
   heading level ils = do
     headingText <- collectInlineText ils

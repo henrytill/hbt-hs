@@ -32,11 +32,11 @@ instance Exception Error
 type Acc = (Collection, FoldState)
 
 saveEntity :: Acc -> Acc
-saveEntity (c, st) = do
-  let entity = maybe (throw NoSaveableEntity) id (FoldState.toEntity st)
-      d = Collection.upsert entity c
-   in foldr (Collection.addEdges entity.uri) d (Maybe.listToMaybe st.parents)
-        & (,st {uri = mempty, name = mempty, maybeParent = Last $ Just entity.uri})
+saveEntity (c, st) =
+  let e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity st)
+      d = Collection.upsert e c
+   in foldr (Collection.addEdges e.uri) d (Maybe.listToMaybe st.parents)
+        & (,st {uri = mempty, name = mempty, maybeParent = Last $ Just e.uri})
 
 textFromInlines :: [Inline a] -> Text
 textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
