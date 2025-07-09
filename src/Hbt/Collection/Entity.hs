@@ -42,13 +42,10 @@ newtype Time = MkTime {unTime :: POSIXTime}
 epoch :: Time
 epoch = MkTime 0
 
-parsePOSIXTime :: String -> POSIXTime
-parsePOSIXTime s = case parseTimeM True defaultTimeLocale "%B %e, %Y" s :: Maybe UTCTime of
-  Nothing -> throw $ InvalidTime s
-  Just utcTime -> utcTimeToPOSIXSeconds utcTime
-
 mkTime :: String -> Time
-mkTime s = MkTime $ parsePOSIXTime s
+mkTime s = case parseTimeM True defaultTimeLocale "%B %e, %Y" s :: Maybe UTCTime of
+  Nothing -> throw $ InvalidTime s
+  Just utcTime -> MkTime $ utcTimeToPOSIXSeconds utcTime
 
 newtype Name = MkName {unName :: Text}
   deriving (Show, Eq, Ord)
