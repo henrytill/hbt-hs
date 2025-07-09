@@ -4,31 +4,36 @@ module Hbt.MarkdownTest where
 
 import Data.Function ((&))
 import Data.Set qualified as Set
+import Data.Text (Text)
 import Data.Text qualified as Text
+import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity
-import Hbt.Markdown (parse)
+import Hbt.Markdown qualified as Markdown
+import Hbt.Markdown.Direct qualified as Direct
 import Test.Dwergaz
 
 unwrap :: (Show a) => Either a b -> b
 unwrap = either (error . show) id
 
-testEmpty :: Test
-testEmpty = assertBool name $ any Collection.null actual
+data Parser = forall a. (Show a) => MkParser (String -> Text -> Either a Collection)
+
+testEmpty :: Parser -> Test
+testEmpty (MkParser parse) = assertBool name $ any Collection.null actual
   where
     name = "testEmpty"
     input = mempty
     actual = parse name input
 
-testOnlyDate :: Test
-testOnlyDate = assertBool name $ any Collection.null actual
+testOnlyDate :: Parser -> Test
+testOnlyDate (MkParser parse) = assertBool name $ any Collection.null actual
   where
     name = "testOnlyDate"
     input = "# November 15, 2023\n"
     actual = parse name input
 
-testNoLabels :: Test
-testNoLabels =
+testNoLabels :: Parser -> Test
+testNoLabels (MkParser parse) =
   let name = "testNoLabels"
       input =
         Text.unlines
@@ -44,8 +49,8 @@ testNoLabels =
       expected = Collection.upsert bar . Collection.upsert foo $ Collection.empty
    in assertEqual name expected actual
 
-testNoUrl :: Test
-testNoUrl =
+testNoUrl :: Parser -> Test
+testNoUrl (MkParser parse) =
   let name = "testNoUrl"
       input =
         Text.unlines
@@ -56,8 +61,8 @@ testNoUrl =
       actual = parse name input
    in assertBool name $ any Collection.null actual
 
-testNoTitle :: Test
-testNoTitle =
+testNoTitle :: Parser -> Test
+testNoTitle (MkParser parse) =
   let name = "testNoTitle"
       input =
         Text.unlines
@@ -70,8 +75,8 @@ testNoTitle =
       expected = Collection.upsert entity Collection.empty
    in assertEqual name expected actual
 
-testIndented :: Test
-testIndented =
+testIndented :: Parser -> Test
+testIndented (MkParser parse) =
   let name = "testIndented"
       input =
         Text.unlines
@@ -84,8 +89,8 @@ testIndented =
       expected = Collection.upsert entity Collection.empty
    in assertEqual name expected actual
 
-testIndentedDouble :: Test
-testIndentedDouble =
+testIndentedDouble :: Parser -> Test
+testIndentedDouble (MkParser parse) =
   let name = "testIndented"
       input =
         Text.unlines
@@ -96,8 +101,8 @@ testIndentedDouble =
       actual = parse name input
    in assertBool name $ any Collection.null actual
 
-testParent :: Test
-testParent =
+testParent :: Parser -> Test
+testParent (MkParser parse) =
   let name = "testParent"
       input =
         Text.unlines
@@ -118,8 +123,8 @@ testParent =
           & unwrap
    in assertEqual name expected actual
 
-testParents :: Test
-testParents =
+testParents :: Parser -> Test
+testParents (MkParser parse) =
   let name = "testParents"
       input =
         Text.unlines
@@ -145,8 +150,8 @@ testParents =
           & unwrap
    in assertEqual name expected actual
 
-testParentsIndented :: Test
-testParentsIndented =
+testParentsIndented :: Parser -> Test
+testParentsIndented (MkParser parse) =
   let name = "testParentsIndented"
       input =
         Text.unlines
@@ -172,8 +177,8 @@ testParentsIndented =
           & unwrap
    in assertEqual name expected actual
 
-testSingleParent :: Test
-testSingleParent =
+testSingleParent :: Parser -> Test
+testSingleParent (MkParser parse) =
   let name = "testSingleParent"
       input =
         Text.unlines
@@ -204,8 +209,8 @@ testSingleParent =
           & unwrap
    in assertEqual name expected actual
 
-testInvertedParent :: Test
-testInvertedParent =
+testInvertedParent :: Parser -> Test
+testInvertedParent (MkParser parse) =
   let name = "testInvertedParent"
       input =
         Text.unlines
@@ -224,8 +229,8 @@ testInvertedParent =
           & Collection.upsert bar
    in assertEqual name expected actual
 
-testInvertedSingleParent :: Test
-testInvertedSingleParent =
+testInvertedSingleParent :: Parser -> Test
+testInvertedSingleParent (MkParser parse) =
   let name = "testSingleParent"
       input =
         Text.unlines
@@ -247,8 +252,8 @@ testInvertedSingleParent =
           & Collection.upsert baz
    in assertEqual name expected actual
 
-testLabel :: Test
-testLabel =
+testLabel :: Parser -> Test
+testLabel (MkParser parse) =
   let name = "testLabel"
       input =
         Text.unlines
@@ -270,8 +275,8 @@ testLabel =
           & Collection.upsert bar
    in assertEqual name expected actual
 
-testLabels :: Test
-testLabels =
+testLabels :: Parser -> Test
+testLabels (MkParser parse) =
   let name = "testLabels"
       input =
         Text.unlines
@@ -303,8 +308,8 @@ testLabels =
           & Collection.upsert quux
    in assertEqual name expected actual
 
-testMultipleLabels :: Test
-testMultipleLabels =
+testMultipleLabels :: Parser -> Test
+testMultipleLabels (MkParser parse) =
   let name = "testMultipleLabels"
       input =
         Text.unlines
@@ -337,8 +342,8 @@ testMultipleLabels =
           & Collection.upsert baz
    in assertEqual name expected actual
 
-testUpdated :: Test
-testUpdated =
+testUpdated :: Parser -> Test
+testUpdated (MkParser parse) =
   let name = "testUpdated"
       input =
         Text.unlines
@@ -371,8 +376,8 @@ testUpdated =
         , assertEqual "same collection" expected actual
         ]
 
-testDescendingDates :: Test
-testDescendingDates =
+testDescendingDates :: Parser -> Test
+testDescendingDates (MkParser parse) =
   let name = "testDescendingDates"
       input =
         Text.unlines
@@ -405,8 +410,8 @@ testDescendingDates =
         , assertEqual "same collection" expected actual
         ]
 
-testMixedDates :: Test
-testMixedDates =
+testMixedDates :: Parser -> Test
+testMixedDates (MkParser parse) =
   let name = "testMixedDates"
       input =
         Text.unlines
@@ -453,8 +458,8 @@ testMixedDates =
         , assertEqual "expected updated" (Just [finalTime, updatedTime]) ((.updatedAt) <$> Collection.lookupEntity uri actual)
         ]
 
-testBasic :: Test
-testBasic =
+testBasic :: Parser -> Test
+testBasic (MkParser parse) =
   let name = "testBasic"
       input =
         Text.unlines
@@ -486,8 +491,8 @@ testBasic =
           & Collection.upsert baz
    in assertEqual name expected actual
 
-testNested :: Test
-testNested =
+testNested :: Parser -> Test
+testNested (MkParser parse) =
   let name = "testNested"
       input =
         Text.unlines
@@ -525,8 +530,8 @@ testNested =
           & unwrap
    in assertEqual name expected actual
 
-testEmptyLink :: Test
-testEmptyLink =
+testEmptyLink :: Parser -> Test
+testEmptyLink (MkParser parse) =
   let name = "testEmptyLink"
       input =
         Text.unlines
@@ -539,8 +544,8 @@ testEmptyLink =
       expected = Collection.upsert entity Collection.empty
    in assertEqual name expected actual
 
-testLinkTextWithBackticks :: Test
-testLinkTextWithBackticks =
+testLinkTextWithBackticks :: Parser -> Test
+testLinkTextWithBackticks (MkParser parse) =
   let name = "testLinkTextWithBackticks"
       input =
         Text.unlines
@@ -553,8 +558,8 @@ testLinkTextWithBackticks =
       expected = Collection.upsert entity Collection.empty
    in assertEqual name expected actual
 
-testMixedLinkTextWithBackticks :: Test
-testMixedLinkTextWithBackticks =
+testMixedLinkTextWithBackticks :: Parser -> Test
+testMixedLinkTextWithBackticks (MkParser parse) =
   let name = "testMixedLinkTextWithBackticks"
       input =
         Text.unlines
@@ -571,31 +576,36 @@ allTests :: Test
 allTests =
   group
     "Hbt.Markdown tests"
-    [ testEmpty
-    , testOnlyDate
-    , testNoLabels
-    , testNoUrl
-    , testNoTitle
-    , testIndented
-    , testIndentedDouble
-    , testParent
-    , testParents
-    , testParentsIndented
-    , testSingleParent
-    , testInvertedParent
-    , testInvertedSingleParent
-    , testLabel
-    , testLabels
-    , testMultipleLabels
-    , testUpdated
-    , testDescendingDates
-    , testMixedDates
-    , testBasic
-    , testNested
-    , testEmptyLink
-    , testLinkTextWithBackticks
-    , testMixedLinkTextWithBackticks
+    [ group "Vanilla tests" (fmap ($ MkParser Markdown.parse) tests)
+    , group "Direct tests" (fmap ($ MkParser Direct.parse) tests)
     ]
+  where
+    tests =
+      [ testEmpty
+      , testOnlyDate
+      , testNoLabels
+      , testNoUrl
+      , testNoTitle
+      , testIndented
+      , testIndentedDouble
+      , testParent
+      , testParents
+      , testParentsIndented
+      , testSingleParent
+      , testInvertedParent
+      , testInvertedSingleParent
+      , testLabel
+      , testLabels
+      , testMultipleLabels
+      , testUpdated
+      , testDescendingDates
+      , testMixedDates
+      , testBasic
+      , testNested
+      , testEmptyLink
+      , testLinkTextWithBackticks
+      , testMixedLinkTextWithBackticks
+      ]
 
 results :: (String, Bool)
 results = (buildString mempty, allPassed)
