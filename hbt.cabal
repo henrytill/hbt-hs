@@ -26,11 +26,11 @@ library
         Hbt
         Hbt.Collection
         Hbt.Collection.Entity
-        Hbt.Markdown
+        Hbt.Markdown.Initial
         Hbt.Markdown.Direct
 
     hs-source-dirs:   src
-    other-modules:    Hbt.Markdown.FoldState,
+    other-modules:    Hbt.Markdown.Initial.FoldState,
                       Hbt.Markdown.Direct.FoldState
     default-language: GHC2021
     ghc-options:      -Wall

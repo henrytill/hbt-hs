@@ -1,4 +1,4 @@
-module Hbt.Markdown.FoldState where
+module Hbt.Markdown.Initial.FoldState where
 
 import Data.Monoid (Last (..))
 import Data.Set qualified as Set

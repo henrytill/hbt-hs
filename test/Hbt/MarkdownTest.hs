@@ -9,8 +9,8 @@ import Data.Text qualified as Text
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity
-import Hbt.Markdown qualified as Markdown
 import Hbt.Markdown.Direct qualified as Direct
+import Hbt.Markdown.Initial qualified as Initial
 import Test.Dwergaz
 
 unwrap :: (Show a) => Either a b -> b
@@ -576,8 +576,8 @@ allTests :: Test
 allTests =
   group
     "Hbt.Markdown tests"
-    [ group "Vanilla tests" (fmap ($ MkParser Markdown.parse) tests)
-    , group "Direct tests" (fmap ($ MkParser Direct.parse) tests)
+    [ group "Initial" (fmap ($ MkParser Initial.parse) tests)
+    , group "Direct" (fmap ($ MkParser Direct.parse) tests)
     ]
   where
     tests =

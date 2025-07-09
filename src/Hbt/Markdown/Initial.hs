@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Hbt.Markdown where
+module Hbt.Markdown.Initial where
 
 import Commonmark qualified
 import Commonmark.Initial (Block, Blocks, Inline)
@@ -21,8 +21,8 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Label (..), Name (..))
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Markdown.FoldState (FoldState (..))
-import Hbt.Markdown.FoldState qualified as FoldState
+import Hbt.Markdown.Initial.FoldState (FoldState (..))
+import Hbt.Markdown.Initial.FoldState qualified as FoldState
 
 data Error
   = CommonmarkError Commonmark.ParseError
