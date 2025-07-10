@@ -34,8 +34,9 @@ saveEntity :: Acc -> Acc
 saveEntity (c, st) =
   let e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity st)
       d = Collection.upsert e c
+      maybeParent = Last $ Just e.uri
    in foldr (Collection.addEdges e.uri) d (Maybe.listToMaybe st.parents)
-        & (,st {uri = mempty, name = mempty, maybeParent = Last $ Just e.uri})
+        & (,st {maybeParent, uri = mempty, name = mempty})
 
 textFromInlines :: [Inline a] -> Text
 textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
@@ -56,9 +57,9 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
 
 extractLink :: Text -> Text -> [Inline a] -> Acc -> Acc
 extractLink d _ desc (c, st) =
-  (c, st {name, uri = Last $ Just uri})
+  (c, st {uri, name})
   where
-    uri = Entity.mkURI $ Text.unpack d
+    uri = Last . Just . Entity.mkURI $ Text.unpack d
     linkText = textFromInlines desc
     name
       | Text.null linkText || linkText == d = mempty
@@ -74,9 +75,9 @@ blockFolder acc@(c, st) (_ :< b) = case b of
   Initial.Plain ils ->
     foldl' inlineFolder acc ils
   Initial.Heading 1 ils ->
-    (c, st {time = Last $ Just time, maybeParent = mempty, labels = []})
+    (c, st {time, maybeParent = mempty, labels = mempty})
     where
-      time = Entity.mkTime $ Text.unpack headingText
+      time = Last . Just . Entity.mkTime $ Text.unpack headingText
       headingText = textFromInlines ils
   Initial.Heading level ils ->
     (c, st {labels})

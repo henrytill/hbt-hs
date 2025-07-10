@@ -59,8 +59,9 @@ saveEntity :: Harvester ()
 saveEntity = modify $ \(c, st) ->
   let e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity st)
       d = Collection.upsert e c
+      maybeParent = Last $ Just e.uri
    in foldr (Collection.addEdges e.uri) d (Maybe.listToMaybe st.parents)
-        & (,st {uri = mempty, name = mempty, maybeParent = Last $ Just e.uri})
+        & (,st {maybeParent, uri = mempty, name = mempty})
 
 collectInlineText :: Harvester () -> Harvester Text
 collectInlineText harvester = do
@@ -88,12 +89,12 @@ instance IsInline (Harvester ()) where
   strong ils = ils
 
   link d _ desc = do
-    let uri = Entity.mkURI $ Text.unpack d
+    let uri = Last . Just . Entity.mkURI $ Text.unpack d
     linkText <- collectInlineText desc
     let name
           | Text.null linkText || linkText == d = mempty
           | otherwise = Last . Just $ MkName linkText
-    modify . fmap $ \st -> st {name, uri = Last $ Just uri}
+    modify . fmap $ \st -> st {uri, name}
     saveEntity
     return ()
 
@@ -118,8 +119,8 @@ instance IsBlock (Harvester ()) (Harvester ()) where
 
   heading 1 ils = do
     headingText <- collectInlineText ils
-    let time = Entity.mkTime $ Text.unpack headingText
-    modify . fmap $ \st -> st {time = Last $ Just time, maybeParent = mempty, labels = []}
+    let time = Last . Just . Entity.mkTime $ Text.unpack headingText
+    modify . fmap $ \st -> st {time, maybeParent = mempty, labels = mempty}
   heading level ils = do
     headingText <- collectInlineText ils
     modify . fmap $ \st -> st {labels = MkLabel headingText : take (level - 2) st.labels}
