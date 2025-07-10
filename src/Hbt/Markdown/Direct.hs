@@ -28,18 +28,6 @@ type Acc = (Collection, FoldState)
 newtype Harvester a = MkHarvester (State Acc a)
   deriving (Functor, Applicative, Monad)
 
-get :: Harvester Acc
-get = MkHarvester State.get
-
-put :: Acc -> Harvester ()
-put = MkHarvester . State.put
-
-modify :: (Acc -> Acc) -> Harvester ()
-modify = MkHarvester . State.modify
-
-execHarvester :: Harvester a -> Acc -> Acc
-execHarvester (MkHarvester m) = State.execState m
-
 instance Show (Harvester ()) where
   show _ = show ()
 
@@ -54,6 +42,24 @@ instance Rangeable (Harvester ()) where
 
 instance HasAttributes (Harvester ()) where
   addAttributes _ m = m
+
+get :: Harvester Acc
+get = MkHarvester State.get
+
+put :: Acc -> Harvester ()
+put = MkHarvester . State.put
+
+modify :: (Acc -> Acc) -> Harvester ()
+modify = MkHarvester . State.modify
+
+execHarvester :: Harvester a -> Acc -> Acc
+execHarvester (MkHarvester m) = State.execState m
+
+harvestChar :: Char -> Harvester ()
+harvestChar c = modify . fmap $ FoldState.appendChar c
+
+harvestText :: Text -> Harvester ()
+harvestText t = modify . fmap $ FoldState.appendText t
 
 saveEntity :: Harvester ()
 saveEntity = modify $ \(c, st) ->
@@ -75,15 +81,15 @@ collectInlineText harvester = do
   return collectedText
 
 instance IsInline (Harvester ()) where
-  lineBreak = modify . fmap $ FoldState.appendChar '\n'
+  lineBreak = harvestChar '\n'
 
-  softBreak = modify . fmap $ FoldState.appendChar ' '
+  softBreak = harvestChar ' '
 
-  str t = modify . fmap $ FoldState.appendText t
+  str = harvestText
 
-  entity = str
+  entity = harvestText
 
-  escapedChar ch = modify . fmap $ FoldState.appendChar ch
+  escapedChar = harvestChar
 
   emph ils = ils
   strong ils = ils
@@ -100,11 +106,9 @@ instance IsInline (Harvester ()) where
 
   image _ _ desc = desc
 
-  code t = modify . fmap $ FoldState.appendText codeText
-    where
-      codeText = "`" <> t <> "`"
+  code t = harvestText $ "`" <> t <> "`"
 
-  rawInline _ = str
+  rawInline _ = harvestText
 
 instance IsBlock (Harvester ()) (Harvester ()) where
   paragraph ils = ils
@@ -131,7 +135,7 @@ instance IsBlock (Harvester ()) (Harvester ()) where
 
   list _ _ bss = do
     (c0, st0) <- get
-    let st1 = foldr (\parent s -> s {parents = parent : s.parents}) st0 st0.maybeParent
+    let st1 = foldr (\parent st -> st {parents = parent : st.parents}) st0 st0.maybeParent
     put (c0, st1)
     sequence_ bss
     (c2, _) <- get
