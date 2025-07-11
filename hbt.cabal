@@ -77,7 +77,6 @@ test-suite hbt-test
         commonmark-extensions ^>=0.2.6,
         containers ^>=0.6.7,
         dwergaz ^>=0.3.1.0,
-        free ^>=5.2,
         network-uri ^>=2.6.4.2,
         parsec ^>=3.1.16.1,
         text ^>=2.0.2,

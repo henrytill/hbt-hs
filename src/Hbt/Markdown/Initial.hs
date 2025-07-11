@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Hbt.Markdown.Initial where
 
 import Commonmark qualified
-import Commonmark.Initial (Block, Blocks, Inline)
+import Commonmark.Initial (Block, Blocks, Inline, pattern MkBlock, pattern MkInline)
 import Commonmark.Initial qualified as Initial
-import Control.Comonad.Cofree
 import Control.Exception (Exception, throw)
 import Data.Foldable (foldl')
 import Data.Function ((&))
@@ -42,7 +42,7 @@ textFromInlines :: [Inline a] -> Text
 textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
   where
     go :: Inline a -> Builder
-    go (_ :< il) = case il of
+    go (MkInline _ il) = case il of
       Initial.LineBreak -> "\n"
       Initial.SoftBreak -> " "
       Initial.Str t -> Builder.fromText t
@@ -66,12 +66,12 @@ extractLink d _ desc (c, st) =
       | otherwise = Last . Just $ MkName linkText
 
 inlineFolder :: Acc -> Inline a -> Acc
-inlineFolder acc (_ :< il) = case il of
+inlineFolder acc (MkInline _ il) = case il of
   Initial.Link d t desc -> saveEntity $ extractLink d t desc acc
   _ -> acc
 
 blockFolder :: Acc -> Block a -> Acc
-blockFolder acc@(c, st) (_ :< b) = case b of
+blockFolder acc@(c, st) (MkBlock _ b) = case b of
   Initial.Plain ils ->
     foldl' inlineFolder acc ils
   Initial.Heading 1 ils ->

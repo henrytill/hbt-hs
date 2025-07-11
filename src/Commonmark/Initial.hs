@@ -1,6 +1,18 @@
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Commonmark.Initial where
+module Commonmark.Initial
+  ( Ann (..)
+  , Block
+  , Blocks
+  , BlockF (..)
+  , Inline
+  , Inlines
+  , InlineF (..)
+  , pattern MkInline
+  , pattern MkBlock
+  )
+where
 
 import Commonmark.Types
   ( Attributes
@@ -49,13 +61,18 @@ $(deriveEq1 ''InlineF)
 
 type Inline a = Cofree InlineF a
 
+pattern MkInline :: a -> InlineF (Inline a) -> Inline a
+pattern MkInline a body = a :< body
+
+{-# COMPLETE MkInline #-}
+
 type Inlines = [Inline Ann]
 
 rangedInline :: SourceRange -> Inline Ann -> Inline Ann
-rangedInline sr (ann :< body) = ann <> MkAnn sr mempty :< body
+rangedInline sr (MkInline ann body) = MkInline (ann <> MkAnn sr mempty) body
 
 addAttributesInline :: Attributes -> Inline Ann -> Inline Ann
-addAttributesInline attrs (ann :< body) = ann <> MkAnn mempty attrs :< body
+addAttributesInline attrs (MkInline ann body) = MkInline (ann <> MkAnn mempty attrs) body
 
 instance Rangeable Inlines where
   ranged sr = map $ rangedInline sr
@@ -64,7 +81,7 @@ instance HasAttributes Inlines where
   addAttributes attrs = map $ addAttributesInline attrs
 
 mkInline :: (Monoid a) => InlineF (Inline a) -> Inline a
-mkInline il = mempty :< il
+mkInline il = MkInline mempty il
 
 instance IsInline Inlines where
   lineBreak = [mkInline LineBreak]
@@ -96,13 +113,18 @@ $(deriveEq1 ''BlockF)
 
 type Block a = Cofree (BlockF a) a
 
+pattern MkBlock :: a -> BlockF a (Block a) -> Block a
+pattern MkBlock a body = a :< body
+
+{-# COMPLETE MkBlock #-}
+
 type Blocks = [Block Ann]
 
 rangedBlock :: SourceRange -> Block Ann -> Block Ann
-rangedBlock sr (ann :< body) = ann <> MkAnn sr mempty :< body
+rangedBlock sr (MkBlock ann body) = MkBlock (ann <> MkAnn sr mempty) body
 
 addAttributesBlock :: Attributes -> Block Ann -> Block Ann
-addAttributesBlock attrs (ann :< body) = ann <> MkAnn mempty attrs :< body
+addAttributesBlock attrs (MkBlock ann body) = MkBlock (ann <> MkAnn mempty attrs) body
 
 instance Rangeable Blocks where
   ranged sr = map $ rangedBlock sr
@@ -111,7 +133,7 @@ instance HasAttributes Blocks where
   addAttributes attrs = map $ addAttributesBlock attrs
 
 mkBlock :: (Monoid a) => BlockF a (Block a) -> Block a
-mkBlock b = mempty :< b
+mkBlock b = MkBlock mempty b
 
 instance IsBlock Inlines Blocks where
   paragraph ils = [mkBlock $ Paragraph ils]
