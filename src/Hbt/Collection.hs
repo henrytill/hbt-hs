@@ -42,7 +42,7 @@ lookupEntity :: URI -> Collection -> Maybe Entity
 lookupEntity uri = Map.lookup uri . (.entities)
 
 insert :: Entity -> Collection -> Collection
-insert entity collection = MkCollection entities collection.edges
+insert entity collection = collection {entities}
   where
     entities = Map.insert entity.uri entity collection.entities
 
