@@ -9,8 +9,8 @@ module Commonmark.Initial
   , Inline
   , Inlines
   , InlineF (..)
-  , pattern MkInline
   , pattern MkBlock
+  , pattern MkInline
   )
 where
 
