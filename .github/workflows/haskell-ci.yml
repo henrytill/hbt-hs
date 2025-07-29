@@ -8,9 +8,9 @@
 #
 # For more information, see https://github.com/haskell-CI/haskell-ci
 #
-# version: 0.19.20250605
+# version: 0.19.20250722
 #
-# REGENDATA ("0.19.20250605",["github","cabal.project"])
+# REGENDATA ("0.19.20250722",["github","cabal.project"])
 #
 name: Haskell-CI
 on:
@@ -153,7 +153,11 @@ jobs:
           touch cabal.project.local
           echo "packages: ${PKGDIR_hbt}" >> cabal.project
           echo "package hbt" >> cabal.project
-          echo "    ghc-options: -Werror=missing-methods" >> cabal.project
+          echo "    ghc-options: -Werror=missing-methods -Werror=missing-fields" >> cabal.project
+          echo "package hbt" >> cabal.project
+          echo "    ghc-options: -Werror=unused-packages" >> cabal.project
+          echo "package hbt" >> cabal.project
+          echo "    ghc-options: -Werror=incomplete-patterns -Werror=incomplete-uni-patterns" >> cabal.project
           cat >> cabal.project <<EOF
           EOF
           $HCPKG list --simple-output --names-only | perl -ne 'for (split /\s+/) { print "constraints: any.$_ installed\n" unless /^(hbt)$/; }' >> cabal.project.local
