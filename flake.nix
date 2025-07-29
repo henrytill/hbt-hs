@@ -25,6 +25,12 @@
           packages = prev.haskell.packages // {
             ${ghcName} = prev.haskell.packages.${ghcName}.override {
               overrides = hfinal: hprev: {
+                commonmark-initial = hfinal.callCabal2nix "commonmark-initial" (final.fetchFromGitHub {
+                  owner = "henrytill";
+                  repo = "commonmark-initial";
+                  rev = "89563e24acd008748b7e6fd6f0faf586bb054f64";
+                  sha256 = "sha256-8SiKui/R4SftzGN8eYw0METTdFmZcxBGWONov3MU5lI=";
+                }) { };
                 dwergaz = hfinal.callCabal2nix "dwergaz" (final.fetchFromGitHub {
                   owner = "henrytill";
                   repo = "dwergaz";

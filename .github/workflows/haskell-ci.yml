@@ -159,6 +159,10 @@ jobs:
           echo "package hbt" >> cabal.project
           echo "    ghc-options: -Werror=incomplete-patterns -Werror=incomplete-uni-patterns" >> cabal.project
           cat >> cabal.project <<EOF
+          source-repository-package
+            type:     git
+            location: https://github.com/henrytill/commonmark-initial
+            tag:      89563e24acd008748b7e6fd6f0faf586bb054f64
           EOF
           $HCPKG list --simple-output --names-only | perl -ne 'for (split /\s+/) { print "constraints: any.$_ installed\n" unless /^(hbt)$/; }' >> cabal.project.local
           cat cabal.project

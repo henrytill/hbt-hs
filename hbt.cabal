@@ -21,7 +21,6 @@ common exts
 library
     import: exts
     exposed-modules:
-        Commonmark.Initial
         Data.Multimap
         Hbt
         Hbt.Collection
@@ -37,9 +36,8 @@ library
     build-depends:
         base >=4.17.2.1 && <4.19,
         commonmark ^>=0.2.6.1,
+        commonmark-initial ^>=0.1.0.0,
         containers ^>=0.6.7,
-        deriving-compat ^>=0.6.7,
-        free ^>=5.2,
         network-uri ^>=2.6.4.2,
         text ^>=2.0.2,
         time ^>=1.12,
@@ -64,7 +62,6 @@ test-suite hbt-test
     main-is:          Main.hs
     hs-source-dirs:   test
     other-modules:
-        Commonmark.InitialTest
         Data.MultimapTest
         Hbt.CollectionTest
         Hbt.MarkdownTest
@@ -73,11 +70,8 @@ test-suite hbt-test
     ghc-options:      -Wall
     build-depends:
         base >=4.17.2.1 && <4.19,
-        commonmark ^>=0.2.6.1,
-        commonmark-extensions ^>=0.2.6,
         containers ^>=0.6.7,
         dwergaz ^>=0.3.1.0,
         network-uri ^>=2.6.4.2,
-        parsec ^>=3.1.16.1,
         text ^>=2.0.2,
         hbt
