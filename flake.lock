@@ -1,5 +1,37 @@
 {
   "nodes": {
+    "commonmark-initial-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1753750213,
+        "narHash": "sha256-zu8/tUVYbLXV+7BpFzHUMsAXJkuvQnqRe2TaVX4dYp4=",
+        "owner": "henrytill",
+        "repo": "commonmark-initial",
+        "rev": "ba191067da9ac8e3d02be9a0fd60514462b28bb7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "henrytill",
+        "repo": "commonmark-initial",
+        "type": "github"
+      }
+    },
+    "dwergaz-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1750379035,
+        "narHash": "sha256-tL0zA+af1u8VedK2SXAS7YSbqUfxGMdvnbp7O8bo/k4=",
+        "owner": "henrytill",
+        "repo": "dwergaz",
+        "rev": "13c00c1a9bb32fc468c260735b00e2152d71b056",
+        "type": "github"
+      },
+      "original": {
+        "owner": "henrytill",
+        "repo": "dwergaz",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -36,6 +68,8 @@
     },
     "root": {
       "inputs": {
+        "commonmark-initial-src": "commonmark-initial-src",
+        "dwergaz-src": "dwergaz-src",
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs"
       }

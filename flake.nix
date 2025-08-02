@@ -2,6 +2,14 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    commonmark-initial-src = {
+      url = "github:henrytill/commonmark-initial";
+      flake = false;
+    };
+    dwergaz-src = {
+      url = "github:henrytill/dwergaz";
+      flake = false;
+    };
   };
 
   nixConfig = {
@@ -16,6 +24,8 @@
       self,
       nixpkgs,
       flake-utils,
+      commonmark-initial-src,
+      dwergaz-src,
       ...
     }:
     let
@@ -25,18 +35,8 @@
           packages = prev.haskell.packages // {
             ${ghcName} = prev.haskell.packages.${ghcName}.override {
               overrides = hfinal: hprev: {
-                commonmark-initial = hfinal.callCabal2nix "commonmark-initial" (final.fetchFromGitHub {
-                  owner = "henrytill";
-                  repo = "commonmark-initial";
-                  rev = "89563e24acd008748b7e6fd6f0faf586bb054f64";
-                  sha256 = "sha256-8SiKui/R4SftzGN8eYw0METTdFmZcxBGWONov3MU5lI=";
-                }) { };
-                dwergaz = hfinal.callCabal2nix "dwergaz" (final.fetchFromGitHub {
-                  owner = "henrytill";
-                  repo = "dwergaz";
-                  rev = "13c00c1a9bb32fc468c260735b00e2152d71b056";
-                  sha256 = "sha256-tL0zA+af1u8VedK2SXAS7YSbqUfxGMdvnbp7O8bo/k4=";
-                }) { };
+                commonmark-initial = hfinal.callCabal2nix "commonmark-initial" commonmark-initial-src { };
+                dwergaz = hfinal.callCabal2nix "dwergaz" dwergaz-src { };
                 hbt = hfinal.callCabal2nix "hbt" (builtins.path {
                   path = ./.;
                   name = "hbt-src";
