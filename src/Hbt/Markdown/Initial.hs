@@ -8,7 +8,6 @@ import Commonmark.Initial (Block, Blocks, Inline, pattern MkBlock, pattern MkInl
 import Commonmark.Initial qualified as Initial
 import Control.Exception (Exception, throw)
 import Data.Foldable (foldl')
-import Data.Function ((&))
 import Data.Maybe qualified as Maybe
 import Data.Monoid (Last (..))
 import Data.Text (Text)
@@ -20,8 +19,10 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Label (..), Name (..))
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Markdown.Initial.FoldState (FoldState (..))
+import Hbt.Markdown.Initial.FoldState
 import Hbt.Markdown.Initial.FoldState qualified as FoldState
+import Lens.Family2
+import Lens.Family2.Stock
 
 data Error = NoSaveableEntity
   deriving (Show, Eq)
@@ -31,12 +32,16 @@ instance Exception Error
 type Acc = (Collection, FoldState)
 
 saveEntity :: Acc -> Acc
-saveEntity (c, st) =
-  let e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity st)
-      d = Collection.upsert e c
-      maybeParent = Last $ Just e.uri
-   in foldr (Collection.addEdges e.uri) d (Maybe.listToMaybe st.parents)
-        & (,st {maybeParent, uri = mempty, name = mempty})
+saveEntity acc =
+  acc
+    & _1 %~ Collection.upsert e
+    & _1 %~ addParentEdges e (Maybe.listToMaybe $ acc ^. _2 . parents)
+    & _2 . maybeParent .~ Last (Just e.uri)
+    & _2 . uri .~ mempty
+    & _2 . name .~ mempty
+  where
+    e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity $ acc ^. _2)
+    addParentEdges entity = flip . foldr $ Collection.addEdges entity.uri
 
 textFromInlines :: [Inline a] -> Text
 textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
@@ -56,46 +61,55 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
       Initial.RawInline _ t -> Builder.fromText t
 
 extractLink :: Text -> Text -> [Inline a] -> Acc -> Acc
-extractLink d _ desc (c, st) =
-  (c, st {uri, name})
+extractLink d _ desc acc =
+  acc
+    & _2 . uri .~ (Last . Just . Entity.mkURI $ Text.unpack d)
+    & _2 . name .~ updatedName
   where
-    uri = Last . Just . Entity.mkURI $ Text.unpack d
     linkText = textFromInlines desc
-    name
+    updatedName
       | Text.null linkText || linkText == d = mempty
-      | otherwise = Last . Just $ MkName linkText
+      | otherwise = Last (Just (MkName linkText))
 
 inlineFolder :: Acc -> Inline a -> Acc
 inlineFolder acc (MkInline _ il) = case il of
-  Initial.Link d t desc -> saveEntity $ extractLink d t desc acc
+  Initial.Link d t desc ->
+    acc
+      & extractLink d t desc
+      & saveEntity
   _ -> acc
 
 blockFolder :: Acc -> Block a -> Acc
-blockFolder acc@(c, st) (MkBlock _ b) = case b of
+blockFolder acc (MkBlock _ b) = case b of
   Initial.Plain ils ->
     foldl' inlineFolder acc ils
   Initial.Heading 1 ils ->
-    (c, st {time, maybeParent = mempty, labels = mempty})
+    acc
+      & _2 . time .~ (Last . Just . Entity.mkTime $ Text.unpack headingText)
+      & _2 . maybeParent .~ mempty
+      & _2 . labels .~ mempty
     where
-      time = Last . Just . Entity.mkTime $ Text.unpack headingText
       headingText = textFromInlines ils
   Initial.Heading level ils ->
-    (c, st {labels})
+    acc
+      & _2 . labels %~ (MkLabel headingText :) . take (level - 2)
     where
       headingText = textFromInlines ils
-      labels = MkLabel headingText : take (level - 2) st.labels
   Initial.List _ _ bss ->
-    foldl' (foldl' blockFolder) acc' bss & fmap f
+    acc
+      & _2 . parents %~ maybe id (:) (getLast $ acc ^. _2 . maybeParent)
+      & foldBlocks bss
+      & _2 . maybeParent .~ mempty
+      & _2 . parents %~ drop 1
     where
-      acc' = (c, foldr (\parent s -> s {parents = parent : s.parents}) st st.maybeParent)
-      f s = s {maybeParent = mempty, parents = drop 1 s.parents}
+      foldBlocks = flip . foldl' $ foldl' blockFolder
   _ -> acc
 
 collectionFromBlocks :: [Block a] -> Collection
-collectionFromBlocks bs = fst $ foldl' blockFolder mempty bs
+collectionFromBlocks = (^. _1) . foldl' blockFolder mempty
 
 parseBlocks :: String -> Text -> Either Commonmark.ParseError Blocks
 parseBlocks = Commonmark.commonmark
 
 parse :: String -> Text -> Either Commonmark.ParseError Collection
-parse name input = collectionFromBlocks <$> parseBlocks name input
+parse parseName input = collectionFromBlocks <$> parseBlocks parseName input
