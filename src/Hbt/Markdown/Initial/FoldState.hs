@@ -27,12 +27,12 @@ instance Semigroup FoldState where
 empty :: FoldState
 empty =
   MkFoldState
-    { name = Last Nothing
-    , time = Last Nothing
-    , uri = Last Nothing
-    , labels = []
-    , maybeParent = Last Nothing
-    , parents = []
+    { name = mempty
+    , time = mempty
+    , uri = mempty
+    , labels = mempty
+    , maybeParent = mempty
+    , parents = mempty
     }
 
 instance Monoid FoldState where

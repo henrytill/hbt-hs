@@ -34,12 +34,12 @@ empty :: FoldState
 empty =
   MkFoldState
     { buffer = mempty
-    , time = Last Nothing
-    , uri = Last Nothing
-    , name = Last Nothing
-    , labels = []
-    , maybeParent = Last Nothing
-    , parents = []
+    , time = mempty
+    , uri = mempty
+    , name = mempty
+    , labels = mempty
+    , maybeParent = mempty
+    , parents = mempty
     }
 
 instance Monoid FoldState where
