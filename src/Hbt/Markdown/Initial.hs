@@ -32,6 +32,12 @@ instance Exception Error
 
 type Acc = (Collection, FoldState)
 
+coll :: Lens' Acc Collection
+coll = _1
+
+st :: Lens' Acc FoldState
+st = _2
+
 _Last :: Adapter' (Last a) (Maybe a)
 _Last = adapter getLast Last
 
@@ -41,13 +47,13 @@ _head = to Maybe.listToMaybe
 saveEntity :: Acc -> Acc
 saveEntity acc =
   acc
-    & _1 %~ Collection.upsert e
-    & _1 %~ maybe id (Collection.addEdges e.uri) (acc ^. _2 . parents . _head)
-    & _2 . maybeParent <>~ Last (Just e.uri)
-    & _2 . uri .~ mempty
-    & _2 . name .~ mempty
+    & coll %~ Collection.upsert e
+    & coll %~ maybe id (Collection.addEdges e.uri) (acc ^. st . parents . _head)
+    & st . maybeParent <>~ Last (Just e.uri)
+    & st . uri .~ mempty
+    & st . name .~ mempty
   where
-    e = Maybe.fromMaybe (throw NoSaveableEntity) (acc ^. _2 . to FoldState.toEntity)
+    e = Maybe.fromMaybe (throw NoSaveableEntity) (acc ^. st . to FoldState.toEntity)
 
 textFromInlines :: [Inline a] -> Text
 textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
@@ -69,8 +75,8 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
 extractLink :: Text -> Text -> [Inline a] -> Acc -> Acc
 extractLink d _ desc acc =
   acc
-    & _2 . uri <>~ Last updatedURI
-    & _2 . name <>~ Last updatedName
+    & st . uri <>~ Last updatedURI
+    & st . name <>~ Last updatedName
   where
     updatedURI = Just . Entity.mkURI $ Text.unpack d
     linkText = textFromInlines desc
@@ -92,30 +98,30 @@ blockFolder acc (MkBlock _ b) = case b of
     foldl' inlineFolder acc ils
   Initial.Heading 1 ils ->
     acc
-      & _2 . time <>~ Last updatedTime
-      & _2 . maybeParent .~ mempty
-      & _2 . labels .~ mempty
+      & st . time <>~ Last updatedTime
+      & st . maybeParent .~ mempty
+      & st . labels .~ mempty
     where
       headingText = textFromInlines ils
       updatedTime = Just . Entity.mkTime $ Text.unpack headingText
   Initial.Heading level ils ->
     acc
-      & _2 . labels %~ (MkLabel headingText :) . take (level - 2)
+      & st . labels %~ (MkLabel headingText :) . take (level - 2)
     where
       headingText = textFromInlines ils
   Initial.List _ _ bss ->
     acc
-      & _2 . parents %~ maybe id (:) (acc ^. _2 . maybeParent . under _Last)
+      & st . parents %~ maybe id (:) (acc ^. st . maybeParent . under _Last)
       & foldBlocks bss
-      & _2 . maybeParent .~ mempty
-      & _2 . parents %~ drop 1
+      & st . maybeParent .~ mempty
+      & st . parents %~ drop 1
     where
       foldBlocks :: [[Block a]] -> Acc -> Acc
       foldBlocks = flip . foldl' $ foldl' blockFolder
   _ -> acc
 
 collectionFromBlocks :: [Block a] -> Collection
-collectionFromBlocks = (^. _1) . foldl' blockFolder mempty
+collectionFromBlocks = (^. coll) . foldl' blockFolder mempty
 
 parseBlocks :: String -> Text -> Either Commonmark.ParseError Blocks
 parseBlocks = Commonmark.commonmark
