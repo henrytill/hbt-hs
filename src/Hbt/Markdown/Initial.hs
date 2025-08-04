@@ -43,11 +43,11 @@ saveEntity acc =
   acc
     & _1 %~ Collection.upsert e
     & _1 %~ maybe id (Collection.addEdges e.uri) (acc ^. _2 . parents . _head)
-    & _2 . maybeParent . under _Last .~ Just e.uri
+    & _2 . maybeParent <>~ Last (Just e.uri)
     & _2 . uri .~ mempty
     & _2 . name .~ mempty
   where
-    e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity $ acc ^. _2)
+    e = Maybe.fromMaybe (throw NoSaveableEntity) (acc ^. _2 . to FoldState.toEntity)
 
 textFromInlines :: [Inline a] -> Text
 textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
@@ -69,8 +69,8 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
 extractLink :: Text -> Text -> [Inline a] -> Acc -> Acc
 extractLink d _ desc acc =
   acc
-    & _2 . uri . under _Last .~ updatedURI
-    & _2 . name . under _Last .~ updatedName
+    & _2 . uri <>~ Last updatedURI
+    & _2 . name <>~ Last updatedName
   where
     updatedURI = Just . Entity.mkURI $ Text.unpack d
     linkText = textFromInlines desc
@@ -92,7 +92,7 @@ blockFolder acc (MkBlock _ b) = case b of
     foldl' inlineFolder acc ils
   Initial.Heading 1 ils ->
     acc
-      & _2 . time . under _Last .~ updatedTime
+      & _2 . time <>~ Last updatedTime
       & _2 . maybeParent .~ mempty
       & _2 . labels .~ mempty
     where
@@ -110,6 +110,7 @@ blockFolder acc (MkBlock _ b) = case b of
       & _2 . maybeParent .~ mempty
       & _2 . parents %~ drop 1
     where
+      foldBlocks :: [[Block a]] -> Acc -> Acc
       foldBlocks = flip . foldl' $ foldl' blockFolder
   _ -> acc
 
