@@ -23,7 +23,6 @@ import Hbt.Markdown.Initial.FoldState
 import Hbt.Markdown.Initial.FoldState qualified as FoldState
 import Lens.Family2
 import Lens.Family2.Stock
-import Lens.Family2.Unchecked (adapter)
 
 data Error = NoSaveableEntity
   deriving (Show, Eq)
@@ -38,17 +37,11 @@ coll = _1
 st :: Lens' Acc FoldState
 st = _2
 
-_Last :: Adapter' (Last a) (Maybe a)
-_Last = adapter getLast Last
-
-_head :: Getter' [a] (Maybe a)
-_head = to Maybe.listToMaybe
-
 saveEntity :: Acc -> Acc
 saveEntity acc =
   acc
     & coll %~ Collection.upsert e
-    & coll %~ maybe id (Collection.addEdges e.uri) (acc ^. st . parents . _head)
+    & coll %~ maybe id (Collection.addEdges e.uri) (acc ^. st . parents . to Maybe.listToMaybe)
     & st . maybeParent <>~ Last (Just e.uri)
     & st . uri .~ mempty
     & st . name .~ mempty
@@ -111,7 +104,7 @@ blockFolder acc (MkBlock _ b) = case b of
       headingText = textFromInlines ils
   Initial.List _ _ bss ->
     acc
-      & st . parents %~ maybe id (:) (acc ^. st . maybeParent . under _Last)
+      & st . parents %~ maybe id (:) (acc ^. st . maybeParent . to getLast)
       & foldBlocks bss
       & st . maybeParent .~ mempty
       & st . parents %~ drop 1
