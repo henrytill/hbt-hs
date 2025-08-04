@@ -23,6 +23,7 @@ import Hbt.Markdown.Initial.FoldState
 import Hbt.Markdown.Initial.FoldState qualified as FoldState
 import Lens.Family2
 import Lens.Family2.Stock
+import Lens.Family2.Unchecked (adapter)
 
 data Error = NoSaveableEntity
   deriving (Show, Eq)
@@ -31,12 +32,15 @@ instance Exception Error
 
 type Acc = (Collection, FoldState)
 
+_Last :: Adapter' (Last a) (Maybe a)
+_Last = adapter getLast Last
+
 saveEntity :: Acc -> Acc
 saveEntity acc =
   acc
     & _1 %~ Collection.upsert e
     & _1 %~ addParentEdges e (Maybe.listToMaybe $ acc ^. _2 . parents)
-    & _2 . maybeParent .~ Last (Just e.uri)
+    & _2 . maybeParent . under _Last .~ Just e.uri
     & _2 . uri .~ mempty
     & _2 . name .~ mempty
   where
@@ -63,13 +67,14 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
 extractLink :: Text -> Text -> [Inline a] -> Acc -> Acc
 extractLink d _ desc acc =
   acc
-    & _2 . uri .~ (Last . Just . Entity.mkURI $ Text.unpack d)
-    & _2 . name .~ updatedName
+    & _2 . uri . under _Last .~ updatedURI
+    & _2 . name . under _Last .~ updatedName
   where
+    updatedURI = Just . Entity.mkURI $ Text.unpack d
     linkText = textFromInlines desc
     updatedName
-      | Text.null linkText || linkText == d = mempty
-      | otherwise = Last (Just (MkName linkText))
+      | Text.null linkText || linkText == d = Nothing
+      | otherwise = Just $ MkName linkText
 
 inlineFolder :: Acc -> Inline a -> Acc
 inlineFolder acc (MkInline _ il) = case il of
@@ -85,11 +90,12 @@ blockFolder acc (MkBlock _ b) = case b of
     foldl' inlineFolder acc ils
   Initial.Heading 1 ils ->
     acc
-      & _2 . time .~ (Last . Just . Entity.mkTime $ Text.unpack headingText)
+      & _2 . time . under _Last .~ updatedTime
       & _2 . maybeParent .~ mempty
       & _2 . labels .~ mempty
     where
       headingText = textFromInlines ils
+      updatedTime = Just . Entity.mkTime $ Text.unpack headingText
   Initial.Heading level ils ->
     acc
       & _2 . labels %~ (MkLabel headingText :) . take (level - 2)
@@ -97,7 +103,7 @@ blockFolder acc (MkBlock _ b) = case b of
       headingText = textFromInlines ils
   Initial.List _ _ bss ->
     acc
-      & _2 . parents %~ maybe id (:) (getLast $ acc ^. _2 . maybeParent)
+      & _2 . parents %~ maybe id (:) (acc ^. _2 . maybeParent . under _Last)
       & foldBlocks bss
       & _2 . maybeParent .~ mempty
       & _2 . parents %~ drop 1
