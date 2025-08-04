@@ -1,9 +1,18 @@
-module Hbt.Markdown.Initial.FoldState where
+module Hbt.Markdown.Initial.FoldState
+  ( FoldState (..)
+  , toEntity
+  , name
+  , time
+  , uri
+  , labels
+  , maybeParent
+  , parents
+  )
+where
 
 import Data.Monoid (Last (..))
 import Data.Set qualified as Set
 import Hbt.Collection.Entity (Entity, Label, Name, Time, mkEntity)
-import Lens.Family2
 import Network.URI (URI)
 
 data FoldState = MkFoldState
@@ -43,6 +52,10 @@ toEntity :: FoldState -> Maybe Entity
 toEntity st = case (getLast st.uri, getLast st.time) of
   (Just u, Just t) -> Just . mkEntity u t (getLast st.name) $ Set.fromList st.labels
   _ -> Nothing
+
+type Lens s t a b = forall f. (Functor f) => (a -> f b) -> s -> f t
+
+type Lens' s a = Lens s s a a
 
 name :: Lens' FoldState (Last Name)
 name f s = (\n -> s {name = n}) <$> f (s.name)
