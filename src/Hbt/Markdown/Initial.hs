@@ -35,17 +35,19 @@ type Acc = (Collection, FoldState)
 _Last :: Adapter' (Last a) (Maybe a)
 _Last = adapter getLast Last
 
+_head :: Getter' [a] (Maybe a)
+_head = to Maybe.listToMaybe
+
 saveEntity :: Acc -> Acc
 saveEntity acc =
   acc
     & _1 %~ Collection.upsert e
-    & _1 %~ addParentEdges e (Maybe.listToMaybe $ acc ^. _2 . parents)
+    & _1 %~ maybe id (Collection.addEdges e.uri) (acc ^. _2 . parents . _head)
     & _2 . maybeParent . under _Last .~ Just e.uri
     & _2 . uri .~ mempty
     & _2 . name .~ mempty
   where
     e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity $ acc ^. _2)
-    addParentEdges entity = flip . foldr $ Collection.addEdges entity.uri
 
 textFromInlines :: [Inline a] -> Text
 textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
