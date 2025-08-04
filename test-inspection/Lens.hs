@@ -3,6 +3,7 @@
 module Lens where
 
 import Control.Exception (Exception, throw)
+import Data.Bifunctor
 import Data.Maybe qualified as Maybe
 import Data.Monoid (Last (..))
 import Hbt.Collection (Collection)
@@ -21,6 +22,22 @@ instance Exception Error
 
 type Acc = (Collection, FoldState)
 
+saveEntityInline :: Acc -> Acc
+saveEntityInline (c, s) =
+  ( (maybe id (Collection.addEdges e.uri) (Maybe.listToMaybe s.parents)) (Collection.upsert e c)
+  , s {maybeParent = Last (Just e.uri), uri = mempty, name = mempty}
+  )
+  where
+    e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity s)
+
+saveEntity :: Acc -> Acc
+saveEntity (c, s) =
+  Collection.upsert e c
+    & maybe id (Collection.addEdges e.uri) (Maybe.listToMaybe s.parents)
+    & (,s {maybeParent = Last (Just e.uri), uri = mempty, name = mempty})
+  where
+    e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity s)
+
 coll :: Lens' Acc Collection
 coll = _1
 
@@ -38,24 +55,20 @@ saveEntityLens acc =
   where
     e = Maybe.fromMaybe (throw NoSaveableEntity) (acc ^. st . to FoldState.toEntity)
 
-saveEntity :: Acc -> Acc
-saveEntity (c, s) =
-  Collection.upsert e c
-    & maybe id (Collection.addEdges e.uri) (Maybe.listToMaybe s.parents)
-    & (,s {maybeParent = Last (Just e.uri), uri = mempty, name = mempty})
+saveEntityBifunctor :: Acc -> Acc
+saveEntityBifunctor acc@(_, s) =
+  acc
+    & first (Collection.upsert e)
+    & first (maybe id (Collection.addEdges e.uri) (Maybe.listToMaybe s.parents))
+    & second (\s' -> s' {maybeParent = s'.maybeParent <> Last (Just e.uri)})
+    & second (\s' -> s' {uri = mempty})
+    & second (\s' -> s' {name = mempty})
   where
     e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity s)
 
-saveEntityInline :: Acc -> Acc
-saveEntityInline (c, s) =
-  ( (maybe id (Collection.addEdges e.uri) (Maybe.listToMaybe s.parents)) (Collection.upsert e c)
-  , s {maybeParent = Last (Just e.uri), uri = mempty, name = mempty}
-  )
-  where
-    e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity s)
-
-inspect $ 'saveEntityLens === 'saveEntity
-inspect $ 'saveEntityLens === 'saveEntityInline
+inspect $ 'saveEntityInline === 'saveEntity
+inspect $ 'saveEntityInline === 'saveEntityLens
+inspect $ 'saveEntityInline === 'saveEntityBifunctor
 
 main :: IO ()
 main = return ()
