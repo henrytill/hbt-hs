@@ -10,6 +10,10 @@
       url = "github:henrytill/dwergaz";
       flake = false;
     };
+    inspection-testing-src = {
+      url = "github:nomeata/inspection-testing/0.6.2";
+      flake = false;
+    };
   };
 
   nixConfig = {
@@ -26,6 +30,7 @@
       flake-utils,
       commonmark-initial-src,
       dwergaz-src,
+      inspection-testing-src,
       ...
     }:
     let
@@ -37,6 +42,7 @@
               overrides = hfinal: hprev: {
                 commonmark-initial = hfinal.callCabal2nix "commonmark-initial" commonmark-initial-src { };
                 dwergaz = hfinal.callCabal2nix "dwergaz" dwergaz-src { };
+                inspection-testing = hfinal.callCabal2nix "inspection-testing" inspection-testing-src { };
                 hbt = hfinal.callCabal2nix "hbt" (builtins.path {
                   path = ./.;
                   name = "hbt-src";

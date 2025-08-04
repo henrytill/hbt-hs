@@ -26,11 +26,12 @@ library
         Hbt.Collection
         Hbt.Collection.Entity
         Hbt.Markdown.Initial
+        Hbt.Markdown.Initial.FoldState
         Hbt.Markdown.Direct
+        Hbt.Markdown.Direct.FoldState
 
     hs-source-dirs:   src
-    other-modules:    Hbt.Markdown.Initial.FoldState,
-                      Hbt.Markdown.Direct.FoldState
+    other-modules:
     default-language: GHC2021
     ghc-options:      -Wall
     build-depends:
@@ -75,4 +76,18 @@ test-suite hbt-test
         dwergaz ^>=0.3.1.0,
         network-uri ^>=2.6.4.2,
         text ^>=2.0.2,
+        hbt
+
+test-suite lens-inspection
+    import:           exts
+    type:             exitcode-stdio-1.0
+    main-is:          Lens.hs
+    ghc-options:      -main-is Lens
+    hs-source-dirs:   test-inspection
+    default-language: GHC2021
+    ghc-options:      -Wall
+    build-depends:
+        base >=4.17.2.1 && <4.19,
+        lens-family ^>=2.1.3,
+        inspection-testing ^>=0.6.2,
         hbt
