@@ -9,7 +9,7 @@ import Data.Text.IO qualified as Text
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
-import Hbt.Markdown.Direct qualified as Markdown
+import Hbt.Markdown.Initial qualified as Markdown
 import System.Console.GetOpt
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitFailure, exitSuccess)
