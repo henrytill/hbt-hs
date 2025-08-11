@@ -38,6 +38,8 @@ saveEntity (c, s) =
   where
     e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity s)
 
+inspect $ 'saveEntityInline === 'saveEntity
+
 coll :: Lens' Acc Collection
 coll = _1
 
@@ -55,6 +57,8 @@ saveEntityLens acc =
   where
     e = Maybe.fromMaybe (throw NoSaveableEntity) (acc ^. st . to FoldState.toEntity)
 
+inspect $ 'saveEntityInline === 'saveEntityLens
+
 saveEntityBifunctor :: Acc -> Acc
 saveEntityBifunctor acc@(_, s) =
   acc
@@ -66,8 +70,6 @@ saveEntityBifunctor acc@(_, s) =
   where
     e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity s)
 
-inspect $ 'saveEntityInline === 'saveEntity
-inspect $ 'saveEntityInline === 'saveEntityLens
 inspect $ 'saveEntityInline === 'saveEntityBifunctor
 
 main :: IO ()
