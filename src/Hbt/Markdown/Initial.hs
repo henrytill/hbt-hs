@@ -65,11 +65,11 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
       Initial.Code t -> "`" <> Builder.fromText t <> "`"
       Initial.RawInline _ t -> Builder.fromText t
 
-extractLink :: Text -> Text -> [Inline a] -> Acc -> Acc
-extractLink d _ desc acc =
-  acc
-    & st . uri <>~ Last updatedURI
-    & st . name <>~ Last updatedName
+extractLink :: Text -> Text -> [Inline a] -> FoldState -> FoldState
+extractLink d _ desc foldState =
+  foldState
+    & uri <>~ Last updatedURI
+    & name <>~ Last updatedName
   where
     updatedURI = Just . Entity.mkURI $ Text.unpack d
     linkText = textFromInlines desc
@@ -81,7 +81,7 @@ inlineFolder :: Acc -> Inline a -> Acc
 inlineFolder acc (MkInline _ il) = case il of
   Initial.Link d t desc ->
     acc
-      & extractLink d t desc
+      & st %~ extractLink d t desc
       & saveEntity
   _ -> acc
 
