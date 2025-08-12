@@ -5,13 +5,17 @@ module Backlogged where
 
 import Data.Aeson (FromJSON (..), Options, ToJSON (..))
 import Data.Aeson qualified as Aeson
+import Data.Default (def)
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import Data.Text.IO qualified as Text.IO
 import Data.Time (UTCTime)
 import GHC.Generics (Generic)
+import Network.Connection (TLSSettings (..))
+import Network.HTTP.Client (ManagerSettings)
 import Network.HTTP.Client qualified as Client
 import Network.HTTP.Client.TLS qualified as TLS
+import Network.TLS (EMSMode (AllowEMS), Supported (..))
 import Servant.API hiding (JSON)
 import Servant.API.ContentTypes.Ext
 import Servant.Client
@@ -131,9 +135,19 @@ readConfig path = do
   configText <- Text.IO.readFile path
   Aeson.throwDecodeStrictText configText
 
+managerSettings :: ManagerSettings
+managerSettings = TLS.mkManagerSettings tlsSettings Nothing
+  where
+    supportedExtendedMainSecret :: EMSMode
+    supportedExtendedMainSecret = AllowEMS
+    settingClientSupported :: Supported
+    settingClientSupported = def {supportedExtendedMainSecret}
+    tlsSettings :: TLSSettings
+    tlsSettings = def {settingClientSupported}
+
 runClient :: ApiToken -> IO ()
 runClient apiToken = do
-  manager <- Client.newManager TLS.tlsManagerSettings
+  manager <- Client.newManager managerSettings
   let m = update (Just JSON) (Just apiToken)
       env = mkClientEnv manager (BaseUrl Https "api.pinboard.in" 443 "v1")
   result <- runClientM m env
