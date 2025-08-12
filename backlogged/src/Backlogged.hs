@@ -149,7 +149,7 @@ runClient :: ApiToken -> IO ()
 runClient apiToken = do
   manager <- Client.newManager managerSettings
   let m = update (Just JSON) (Just apiToken)
-      env = mkClientEnv manager (BaseUrl Https "api.pinboard.in" 443 "v1")
+      env = mkClientEnv manager $ BaseUrl Https "api.pinboard.in" 443 "v1"
   result <- runClientM m env
   case result of
     Left err -> error $ show err
@@ -164,6 +164,6 @@ someFunc = do
   if configExists
     then do
       config <- readConfig configFile
-      putStrLn $ "parsed: " ++ (show config)
-      runClient (configApiToken config)
+      putStrLn $ "parsed: " ++ show config
+      runClient $ configApiToken config
     else error "config file does not exist"
