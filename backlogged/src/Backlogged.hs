@@ -51,6 +51,11 @@ update :: Maybe Format -> Maybe ApiToken -> ClientM UpdateTime
 get :: Maybe Format -> Maybe ApiToken -> Maybe Tag -> ClientM [Bookmark]
 update :<|> get = client api
 
+remapField :: [(String, String)] -> String -> String
+remapField mappings field
+  | Just mapped <- lookup field mappings = mapped
+  | otherwise = field
+
 newtype UpdateTime = MkUpdateTime {unUpdateTime :: UTCTime}
   deriving (Eq, Show, Generic)
 
@@ -110,11 +115,6 @@ data Config = MkConfig
   , configApiToken :: ApiToken
   }
   deriving (Eq, Show, Generic)
-
-remapField :: [(String, String)] -> String -> String
-remapField mappings field
-  | Just mapped <- lookup field mappings = mapped
-  | otherwise = field
 
 configOptions :: Options
 configOptions = Aeson.defaultOptions {Aeson.fieldLabelModifier = remapField mappings}
