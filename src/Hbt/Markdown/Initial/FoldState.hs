@@ -12,8 +12,7 @@ where
 
 import Data.Monoid (Last (..))
 import Data.Set qualified as Set
-import Hbt.Collection.Entity (Entity, Label, Name, Time, mkEntity)
-import Network.URI (URI)
+import Hbt.Collection.Entity (Entity, Label, Name, Time, URI, mkEntity)
 
 data FoldState = MkFoldState
   { name :: Last Name

@@ -7,9 +7,8 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Multimap (Multimap)
 import Data.Multimap qualified as Multimap
-import Hbt.Collection.Entity (Entity (..))
+import Hbt.Collection.Entity (Entity (..), URI)
 import Hbt.Collection.Entity qualified as Entity
-import Network.URI (URI)
 import Prelude hiding (id, length)
 
 data Error = MissingEntities [URI]

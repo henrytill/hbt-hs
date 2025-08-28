@@ -7,9 +7,8 @@ import Data.Maybe qualified as Maybe
 import Data.Multimap qualified as Multimap
 import Data.Set qualified as Set
 import Hbt.Collection
-import Hbt.Collection.Entity (Entity (..), Label (..), Name (..), Time (..))
+import Hbt.Collection.Entity (Entity (..), Label (..), Name (..), Time (..), nullURI)
 import Hbt.Collection.Entity qualified as Entity
-import Network.URI qualified as URI
 import Test.Dwergaz
 import Prelude hiding (length, null)
 
@@ -21,7 +20,7 @@ emptyEntityTests =
   let entity = Entity.empty
    in group
         "Entity operations on empty entity"
-        [ assertEqual "emptyEntity has null URI" URI.nullURI entity.uri
+        [ assertEqual "emptyEntity has null URI" nullURI entity.uri
         , assertEqual "emptyEntity has empty creation time" (mkTime 0) entity.createdAt
         , assertEqual "emptyEntity has empty update history" [] entity.updatedAt
         , assertEqual "emptyEntity has empty names" Set.empty entity.names

@@ -1,6 +1,8 @@
 module Hbt.Collection.Entity
   ( Error (..)
+  , URI (..)
   , mkURI
+  , nullURI
   , Time (..)
   , mkTime
   , Name (..)
@@ -22,7 +24,7 @@ import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import Data.Time.Format (defaultTimeLocale, parseTimeM)
-import Network.URI (URI)
+import Network.URI (parseURI)
 import Network.URI qualified as URI
 import Prelude hiding (id)
 
@@ -33,8 +35,14 @@ data Error
 
 instance Exception Error
 
+newtype URI = MkURI {unURI :: URI.URI}
+  deriving (Show, Eq, Ord)
+
 mkURI :: String -> URI
-mkURI s = Maybe.fromMaybe (throw $ InvalidURI s) (URI.parseURI s)
+mkURI s = MkURI $ Maybe.fromMaybe (throw $ InvalidURI s) (parseURI s)
+
+nullURI :: URI
+nullURI = MkURI URI.nullURI
 
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
@@ -84,7 +92,7 @@ mkEntity uri createdAt maybeName labels =
 empty :: Entity
 empty =
   MkEntity
-    { uri = URI.nullURI
+    { uri = MkURI URI.nullURI
     , createdAt = epoch
     , updatedAt = []
     , names = Set.empty
