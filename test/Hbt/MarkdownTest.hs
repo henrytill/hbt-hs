@@ -19,8 +19,8 @@ runSimpleTestCase :: SimpleTestCase -> Test
 runSimpleTestCase testCase =
   either assertFailure id $
     assertEqual testCase.testName
-      <$> addContext "Parse failed" (Initial.parse testCase.testName testCase.inputMarkdown)
-      <*> addContext "YAML decode failed" (Yaml.decodeEither' (Text.Encoding.encodeUtf8 testCase.expectedYaml))
+      <$> addContext "YAML decode failed" (Yaml.decodeEither' (Text.Encoding.encodeUtf8 testCase.expectedYaml))
+      <*> addContext "Parse failed" (Initial.parse testCase.testName testCase.inputMarkdown)
 
 allTests :: Test
 allTests = group "Hbt.Markdown tests" (fmap runSimpleTestCase allTestData)
