@@ -5,8 +5,8 @@ module Hbt.Parser.MarkdownTest where
 import Data.Bifunctor (first)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Yaml qualified as Yaml
-import Hbt.MarkdownTest.TH (SimpleTestCase (..), loadAllTestDataTH)
 import Hbt.Parser.Markdown qualified as Markdown
+import Hbt.Parser.MarkdownTest.TH (SimpleTestCase (..), loadAllTestDataTH)
 import Test.Dwergaz
 
 allTestData :: [SimpleTestCase]

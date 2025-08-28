@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
-module Hbt.MarkdownTest.TH where
+module Hbt.Parser.MarkdownTest.TH where
 
 import Data.List (isSuffixOf, sort)
 import Data.Text (Text)

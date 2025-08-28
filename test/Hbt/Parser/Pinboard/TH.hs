@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
-module Hbt.PinboardTest.TH where
+module Hbt.Parser.Pinboard.TH where
 
 import Data.ByteString qualified as BS
 import Data.List (isSuffixOf, sort)

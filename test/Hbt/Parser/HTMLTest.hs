@@ -5,8 +5,8 @@ module Hbt.Parser.HTMLTest where
 import Data.Bifunctor (first)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Yaml qualified as Yaml
-import Hbt.HTMLTest.TH (HtmlTestCase (..), loadAllHtmlTestDataTH)
 import Hbt.Parser.HTML qualified as HTML
+import Hbt.Parser.HTMLTest.TH (HtmlTestCase (..), loadAllHtmlTestDataTH)
 import Test.Dwergaz
 
 allTestData :: [HtmlTestCase]
