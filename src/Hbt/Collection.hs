@@ -22,7 +22,6 @@ module Hbt.Collection
   )
 where
 
-import Control.Exception (Exception, throw)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -43,8 +42,6 @@ instance FromJSON Id where
 
 data Error = MissingEntities [URI]
   deriving (Show, Eq)
-
-instance Exception Error
 
 data Collection = MkCollection
   { nodes :: Vector Entity
@@ -141,21 +138,21 @@ upsert entity collection = case lookupId entity.uri collection of
           else (existingId, collection)
   Nothing -> insert entity collection
 
-addEdge :: Id -> Id -> Collection -> Collection
+addEdge :: Id -> Id -> Collection -> Either Error Collection
 addEdge from to collection
   | validFrom && validTo =
       let fromEdges = collection.edges ! from.value
           newFromEdges = if to `elem` fromEdges then fromEdges else Vector.snoc fromEdges to
-       in collection {edges = collection.edges // [(from.value, newFromEdges)]}
-  | not validFrom && validTo = throw $ MissingEntities [(entityAt from collection).uri]
-  | validFrom && not validTo = throw $ MissingEntities [(entityAt to collection).uri]
-  | otherwise = throw $ MissingEntities [(entityAt from collection).uri, (entityAt to collection).uri]
+       in Right $ collection {edges = collection.edges // [(from.value, newFromEdges)]}
+  | not validFrom && validTo = Left $ MissingEntities [(entityAt from collection).uri]
+  | validFrom && not validTo = Left $ MissingEntities [(entityAt to collection).uri]
+  | otherwise = Left $ MissingEntities [(entityAt from collection).uri, (entityAt to collection).uri]
   where
     validFrom = from.value < Vector.length collection.nodes
     validTo = to.value < Vector.length collection.nodes
 
-addEdges :: Id -> Id -> Collection -> Collection
-addEdges from to = addEdge from to . addEdge to from
+addEdges :: Id -> Id -> Collection -> Either Error Collection
+addEdges from to collection = addEdge from to collection >>= addEdge to from
 
 toSerialized :: Collection -> SerializedCollection
 toSerialized collection =

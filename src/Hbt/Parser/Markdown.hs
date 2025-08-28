@@ -7,10 +7,10 @@ module Hbt.Parser.Markdown where
 import Commonmark qualified
 import Commonmark.Initial (Block, Blocks, Inline, pattern MkBlock, pattern MkInline)
 import Commonmark.Initial qualified as Initial
-import Control.Exception (Exception)
 import Control.Monad (forM_)
-import Control.Monad.Except (Except, MonadError, runExcept, throwError)
+import Control.Monad.Except (Except, MonadError, liftEither, runExcept, throwError)
 import Control.Monad.State (runStateT)
+import Data.Bifunctor (first)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -27,9 +27,17 @@ import Lens.Family2.State.Lazy
 data Error
   = NoSaveableEntity
   | ParseError Commonmark.ParseError
+  | EntityInvalidURI String
+  | EntityInvalidTime String
+  | CollectionMissingEntities [Entity.URI]
   deriving (Show, Eq)
 
-instance Exception Error
+fromEntityError :: Entity.Error -> Error
+fromEntityError (Entity.InvalidURI s) = EntityInvalidURI s
+fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
+
+fromCollectionError :: Collection.Error -> Error
+fromCollectionError (Collection.MissingEntities uris) = CollectionMissingEntities uris
 
 data ParseState = MkParseState
   { collection :: Collection
@@ -105,7 +113,10 @@ saveEntity = do
       parentStack <- use parents
       case parentStack of
         [] -> return ()
-        (pid : _) -> collection %= Collection.addEdges entityId pid
+        (pid : _) -> do
+          coll <- use collection
+          updatedColl <- liftEither . first fromCollectionError $ Collection.addEdges entityId pid coll
+          collection .= updatedColl
 
       -- Set this entity as the new parent and reset parsing fields
       maybeParent .= Just entityId
@@ -133,7 +144,7 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
 -- Extract link information and set up for entity creation
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
 extractLink destination _title description = do
-  let uri = Entity.mkURI $ Text.unpack destination
+  uri <- liftEither . first fromEntityError . Entity.mkURI $ Text.unpack destination
   maybeURI .= Just uri
 
   let linkText = textFromInlines description
@@ -160,7 +171,7 @@ handleBlock (MkBlock _ b) = case b of
     processInlines inlines
   Initial.Heading 1 inlines -> do
     let headingText = textFromInlines inlines
-    let time = Entity.mkTime $ Text.unpack headingText
+    time <- liftEither . first fromEntityError . Entity.mkTime $ Text.unpack headingText
     maybeTime .= Just time
     maybeParent .= Nothing
     labels .= []
@@ -196,13 +207,8 @@ parseBlocks = Commonmark.commonmark
 -- Parse markdown text using StateT approach
 parse :: String -> Text -> Either Error Collection
 parse parseName input = do
-  blocks <- case parseBlocks parseName input of
-    Left parseErr -> Left $ ParseError parseErr
-    Right result -> Right result
-
-  case runMarkdownM (processBlocks blocks) empty of
-    Left err -> Left err
-    Right (result, _) -> Right result
+  blocks <- liftEither . first ParseError $ parseBlocks parseName input
+  fst <$> runMarkdownM (processBlocks blocks) empty
 
 -- Parse from file
 parseFile :: FilePath -> IO (Either Error Collection)

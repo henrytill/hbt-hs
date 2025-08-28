@@ -18,9 +18,7 @@ module Hbt.Collection.Entity
   )
 where
 
-import Control.Exception (Exception, throw)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.:?), (.=))
-import Data.Maybe qualified as Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -37,8 +35,6 @@ data Error
   | InvalidTime String
   deriving (Show, Eq)
 
-instance Exception Error
-
 newtype URI = MkURI {unURI :: URI.URI}
   deriving (Show, Eq, Ord)
 
@@ -51,8 +47,10 @@ instance FromJSON URI where
       Nothing -> fail $ "Invalid URI: " <> Text.unpack t
       Just uri -> pure $ MkURI (normalizeURI uri)
 
-mkURI :: String -> URI
-mkURI s = MkURI $ Maybe.fromMaybe (throw $ InvalidURI s) (parseURI s >>= Just . normalizeURI)
+mkURI :: String -> Either Error URI
+mkURI s = case parseURI s of
+  Nothing -> Left $ InvalidURI s
+  Just uri -> Right . MkURI $ normalizeURI uri
 
 normalizeURI :: URI.URI -> URI.URI
 normalizeURI uri
@@ -77,10 +75,10 @@ instance FromJSON Time where
 epoch :: Time
 epoch = MkTime 0
 
-mkTime :: String -> Time
+mkTime :: String -> Either Error Time
 mkTime s = case parseTimeM True defaultTimeLocale "%B %e, %Y" s :: Maybe UTCTime of
-  Nothing -> throw $ InvalidTime s
-  Just utcTime -> MkTime $ utcTimeToPOSIXSeconds utcTime
+  Nothing -> Left $ InvalidTime s
+  Just utcTime -> Right . MkTime $ utcTimeToPOSIXSeconds utcTime
 
 newtype Name = MkName {unName :: Text}
   deriving (Show, Eq, Ord)

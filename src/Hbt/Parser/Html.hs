@@ -5,8 +5,9 @@
 module Hbt.Parser.Html where
 
 import Control.Monad (forM_, when)
-import Control.Monad.Except (Except, MonadError, runExcept)
+import Control.Monad.Except (Except, MonadError, liftEither, runExcept)
 import Control.Monad.State (runStateT)
+import Data.Bifunctor (first)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -22,7 +23,13 @@ import Text.HTML.TagSoup (Attribute, Tag (..))
 import Text.HTML.TagSoup qualified as TagSoup
 
 data Error
+  = EntityInvalidURI String
+  | EntityInvalidTime String
   deriving (Show, Eq)
+
+fromEntityError :: Entity.Error -> Error
+fromEntityError (Entity.InvalidURI s) = EntityInvalidURI s
+fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
 
 data WaitingFor
   = FolderName
@@ -108,10 +115,10 @@ createLabels tags folderLabels =
       labelStrings = filteredTags ++ reverse folderLabels
    in Set.fromList $ map Entity.MkLabel labelStrings
 
-createBookmark :: [Text] -> [Attribute Text] -> Maybe Text -> Maybe Text -> Entity
-createBookmark folderLabels attrs bookmarkDescription extendedDescription =
-  let uri = Entity.mkURI . Text.unpack $ Maybe.fromMaybe mempty (lookupAttr "href" attrs)
-      createdAt = parseTimestampWithDefault attrs "add_date"
+createBookmark :: [Text] -> [Attribute Text] -> Maybe Text -> Maybe Text -> Either Error Entity
+createBookmark folderLabels attrs bookmarkDescription extendedDescription = do
+  uri <- first fromEntityError $ Entity.mkURI . Text.unpack $ Maybe.fromMaybe mempty (lookupAttr "href" attrs)
+  let createdAt = parseTimestampWithDefault attrs "add_date"
       labels = createLabels (parseTagsFromAttr attrs) folderLabels
       entity = Entity.mkEntity uri createdAt (Entity.MkName <$> bookmarkDescription) labels
 
@@ -121,18 +128,20 @@ createBookmark folderLabels attrs bookmarkDescription extendedDescription =
       toRead = parseBoolAttr attrs "toread" "1"
       lastVisitedAt = parseTimestamp attrs "last_visit"
       isFeed = parseBoolAttr attrs "feed" "true"
-   in entity
-        { updatedAt
-        , extended
-        , shared
-        , toRead
-        , lastVisitedAt
-        , isFeed
-        }
+  pure
+    entity
+      { updatedAt
+      , extended
+      , shared
+      , toRead
+      , lastVisitedAt
+      , isFeed
+      }
 
 addPending :: NetscapeM ()
 addPending = do
-  entity <- createBookmark <$> use folderStack <*> use attributes <*> use maybeDescription <*> use maybeExtended
+  result <- createBookmark <$> use folderStack <*> use attributes <*> use maybeDescription <*> use maybeExtended
+  entity <- liftEither result
   collection %= snd . Collection.upsert entity
   attributes .= []
   maybeDescription .= Nothing

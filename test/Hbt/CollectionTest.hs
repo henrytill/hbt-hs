@@ -7,13 +7,28 @@ import Data.Set qualified as Set
 import Data.Vector ((!))
 import Data.Vector qualified as Vector
 import Hbt.Collection
-import Hbt.Collection.Entity (Entity (..), Label (..), Name (..), Time (..), nullURI)
+import Hbt.Collection.Entity (Entity (..), Label (..), Name (..), Time (..), URI, nullURI)
 import Hbt.Collection.Entity qualified as Entity
 import Test.Dwergaz
 import Prelude hiding (length, null)
 
 mkTime :: Integer -> Time
 mkTime = MkTime . fromIntegral
+
+safeURI :: String -> URI
+safeURI s = case Entity.mkURI s of
+  Left err -> error $ "Test URI creation failed: " ++ show err
+  Right uri -> uri
+
+safeAddEdge :: Id -> Id -> Collection -> Collection
+safeAddEdge from to collection = case addEdge from to collection of
+  Left err -> error $ "Test addEdge failed: " ++ show err
+  Right newCollection -> newCollection
+
+safeAddEdges :: Id -> Id -> Collection -> Collection
+safeAddEdges from to collection = case addEdges from to collection of
+  Left err -> error $ "Test addEdges failed: " ++ show err
+  Right newCollection -> newCollection
 
 emptyEntityTests :: Test
 emptyEntityTests =
@@ -29,7 +44,7 @@ emptyEntityTests =
 
 entityTests :: Test
 entityTests =
-  let uri = Entity.mkURI "https://example.com"
+  let uri = safeURI "https://example.com"
       time = mkTime 1000
       name = Just $ MkName "Test Entity"
       labels = Set.fromList [MkLabel "label1", MkLabel "label2"]
@@ -48,7 +63,7 @@ updateEntityTests :: Test
 updateEntityTests =
   let baseEntity =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com")
+          (safeURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Original")
           (Set.singleton $ MkLabel "label1")
@@ -62,7 +77,7 @@ updateEntityTests =
 
       olderBaseEntity =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com")
+          (safeURI "https://example.com")
           (mkTime 2000)
           (Just $ MkName "Original")
           (Set.singleton $ MkLabel "label1")
@@ -86,13 +101,13 @@ absorbEntityTests :: Test
 absorbEntityTests =
   let entity1 =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com")
+          (safeURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com")
+          (safeURI "https://example.com")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
@@ -122,7 +137,7 @@ insertTests :: Test
 insertTests =
   let entity =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com")
+          (safeURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test")
           (Set.singleton $ MkLabel "label")
@@ -138,13 +153,13 @@ multipleInsertTests :: Test
 multipleInsertTests =
   let entity1 =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com/1")
+          (safeURI "https://example.com/1")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com/2")
+          (safeURI "https://example.com/2")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
@@ -161,7 +176,7 @@ upsertTests :: Test
 upsertTests =
   let newEntity =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com")
+          (safeURI "https://example.com")
           (mkTime 1000)
           (Just $ MkName "Test")
           (Set.singleton $ MkLabel "label")
@@ -169,13 +184,13 @@ upsertTests =
 
       entity1 =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com/existing")
+          (safeURI "https://example.com/existing")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com/existing")
+          (safeURI "https://example.com/existing")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
@@ -195,13 +210,13 @@ edgeTests :: Test
 edgeTests =
   let entity1 =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com/1")
+          (safeURI "https://example.com/1")
           (mkTime 1000)
           (Just $ MkName "Test1")
           (Set.singleton $ MkLabel "label1")
       entity2 =
         Entity.mkEntity
-          (Entity.mkURI "https://example.com/2")
+          (safeURI "https://example.com/2")
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
@@ -209,16 +224,16 @@ edgeTests =
       (id2, collection2) = insert entity2 collection1
 
       -- Test directed edge
-      collectionWithEdge = addEdge id1 id2 collection2
+      collectionWithEdge = safeAddEdge id1 id2 collection2
       edgesFromId1 = (collectionWithEdge.edges ! id1.value)
       edgesFromId2 = (collectionWithEdge.edges ! id2.value)
 
       -- Test duplicate edge
-      collectionWithDuplicateEdge = addEdge id1 id2 collectionWithEdge
+      collectionWithDuplicateEdge = safeAddEdge id1 id2 collectionWithEdge
       edgesFromId1AfterDuplicate = (collectionWithDuplicateEdge.edges ! id1.value)
 
       -- Test bidirectional edges
-      collectionWithBidirectionalEdges = addEdges id1 id2 collection2
+      collectionWithBidirectionalEdges = safeAddEdges id1 id2 collection2
       bidirectionalEdgesFromId1 = (collectionWithBidirectionalEdges.edges ! id1.value)
       bidirectionalEdgesFromId2 = (collectionWithBidirectionalEdges.edges ! id2.value)
    in group
