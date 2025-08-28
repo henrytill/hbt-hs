@@ -34,6 +34,7 @@ library
         Hbt.Html.Netscape
         Hbt.Markdown.Initial
         Hbt.Markdown.Initial.FoldState
+        Hbt.Markdown.StateT
 
     hs-source-dirs:   src
     other-modules:
@@ -79,6 +80,7 @@ test-suite hbt-test
         Hbt.HtmlTest.TH
         Hbt.MarkdownTest
         Hbt.MarkdownTest.TH
+        Hbt.MarkdownStateTTest
 
     default-language: GHC2021
     ghc-options:      -Wall
