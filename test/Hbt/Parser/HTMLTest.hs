@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Hbt.Parser.HtmlTest where
+module Hbt.Parser.HTMLTest where
 
 import Data.Bifunctor (first)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Yaml qualified as Yaml
-import Hbt.HtmlTest.TH (HtmlTestCase (..), loadAllHtmlTestDataTH)
-import Hbt.Parser.Html qualified as Html
+import Hbt.HTMLTest.TH (HtmlTestCase (..), loadAllHtmlTestDataTH)
+import Hbt.Parser.HTML qualified as HTML
 import Test.Dwergaz
 
 allTestData :: [HtmlTestCase]
@@ -20,7 +20,7 @@ runHtmlTestCase testCase =
   either assertFailure id $
     assertEqual testCase.testName
       <$> addContext "YAML decode failed" (Yaml.decodeEither' (Text.Encoding.encodeUtf8 testCase.expectedYaml))
-      <*> addContext "Parse failed" (Html.parse testCase.inputHtml)
+      <*> addContext "Parse failed" (HTML.parse testCase.inputHtml)
 
 allTests :: Test
 allTests = group "Hbt.Html tests" (fmap runHtmlTestCase allTestData)

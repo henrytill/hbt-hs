@@ -3,7 +3,7 @@ module Main (main) where
 import Control.Monad (unless)
 import Data.MultimapTest qualified as MultimapTest
 import Hbt.CollectionTest qualified as CollectionTest
-import Hbt.Parser.HtmlTest qualified as HtmlTest
+import Hbt.Parser.HTMLTest qualified as HTMLTest
 import Hbt.Parser.MarkdownTest qualified as MarkdownTest
 import Hbt.Parser.Pinboard.JSONTest qualified as PinboardJSONTest
 import Hbt.Parser.Pinboard.XMLTest qualified as PinboardXMLTest
@@ -16,7 +16,7 @@ main = do
   putStr multimapOutput
   let (collectionOutput, collectionPassed) = CollectionTest.results
   putStr collectionOutput
-  let (htmlOutput, htmlPassed) = HtmlTest.results
+  let (htmlOutput, htmlPassed) = HTMLTest.results
   putStr htmlOutput
   let (markdownOutput, markdownPassed) = MarkdownTest.results
   putStr markdownOutput

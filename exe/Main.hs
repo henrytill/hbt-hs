@@ -10,7 +10,7 @@ import Data.Vector qualified as Vector
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
-import Hbt.Parser.Html qualified as Html
+import Hbt.Parser.HTML qualified as HTML
 import Hbt.Parser.Markdown qualified as Markdown
 import System.Console.GetOpt
 import System.Environment (getArgs, getProgName)
@@ -105,7 +105,7 @@ processFile opts file = do
           printCollection file opts collection'
     ".html" -> do
       content <- Text.readFile file
-      case Html.parse content of
+      case HTML.parse content of
         Left err -> do
           hPutStrLn stderr $ "Error parsing " ++ file ++ ": " ++ show err
           exitFailure

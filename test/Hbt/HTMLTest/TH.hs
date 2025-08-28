@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
-module Hbt.HtmlTest.TH where
+module Hbt.HTMLTest.TH where
 
 import Data.ByteString qualified as BS
 import Data.List (isSuffixOf, sort)

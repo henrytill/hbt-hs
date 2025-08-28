@@ -35,7 +35,7 @@ library
         Hbt.Collection
         Hbt.Collection.Entity
         Hbt.Parser
-        Hbt.Parser.Html
+        Hbt.Parser.HTML
         Hbt.Parser.Markdown
         Hbt.Parser.Pinboard.JSON
         Hbt.Parser.Pinboard.XML
@@ -81,9 +81,9 @@ test-suite hbt-test
     other-modules:
         Data.MultimapTest
         Hbt.CollectionTest
-        Hbt.HtmlTest.TH
+        Hbt.HTMLTest.TH
         Hbt.MarkdownTest.TH
-        Hbt.Parser.HtmlTest
+        Hbt.Parser.HTMLTest
         Hbt.Parser.MarkdownTest
         Hbt.Parser.Pinboard.JSONTest
         Hbt.Parser.Pinboard.XMLTest
