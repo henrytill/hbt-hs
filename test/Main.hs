@@ -3,8 +3,8 @@ module Main (main) where
 import Control.Monad (unless)
 import Data.MultimapTest qualified as MultimapTest
 import Hbt.CollectionTest qualified as CollectionTest
-import Hbt.HtmlTest qualified as HtmlTest
-import Hbt.MarkdownTest qualified as MarkdownTest
+import Hbt.Parser.HtmlTest qualified as HtmlTest
+import Hbt.Parser.MarkdownTest qualified as MarkdownTest
 import System.Exit (exitFailure)
 import Text.Printf (printf)
 

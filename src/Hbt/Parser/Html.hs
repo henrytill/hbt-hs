@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Hbt.Html.Netscape where
+module Hbt.Parser.Html where
 
 import Control.Monad (forM_, when)
 import Control.Monad.Except (Except, MonadError, runExcept)

@@ -31,8 +31,9 @@ library
         Hbt
         Hbt.Collection
         Hbt.Collection.Entity
-        Hbt.Html.Netscape
-        Hbt.Markdown.StateT
+        Hbt.Parser
+        Hbt.Parser.Html
+        Hbt.Parser.Markdown
 
     hs-source-dirs:   src
     other-modules:
@@ -74,10 +75,10 @@ test-suite hbt-test
     other-modules:
         Data.MultimapTest
         Hbt.CollectionTest
-        Hbt.HtmlTest
         Hbt.HtmlTest.TH
-        Hbt.MarkdownTest
         Hbt.MarkdownTest.TH
+        Hbt.Parser.HtmlTest
+        Hbt.Parser.MarkdownTest
 
     default-language: GHC2021
     ghc-options:      -Wall

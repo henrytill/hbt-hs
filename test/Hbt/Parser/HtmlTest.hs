@@ -1,29 +1,29 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Hbt.MarkdownTest where
+module Hbt.Parser.HtmlTest where
 
 import Data.Bifunctor (first)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Yaml qualified as Yaml
-import Hbt.Markdown.StateT qualified as StateT
-import Hbt.MarkdownTest.TH (SimpleTestCase (..), loadAllTestDataTH)
+import Hbt.HtmlTest.TH (HtmlTestCase (..), loadAllHtmlTestDataTH)
+import Hbt.Parser.Html qualified as Html
 import Test.Dwergaz
 
-allTestData :: [SimpleTestCase]
-allTestData = $(loadAllTestDataTH)
+allTestData :: [HtmlTestCase]
+allTestData = $(loadAllHtmlTestDataTH)
 
 addContext :: (Show e) => String -> Either e a -> Either String a
 addContext context = first $ showString context . showString ": " . flip shows mempty
 
-runSimpleTestCase :: SimpleTestCase -> Test
-runSimpleTestCase testCase =
+runHtmlTestCase :: HtmlTestCase -> Test
+runHtmlTestCase testCase =
   either assertFailure id $
     assertEqual testCase.testName
       <$> addContext "YAML decode failed" (Yaml.decodeEither' (Text.Encoding.encodeUtf8 testCase.expectedYaml))
-      <*> addContext "Parse failed" (StateT.parse testCase.testName testCase.inputMarkdown)
+      <*> addContext "Parse failed" (Html.parse testCase.inputHtml)
 
 allTests :: Test
-allTests = group "Hbt.Markdown tests" (fmap runSimpleTestCase allTestData)
+allTests = group "Hbt.Html tests" (fmap runHtmlTestCase allTestData)
 
 results :: (String, Bool)
 results = (buildString mempty, allPassed)
