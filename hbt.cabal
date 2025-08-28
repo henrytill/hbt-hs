@@ -15,6 +15,8 @@ extra-source-files:
     cabal.project
     test/data/markdown/*.md
     test/data/markdown/*.yaml
+    test/data/html/*.html
+    test/data/html/*.yaml
 
 common exts
     default-extensions:
@@ -29,6 +31,7 @@ library
         Hbt
         Hbt.Collection
         Hbt.Collection.Entity
+        Hbt.Html.Netscape
         Hbt.Markdown.Initial
         Hbt.Markdown.Initial.FoldState
 
@@ -43,7 +46,9 @@ library
         commonmark-initial ^>=0.1.0.0,
         containers ^>=0.6.7,
         lens-family ^>=2.1.3,
+        mtl ^>=2.3.1,
         network-uri ^>=2.6.4.2,
+        tagsoup ^>=0.14.8,
         text ^>=2.0.2,
         time ^>=1.12,
         vector ^>=0.13.2.0
@@ -70,6 +75,8 @@ test-suite hbt-test
     other-modules:
         Data.MultimapTest
         Hbt.CollectionTest
+        Hbt.HtmlTest
+        Hbt.HtmlTest.TH
         Hbt.MarkdownTest
         Hbt.MarkdownTest.TH
 
@@ -77,6 +84,7 @@ test-suite hbt-test
     ghc-options:      -Wall
     build-depends:
         base >=4.17.2.1 && <4.19,
+        bytestring ^>=0.11.5.4,
         containers ^>=0.6.7,
         directory ^>=1.3.8.5,
         dwergaz ^>=0.3.1.0,

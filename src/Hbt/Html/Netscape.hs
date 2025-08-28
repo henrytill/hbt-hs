@@ -1,0 +1,185 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns #-}
+
+module Hbt.Html.Netscape where
+
+import Control.Monad (forM_, when)
+import Control.Monad.Except (Except, MonadError, runExcept)
+import Control.Monad.State (runStateT)
+import Data.Maybe qualified as Maybe
+import Data.Set qualified as Set
+import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Read qualified as Read
+import Hbt.Collection (Collection)
+import Hbt.Collection qualified as Collection
+import Hbt.Collection.Entity (Entity (..), Time)
+import Hbt.Collection.Entity qualified as Entity
+import Lens.Family2
+import Lens.Family2.State.Lazy
+import Text.HTML.TagSoup (Attribute, Tag (..))
+import Text.HTML.TagSoup qualified as TagSoup
+
+data Error
+  deriving (Show, Eq)
+
+data WaitingFor
+  = FolderName
+  | BookmarkDescription
+  | ExtendedDescription
+  | None
+  deriving (Show, Eq)
+
+data ParseState = MkParseState
+  { collection :: Collection
+  , maybeDescription :: Maybe Text
+  , maybeExtended :: Maybe Text
+  , attributes :: [Attribute Text]
+  , folderStack :: [Text]
+  , waitingFor :: WaitingFor
+  }
+  deriving (Show, Eq)
+
+empty :: ParseState
+empty =
+  MkParseState
+    { collection = Collection.empty
+    , maybeDescription = Nothing
+    , maybeExtended = Nothing
+    , attributes = []
+    , folderStack = []
+    , waitingFor = None
+    }
+
+collection :: Lens' ParseState (Collection)
+collection f s = (\c -> s {collection = c}) <$> f s.collection
+
+maybeDescription :: Lens' ParseState (Maybe Text)
+maybeDescription f s = (\d -> s {maybeDescription = d}) <$> f s.maybeDescription
+
+maybeExtended :: Lens' ParseState (Maybe Text)
+maybeExtended f s = (\e -> s {maybeExtended = e}) <$> f s.maybeExtended
+
+attributes :: Lens' ParseState [Attribute Text]
+attributes f s = (\as -> s {attributes = as}) <$> f s.attributes
+
+folderStack :: Lens' ParseState [Text]
+folderStack f s = (\fs -> s {folderStack = fs}) <$> f s.folderStack
+
+waitingFor :: Lens' ParseState WaitingFor
+waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
+
+newtype NetscapeM a = MkNetscapeM {unNetscapeM :: StateT ParseState (Except Error) a}
+  deriving (Functor, Applicative, Monad, MonadState ParseState, MonadError Error)
+
+runNetscapeM :: NetscapeM a -> ParseState -> Either Error (a, ParseState)
+runNetscapeM (MkNetscapeM m) = runExcept . runStateT m
+
+lookupAttr :: Text -> [Attribute Text] -> Maybe Text
+lookupAttr key attrs = lookup (Text.toLower key) (map (\(k, v) -> (Text.toLower k, v)) attrs)
+
+parseTimestamp :: [Attribute Text] -> Text -> Maybe Time
+parseTimestamp attrs key
+  | Just timestampStr <- lookupAttr key attrs
+  , Right (timestamp, "") <- Read.decimal timestampStr =
+      Just $ Entity.MkTime (fromInteger timestamp)
+  | otherwise = Nothing
+
+parseTimestampWithDefault :: [Attribute Text] -> Text -> Time
+parseTimestampWithDefault attrs key = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp attrs key)
+
+parseBoolAttr :: [Attribute Text] -> Text -> Text -> Bool
+parseBoolAttr attrs attrName expectedValue = lookupAttr attrName attrs == Just expectedValue
+
+parseIsPrivate :: [Attribute Text] -> Bool
+parseIsPrivate attrs = parseBoolAttr attrs "private" "1"
+
+parseTagsFromAttr :: [Attribute Text] -> [Text]
+parseTagsFromAttr attrs
+  | Just tagString <- lookupAttr "tags" attrs
+  , not . Text.null $ tagString =
+      Text.splitOn "," tagString
+  | otherwise = []
+
+createLabels :: [Text] -> [Text] -> Set.Set Entity.Label
+createLabels tags folderLabels =
+  let filteredTags = filter (/= "toread") tags
+      labelStrings = filteredTags ++ reverse folderLabels
+   in Set.fromList $ map Entity.MkLabel labelStrings
+
+createBookmark :: [Text] -> [Attribute Text] -> Maybe Text -> Maybe Text -> Entity
+createBookmark folderLabels attrs bookmarkDescription extendedDescription =
+  let uri = Entity.mkURI . Text.unpack $ Maybe.fromMaybe mempty (lookupAttr "href" attrs)
+      createdAt = parseTimestampWithDefault attrs "add_date"
+      labels = createLabels (parseTagsFromAttr attrs) folderLabels
+      entity = Entity.mkEntity uri createdAt (Entity.MkName <$> bookmarkDescription) labels
+
+      updatedAt = Maybe.maybeToList $ parseTimestamp attrs "last_modified"
+      extended = Entity.MkExtended <$> extendedDescription
+      shared = not (parseIsPrivate attrs)
+      toRead = parseBoolAttr attrs "toread" "1"
+      lastVisitedAt = parseTimestamp attrs "last_visit"
+      isFeed = parseBoolAttr attrs "feed" "true"
+   in entity
+        { updatedAt
+        , extended
+        , shared
+        , toRead
+        , lastVisitedAt
+        , isFeed
+        }
+
+addPending :: NetscapeM ()
+addPending = do
+  entity <- createBookmark <$> use folderStack <*> use attributes <*> use maybeDescription <*> use maybeExtended
+  collection %= snd . Collection.upsert entity
+  attributes .= []
+  maybeDescription .= Nothing
+  maybeExtended .= Nothing
+
+handle :: Tag Text -> NetscapeM ()
+handle (TagOpen (Text.toLower -> "h3") _) =
+  waitingFor .= FolderName
+handle (TagOpen (Text.toLower -> "dt") _) = do
+  hasAttrs <- uses attributes (not . null)
+  when hasAttrs addPending
+handle (TagOpen (Text.toLower -> "a") attrs) = do
+  attributes .= attrs
+  waitingFor .= BookmarkDescription
+handle (TagOpen (Text.toLower -> "dd") _) = do
+  hasAttrs <- uses attributes (not . null)
+  when hasAttrs $ waitingFor .= ExtendedDescription
+handle (TagText str) =
+  use waitingFor >>= \case
+    FolderName -> do
+      folderStack %= (Text.strip str :)
+      waitingFor .= None
+    BookmarkDescription -> do
+      maybeDescription .= Just (Text.strip str)
+      waitingFor .= None
+    ExtendedDescription -> do
+      maybeExtended .= Just (Text.strip str)
+      hasAttrs <- uses attributes (not . null)
+      when hasAttrs addPending
+      waitingFor .= None
+    None -> return ()
+handle (TagClose (Text.toLower -> "dl")) = do
+  hasAttrs <- uses attributes (not . null)
+  when hasAttrs addPending
+  folderStack %= drop 1
+handle _ = return ()
+
+process :: [Tag Text] -> NetscapeM Collection
+process tags = forM_ tags handle >> use collection
+
+parse :: Text -> Either Error Collection
+parse input = do
+  let tags = TagSoup.parseTags input
+  (ret, _) <- runNetscapeM (process tags) empty
+  return ret
+
+parseFile :: FilePath -> IO (Either Error Collection)
+parseFile filepath = do
+  content <- readFile filepath
+  return $ parse (Text.pack content)
