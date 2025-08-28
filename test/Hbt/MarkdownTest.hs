@@ -12,6 +12,19 @@ import Hbt.Collection.Entity
 import Hbt.Markdown.Initial qualified as Initial
 import Test.Dwergaz
 
+-- Helper functions for building test collections with new API
+insertEntity :: Entity -> Collection -> Collection
+insertEntity entity collection = snd $ Collection.insert entity collection
+
+upsertEntity :: Entity -> Collection -> Collection
+upsertEntity entity collection = snd $ Collection.upsert entity collection
+
+addEdgesById :: URI -> URI -> Collection -> Collection
+addEdgesById uri1 uri2 collection =
+  case (Collection.lookupId uri1 collection, Collection.lookupId uri2 collection) of
+    (Just id1, Just id2) -> Collection.addEdges id1 id2 collection
+    _ -> collection
+
 data Parser = forall a. (Show a) => MkParser (String -> Text -> Either a Collection)
 
 testEmpty :: Parser -> Test
@@ -42,7 +55,7 @@ testNoLabels (MkParser parse) =
       time = mkTime "November 15, 2023"
       foo = mkEntity (mkURI "https://foo.com") time (Just $ MkName "Foo") Set.empty
       bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
-      expected = Collection.upsert bar . Collection.upsert foo $ Collection.empty
+      expected = Collection.empty & upsertEntity foo & upsertEntity bar
    in assertEqual name expected actual
 
 testNoUrl :: Parser -> Test
@@ -68,7 +81,7 @@ testNoTitle (MkParser parse) =
           ]
       actual = either (error . show) id $ parse name input
       entity = mkEntity (mkURI "https://foo.com") (mkTime "November 15, 2023") Nothing Set.empty
-      expected = Collection.upsert entity Collection.empty
+      expected = upsertEntity entity Collection.empty
    in assertEqual name expected actual
 
 testIndented :: Parser -> Test
@@ -82,7 +95,7 @@ testIndented (MkParser parse) =
           ]
       actual = either (error . show) id $ parse name input
       entity = mkEntity (mkURI "https://foo.com") (mkTime "November 15, 2023") (Just $ MkName "Foo") Set.empty
-      expected = Collection.upsert entity Collection.empty
+      expected = upsertEntity entity Collection.empty
    in assertEqual name expected actual
 
 testIndentedDouble :: Parser -> Test
@@ -113,9 +126,9 @@ testParent (MkParser parse) =
       bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
-          & Collection.addEdges foo.uri bar.uri
+          & upsertEntity foo
+          & upsertEntity bar
+          & addEdgesById foo.uri bar.uri
    in assertEqual name expected actual
 
 testParents :: Parser -> Test
@@ -136,11 +149,11 @@ testParents (MkParser parse) =
       baz = mkEntity (mkURI "https://baz.com") time (Just $ MkName "Baz") Set.empty
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
-          & Collection.addEdges foo.uri bar.uri
-          & Collection.upsert baz
-          & Collection.addEdges bar.uri baz.uri
+          & upsertEntity foo
+          & upsertEntity bar
+          & addEdgesById foo.uri bar.uri
+          & upsertEntity baz
+          & addEdgesById bar.uri baz.uri
    in assertEqual name expected actual
 
 testParentsIndented :: Parser -> Test
@@ -161,11 +174,11 @@ testParentsIndented (MkParser parse) =
       baz = mkEntity (mkURI "https://baz.com") time (Just $ MkName "Baz") Set.empty
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
-          & Collection.addEdges foo.uri bar.uri
-          & Collection.upsert baz
-          & Collection.addEdges bar.uri baz.uri
+          & upsertEntity foo
+          & upsertEntity bar
+          & addEdgesById foo.uri bar.uri
+          & upsertEntity baz
+          & addEdgesById bar.uri baz.uri
    in assertEqual name expected actual
 
 testSingleParent :: Parser -> Test
@@ -188,13 +201,13 @@ testSingleParent (MkParser parse) =
       quux = mkEntity (mkURI "https://quux.com") time (Just $ MkName "Quux") Set.empty
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
-          & Collection.addEdges foo.uri bar.uri
-          & Collection.upsert baz
-          & Collection.addEdges foo.uri baz.uri
-          & Collection.upsert quux
-          & Collection.addEdges foo.uri quux.uri
+          & upsertEntity foo
+          & upsertEntity bar
+          & addEdgesById foo.uri bar.uri
+          & upsertEntity baz
+          & addEdgesById foo.uri baz.uri
+          & upsertEntity quux
+          & addEdgesById foo.uri quux.uri
    in assertEqual name expected actual
 
 testInvertedParent :: Parser -> Test
@@ -213,8 +226,8 @@ testInvertedParent (MkParser parse) =
       bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") Set.empty
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
+          & upsertEntity foo
+          & upsertEntity bar
    in assertEqual name expected actual
 
 testInvertedSingleParent :: Parser -> Test
@@ -235,9 +248,9 @@ testInvertedSingleParent (MkParser parse) =
       baz = mkEntity (mkURI "https://baz.com") time (Just $ MkName "Baz") Set.empty
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
-          & Collection.upsert baz
+          & upsertEntity foo
+          & upsertEntity bar
+          & upsertEntity baz
    in assertEqual name expected actual
 
 testLabel :: Parser -> Test
@@ -259,8 +272,8 @@ testLabel (MkParser parse) =
       bar = mkEntity (mkURI "https://bar.com") time (Just $ MkName "Bar") labels
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
+          & upsertEntity foo
+          & upsertEntity bar
    in assertEqual name expected actual
 
 testLabels :: Parser -> Test
@@ -290,10 +303,10 @@ testLabels (MkParser parse) =
       quux = mkEntity (mkURI "https://quux.com") time (Just $ MkName "Quux") labelsBaz
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
-          & Collection.upsert baz
-          & Collection.upsert quux
+          & upsertEntity foo
+          & upsertEntity bar
+          & upsertEntity baz
+          & upsertEntity quux
    in assertEqual name expected actual
 
 testMultipleLabels :: Parser -> Test
@@ -325,9 +338,9 @@ testMultipleLabels (MkParser parse) =
       baz = mkEntity (mkURI "https://baz.com") time (Just $ MkName "Baz") labelsBaz
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
-          & Collection.upsert baz
+          & upsertEntity foo
+          & upsertEntity bar
+          & upsertEntity baz
    in assertEqual name expected actual
 
 testUpdated :: Parser -> Test
@@ -356,8 +369,8 @@ testUpdated (MkParser parse) =
       bar = mkEntity (mkURI "https://foo.com") updatedTime (Just $ MkName "Bar") labelsBar
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
+          & upsertEntity foo
+          & upsertEntity bar
    in group
         name
         [ assertEqual "expected length" 1 (Collection.length actual)
@@ -390,8 +403,8 @@ testDescendingDates (MkParser parse) =
       bar = mkEntity (mkURI "https://foo.com") initialTime (Just $ MkName "Bar") labelsBar
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
+          & upsertEntity foo
+          & upsertEntity bar
    in group
         name
         [ assertEqual "expected length" 1 (Collection.length actual)
@@ -434,9 +447,9 @@ testMixedDates (MkParser parse) =
       baz = mkEntity uri finalTime (Just $ MkName "Baz") labelsBaz
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
-          & Collection.upsert baz
+          & upsertEntity foo
+          & upsertEntity bar
+          & upsertEntity baz
    in group
         name
         [ assertEqual "expected length" 1 (Collection.length actual)
@@ -474,9 +487,9 @@ testBasic (MkParser parse) =
       baz = mkEntity (mkURI "https://example.com/") time (Just $ MkName "Hello, world!") labelsBaz
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
-          & Collection.upsert baz
+          & upsertEntity foo
+          & upsertEntity bar
+          & upsertEntity baz
    in assertEqual name expected actual
 
 testNested :: Parser -> Test
@@ -503,15 +516,15 @@ testNested (MkParser parse) =
       baz = mkEntity (mkURI "https://baz.com") time Nothing labels
       expected =
         Collection.empty
-          & Collection.upsert foo
-          & Collection.upsert bar
-          & Collection.addEdges foo.uri bar.uri
-          & Collection.upsert hello
-          & Collection.addEdges foo.uri hello.uri
-          & Collection.upsert quux
-          & Collection.addEdges hello.uri quux.uri
-          & Collection.upsert baz
-          & Collection.addEdges foo.uri baz.uri
+          & upsertEntity foo
+          & upsertEntity bar
+          & addEdgesById foo.uri bar.uri
+          & upsertEntity hello
+          & addEdgesById foo.uri hello.uri
+          & upsertEntity quux
+          & addEdgesById hello.uri quux.uri
+          & upsertEntity baz
+          & addEdgesById foo.uri baz.uri
    in assertEqual name expected actual
 
 testEmptyLink :: Parser -> Test
@@ -525,7 +538,7 @@ testEmptyLink (MkParser parse) =
           ]
       actual = either (error . show) id $ parse name input
       entity = mkEntity (mkURI "https://foo.com") (mkTime "November 15, 2023") Nothing Set.empty
-      expected = Collection.upsert entity Collection.empty
+      expected = upsertEntity entity Collection.empty
    in assertEqual name expected actual
 
 testLinkTextWithBackticks :: Parser -> Test
@@ -539,7 +552,7 @@ testLinkTextWithBackticks (MkParser parse) =
           ]
       actual = either (error . show) id $ parse name input
       entity = mkEntity (mkURI "https://foo.com") (mkTime "November 15, 2023") (Just $ MkName "`Foo`") Set.empty
-      expected = Collection.upsert entity Collection.empty
+      expected = upsertEntity entity Collection.empty
    in assertEqual name expected actual
 
 testMixedLinkTextWithBackticks :: Parser -> Test
@@ -553,7 +566,7 @@ testMixedLinkTextWithBackticks (MkParser parse) =
           ]
       actual = either (error . show) id $ parse name input
       entity = mkEntity (mkURI "https://foo.com") (mkTime "November 15, 2023") (Just $ MkName "Hello `Foo`, world!") Set.empty
-      expected = Collection.upsert entity Collection.empty
+      expected = upsertEntity entity Collection.empty
    in assertEqual name expected actual
 
 allTests :: Test

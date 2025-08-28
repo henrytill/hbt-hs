@@ -3,12 +3,9 @@
 module Lens where
 
 import Control.Exception (Exception, throw)
-import Data.Bifunctor
 import Data.Maybe qualified as Maybe
-import Data.Monoid (Last (..))
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Collection.Entity qualified as Entity
 import Hbt.Markdown.Initial.FoldState
 import Hbt.Markdown.Initial.FoldState qualified as FoldState
 import Lens.Family2
@@ -24,19 +21,20 @@ type Acc = (Collection, FoldState)
 
 saveEntityInline :: Acc -> Acc
 saveEntityInline (c, s) =
-  ( (maybe id (Collection.addEdges e.uri) (Maybe.listToMaybe s.parents)) (Collection.upsert e c)
-  , s {maybeParent = Last (Just e.uri), uri = mempty, name = mempty}
+  ( (maybe id (Collection.addEdges eid) (Maybe.listToMaybe s.parents)) c'
+  , s {maybeParent = (Just eid), uri = Nothing, name = Nothing}
   )
   where
-    e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity s)
+    (eid, c') = Collection.upsert (Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity s)) c
 
 saveEntity :: Acc -> Acc
 saveEntity (c, s) =
-  Collection.upsert e c
-    & maybe id (Collection.addEdges e.uri) (Maybe.listToMaybe s.parents)
-    & (,s {maybeParent = Last (Just e.uri), uri = mempty, name = mempty})
+  c'
+    & maybe id (Collection.addEdges eid) (Maybe.listToMaybe s.parents)
+    & (,s {maybeParent = (Just eid), uri = Nothing, name = Nothing})
   where
     e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity s)
+    (eid, c') = Collection.upsert e c
 
 inspect $ 'saveEntityInline === 'saveEntity
 
@@ -49,28 +47,17 @@ st = _2
 saveEntityLens :: Acc -> Acc
 saveEntityLens acc =
   acc
-    & coll %~ Collection.upsert e
-    & coll %~ maybe id (Collection.addEdges e.uri) (acc ^. st . parents . to Maybe.listToMaybe)
-    & st . maybeParent <>~ Last (Just e.uri)
-    & st . uri .~ mempty
-    & st . name .~ mempty
+    & coll .~ f c
+    & st . maybeParent .~ Just eid
+    & st . uri .~ Nothing
+    & st . name .~ Nothing
   where
-    e = Maybe.fromMaybe (throw NoSaveableEntity) (acc ^. st . to FoldState.toEntity)
+    e = acc ^. st . to FoldState.toEntity . to (Maybe.fromMaybe (throw NoSaveableEntity))
+    (eid, c) = acc ^. coll & Collection.upsert e
+    pid = acc ^. st . parents . to Maybe.listToMaybe
+    f = maybe id (Collection.addEdges eid) pid
 
 inspect $ 'saveEntityInline === 'saveEntityLens
-
-saveEntityBifunctor :: Acc -> Acc
-saveEntityBifunctor acc@(_, s) =
-  acc
-    & first (Collection.upsert e)
-    & first (maybe id (Collection.addEdges e.uri) (Maybe.listToMaybe s.parents))
-    & second (\s' -> s' {maybeParent = s'.maybeParent <> Last (Just e.uri)})
-    & second (\s' -> s' {uri = mempty})
-    & second (\s' -> s' {name = mempty})
-  where
-    e = Maybe.fromMaybe (throw NoSaveableEntity) (FoldState.toEntity s)
-
-inspect $ 'saveEntityInline === 'saveEntityBifunctor
 
 main :: IO ()
 main = return ()

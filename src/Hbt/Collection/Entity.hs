@@ -70,9 +70,11 @@ data Entity = MkEntity
   , updatedAt :: [Time]
   , names :: Set Name
   , labels :: Set Label
-  , extended :: Maybe Extended
   , shared :: Bool
   , toRead :: Bool
+  , isFeed :: Bool
+  , extended :: Maybe Extended
+  , lastVisitedAt :: Maybe Time
   }
   deriving (Show, Eq, Ord)
 
@@ -84,9 +86,11 @@ mkEntity uri createdAt maybeName labels =
     , updatedAt = []
     , names = maybe Set.empty Set.singleton maybeName
     , labels
-    , extended = Nothing
     , shared = False
     , toRead = False
+    , isFeed = False
+    , extended = Nothing
+    , lastVisitedAt = Nothing
     }
 
 empty :: Entity
@@ -97,9 +101,11 @@ empty =
     , updatedAt = []
     , names = Set.empty
     , labels = Set.empty
-    , extended = Nothing
     , shared = False
     , toRead = False
+    , isFeed = False
+    , extended = Nothing
+    , lastVisitedAt = Nothing
     }
 
 update :: Time -> Set Name -> Set Label -> Entity -> Entity

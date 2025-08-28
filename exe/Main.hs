@@ -3,9 +3,9 @@
 module Main where
 
 import Control.Monad (forM_, when)
-import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Data.Text.IO qualified as Text
+import Data.Vector qualified as Vector
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
@@ -84,7 +84,7 @@ printCollection file opts collection
       hPutStrLn stderr "Warning: --dump option not yet implemented"
       return ()
   | opts.dumpTags = do
-      let allLabels = foldMap (.labels) (Map.elems collection.entities)
+      let allLabels = foldMap (.labels) (Vector.toList $ Collection.allEntities collection)
       forM_ (Set.toAscList allLabels) $ Text.putStrLn . (.unLabel)
   | otherwise = do
       putStrLn $ file ++ ": " ++ show (Collection.length collection) ++ " entities"

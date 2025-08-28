@@ -1,15 +1,32 @@
-{-# LANGUAGE MultiWayIf #-}
-
-module Hbt.Collection where
+module Hbt.Collection
+  ( Id (..)
+  , Error (..)
+  , Collection (..)
+  , empty
+  , length
+  , null
+  , lookupId
+  , lookupEntity
+  , entityAt
+  , allEntities
+  , insert
+  , upsert
+  , addEdge
+  , addEdges
+  )
+where
 
 import Control.Exception (Exception, throw)
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Multimap (Multimap)
-import Data.Multimap qualified as Multimap
+import Data.Vector (Vector, elem, (!), (//))
+import Data.Vector qualified as Vector
 import Hbt.Collection.Entity (Entity (..), URI)
 import Hbt.Collection.Entity qualified as Entity
-import Prelude hiding (id, length)
+import Prelude hiding (elem, id, length, null)
+
+newtype Id = MkId {value :: Int}
+  deriving (Show, Eq, Ord)
 
 data Error = MissingEntities [URI]
   deriving (Show, Eq)
@@ -17,57 +34,68 @@ data Error = MissingEntities [URI]
 instance Exception Error
 
 data Collection = MkCollection
-  { entities :: Map URI Entity
-  , edges :: Multimap URI URI
+  { nodes :: Vector Entity
+  , edges :: Vector (Vector Id)
+  , uris :: Map URI Id
   }
-  deriving (Eq, Ord, Show)
-
-instance Semigroup Collection where
-  a <> b = MkCollection (a.entities <> b.entities) (a.edges <> b.edges)
+  deriving (Eq, Show)
 
 empty :: Collection
-empty = MkCollection Map.empty Multimap.empty
-
-instance Monoid Collection where
-  mempty = empty
+empty = MkCollection Vector.empty Vector.empty Map.empty
 
 length :: Collection -> Int
-length = Map.size . (.entities)
+length = Vector.length . (.nodes)
 
 null :: Collection -> Bool
-null = Map.null . (.entities)
+null = Vector.null . (.nodes)
+
+lookupId :: URI -> Collection -> Maybe Id
+lookupId uri = Map.lookup uri . (.uris)
 
 lookupEntity :: URI -> Collection -> Maybe Entity
-lookupEntity uri = Map.lookup uri . (.entities)
+lookupEntity uri collection = do
+  id <- lookupId uri collection
+  pure $ collection.nodes ! id.value
 
-insert :: Entity -> Collection -> Collection
-insert entity collection = collection {entities}
+entityAt :: Id -> Collection -> Entity
+entityAt id collection = collection.nodes ! id.value
+
+allEntities :: Collection -> Vector Entity
+allEntities = (.nodes)
+
+insert :: Entity -> Collection -> (Id, Collection)
+insert entity collection = (newId, newCollection)
   where
-    entities = Map.insert entity.uri entity collection.entities
+    newId = MkId (Vector.length collection.nodes)
+    newCollection =
+      MkCollection
+        { nodes = Vector.snoc collection.nodes entity
+        , edges = Vector.snoc collection.edges Vector.empty
+        , uris = Map.insert entity.uri newId collection.uris
+        }
 
-upsert :: Entity -> Collection -> Collection
-upsert entity collection
-  | let uri = entity.uri
-  , let entities = collection.entities
-  , Just existing <- Map.lookup uri entities =
-      if
-        | let updated = Entity.absorb entity existing
-        , updated /= existing ->
-            collection {entities = Map.insert uri updated entities}
-        | otherwise ->
-            collection
-  | otherwise = insert entity collection
+upsert :: Entity -> Collection -> (Id, Collection)
+upsert entity collection = case lookupId entity.uri collection of
+  Just existingId ->
+    let existing = entityAt existingId collection
+        updated = Entity.absorb entity existing
+     in if updated /= existing
+          then (existingId, collection {nodes = collection.nodes // [(existingId.value, updated)]})
+          else (existingId, collection)
+  Nothing -> insert entity collection
 
-addEdge :: URI -> URI -> Collection -> Collection
-addEdge from to collection =
-  let entities = collection.entities
-      validFrom = Map.member from entities
-      validTo = Map.member to entities
-   in if
-        | validFrom && validTo -> collection {edges = Multimap.insert from to collection.edges}
-        | not validFrom && validTo -> throw $ MissingEntities [from]
-        | validFrom && not validTo -> throw $ MissingEntities [to]
-        | otherwise -> throw $ MissingEntities [from, to]
+addEdge :: Id -> Id -> Collection -> Collection
+addEdge from to collection
+  | validFrom && validTo =
+      let fromEdges = collection.edges ! from.value
+          newFromEdges = if to `elem` fromEdges then fromEdges else Vector.snoc fromEdges to
+       in collection {edges = collection.edges // [(from.value, newFromEdges)]}
+  | not validFrom && validTo = throw $ MissingEntities [(entityAt from collection).uri]
+  | validFrom && not validTo = throw $ MissingEntities [(entityAt to collection).uri]
+  | otherwise = throw $ MissingEntities [(entityAt from collection).uri, (entityAt to collection).uri]
+  where
+    validFrom = from.value < Vector.length collection.nodes
+    validTo = to.value < Vector.length collection.nodes
 
-addEdges :: URI -> URI -> Collection -> Collection
+addEdges :: Id -> Id -> Collection -> Collection
 addEdges from to = addEdge from to . addEdge to from

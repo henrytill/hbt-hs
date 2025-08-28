@@ -2,10 +2,10 @@
 
 module Hbt.CollectionTest where
 
-import Data.Map qualified as Map
 import Data.Maybe qualified as Maybe
-import Data.Multimap qualified as Multimap
 import Data.Set qualified as Set
+import Data.Vector ((!))
+import Data.Vector qualified as Vector
 import Hbt.Collection
 import Hbt.Collection.Entity (Entity (..), Label (..), Name (..), Time (..), nullURI)
 import Hbt.Collection.Entity qualified as Entity
@@ -114,8 +114,8 @@ emptyCollectionTests =
     "Empty collection"
     [ assertBool "empty collection is null" $ null empty
     , assertEqual "empty collection has zero length" 0 $ length empty
-    , assertBool "empty collection has empty nodes vector" $ Map.null empty.entities
-    , assertBool "empty collection has empty edges vector" $ Multimap.null empty.edges
+    , assertBool "empty collection has empty nodes vector" $ Vector.null empty.nodes
+    , assertBool "empty collection has empty edges vector" $ Vector.null empty.edges
     ]
 
 insertTests :: Test
@@ -126,7 +126,7 @@ insertTests =
           (mkTime 1000)
           (Just $ MkName "Test")
           (Set.singleton $ MkLabel "label")
-      collection = insert entity empty
+      (_, collection) = insert entity empty
    in group
         "Insert operations"
         [ assertEqual "insert updates collection length" 1 $ length collection
@@ -148,8 +148,8 @@ multipleInsertTests =
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
-      collection1 = insert entity1 empty
-      collection2 = insert entity2 collection1
+      (_, collection1) = insert entity1 empty
+      (_, collection2) = insert entity2 collection1
    in group
         "Multiple insert operations"
         [ assertEqual "collection length after two inserts" 2 $ length collection2
@@ -165,7 +165,7 @@ upsertTests =
           (mkTime 1000)
           (Just $ MkName "Test")
           (Set.singleton $ MkLabel "label")
-      newCollection = upsert newEntity empty
+      (_, newCollection) = upsert newEntity empty
 
       entity1 =
         Entity.mkEntity
@@ -179,8 +179,8 @@ upsertTests =
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
-      collection1 = insert entity1 empty
-      collection2 = upsert entity2 collection1
+      (_, collection1) = insert entity1 empty
+      (_, collection2) = upsert entity2 collection1
       expectedEntity = Entity.absorb entity2 entity1
    in group
         "Upsert operations"
@@ -205,31 +205,31 @@ edgeTests =
           (mkTime 2000)
           (Just $ MkName "Test2")
           (Set.singleton $ MkLabel "label2")
-      collection1 = insert entity1 empty
-      collection2 = insert entity2 collection1
+      (id1, collection1) = insert entity1 empty
+      (id2, collection2) = insert entity2 collection1
 
       -- Test directed edge
-      collectionWithEdge = addEdge entity1.uri entity2.uri collection2
-      edgesFromURI1 = Multimap.lookup entity1.uri collectionWithEdge.edges
-      edgesFromURI2 = Multimap.lookup entity1.uri collectionWithEdge.edges
+      collectionWithEdge = addEdge id1 id2 collection2
+      edgesFromId1 = (collectionWithEdge.edges ! id1.value)
+      edgesFromId2 = (collectionWithEdge.edges ! id2.value)
 
       -- Test duplicate edge
-      collectionWithDuplicateEdge = addEdge entity1.uri entity2.uri collectionWithEdge
-      edgesFromURI1AfterDuplicate = Multimap.lookup entity1.uri collectionWithDuplicateEdge.edges
+      collectionWithDuplicateEdge = addEdge id1 id2 collectionWithEdge
+      edgesFromId1AfterDuplicate = (collectionWithDuplicateEdge.edges ! id1.value)
 
       -- Test bidirectional edges
-      collectionWithBidirectionalEdges = addEdges entity1.uri entity2.uri collection2
-      bidirectionalEdgesFromURI1 = Multimap.lookup entity1.uri collectionWithBidirectionalEdges.edges
-      bidirectionalEdgesFromURI2 = Multimap.lookup entity2.uri collectionWithBidirectionalEdges.edges
+      collectionWithBidirectionalEdges = addEdges id1 id2 collection2
+      bidirectionalEdgesFromId1 = (collectionWithBidirectionalEdges.edges ! id1.value)
+      bidirectionalEdgesFromId2 = (collectionWithBidirectionalEdges.edges ! id2.value)
    in group
         "Edge operations"
         [ assertBool "ids are different for edge tests" $ entity1.uri /= entity2.uri
-        , assertBool "addEdge creates forward edge" $ Set.member entity2.uri edgesFromURI1
-        , assertBool "addEdge doesn't create backward edge" . not $ Set.member entity1.uri edgesFromURI2
-        , assertEqual "addEdge creates exactly one edge" 1 $ Set.size edgesFromURI1
-        , assertEqual "duplicate addEdge doesn't create additional edges" 1 $ Set.size edgesFromURI1AfterDuplicate
-        , assertBool "addEdges creates forward edge" $ Set.member entity2.uri bidirectionalEdgesFromURI1
-        , assertBool "addEdges creates backward edge" $ Set.member entity1.uri bidirectionalEdgesFromURI2
+        , assertBool "addEdge creates forward edge" $ Vector.elem id2 edgesFromId1
+        , assertBool "addEdge doesn't create backward edge" . not $ Vector.elem id1 edgesFromId2
+        , assertEqual "addEdge creates exactly one edge" 1 $ Vector.length edgesFromId1
+        , assertEqual "duplicate addEdge doesn't create additional edges" 1 $ Vector.length edgesFromId1AfterDuplicate
+        , assertBool "addEdges creates forward edge" $ Vector.elem id2 bidirectionalEdgesFromId1
+        , assertBool "addEdges creates backward edge" $ Vector.elem id1 bidirectionalEdgesFromId2
         ]
 
 allTests :: Test

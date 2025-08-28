@@ -9,7 +9,6 @@ import Commonmark.Initial qualified as Initial
 import Control.Exception (Exception, throw)
 import Data.Foldable (foldl')
 import Data.Maybe qualified as Maybe
-import Data.Monoid (Last (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Lazy qualified as LazyText
@@ -40,13 +39,15 @@ st = _2
 saveEntity :: Acc -> Acc
 saveEntity acc =
   acc
-    & coll %~ Collection.upsert e
-    & coll %~ maybe id (Collection.addEdges e.uri) (acc ^. st . parents . to Maybe.listToMaybe)
-    & st . maybeParent <>~ Last (Just e.uri)
-    & st . uri .~ mempty
-    & st . name .~ mempty
+    & coll .~ f c
+    & st . maybeParent .~ Just eid
+    & st . uri .~ Nothing
+    & st . name .~ Nothing
   where
-    e = Maybe.fromMaybe (throw NoSaveableEntity) (acc ^. st . to FoldState.toEntity)
+    e = acc ^. st . to FoldState.toEntity . to (Maybe.fromMaybe (throw NoSaveableEntity))
+    (eid, c) = acc ^. coll & Collection.upsert e
+    pid = acc ^. st . parents . to Maybe.listToMaybe
+    f = maybe id (Collection.addEdges eid) pid
 
 textFromInlines :: [Inline a] -> Text
 textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
@@ -68,8 +69,8 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
 extractLink :: Text -> Text -> [Inline a] -> FoldState -> FoldState
 extractLink d _ desc foldState =
   foldState
-    & uri <>~ Last updatedURI
-    & name <>~ Last updatedName
+    & uri .~ updatedURI
+    & name .~ updatedName
   where
     updatedURI = Just . Entity.mkURI $ Text.unpack d
     linkText = textFromInlines desc
@@ -91,9 +92,9 @@ blockFolder acc (MkBlock _ b) = case b of
     foldl' inlineFolder acc ils
   Initial.Heading 1 ils ->
     acc
-      & st . time <>~ Last updatedTime
-      & st . maybeParent .~ mempty
-      & st . labels .~ mempty
+      & st . time .~ updatedTime
+      & st . maybeParent .~ Nothing
+      & st . labels .~ []
     where
       headingText = textFromInlines ils
       updatedTime = Just . Entity.mkTime $ Text.unpack headingText
@@ -104,9 +105,9 @@ blockFolder acc (MkBlock _ b) = case b of
       headingText = textFromInlines ils
   Initial.List _ _ bss ->
     acc
-      & st . parents %~ maybe id (:) (acc ^. st . maybeParent . to getLast)
+      & st . parents %~ maybe id (:) (acc ^. st . maybeParent)
       & foldBlocks bss
-      & st . maybeParent .~ mempty
+      & st . maybeParent .~ Nothing
       & st . parents %~ drop 1
     where
       foldBlocks :: [[Block a]] -> Acc -> Acc
@@ -114,7 +115,7 @@ blockFolder acc (MkBlock _ b) = case b of
   _ -> acc
 
 collectionFromBlocks :: [Block a] -> Collection
-collectionFromBlocks = (^. coll) . foldl' blockFolder mempty
+collectionFromBlocks = (^. coll) . foldl' blockFolder (Collection.empty, FoldState.empty)
 
 parseBlocks :: String -> Text -> Either Commonmark.ParseError Blocks
 parseBlocks = Commonmark.commonmark
