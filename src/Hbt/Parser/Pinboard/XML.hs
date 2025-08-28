@@ -5,6 +5,7 @@ module Hbt.Parser.Pinboard.XML where
 import Control.Monad.Except (Except, MonadError, liftEither, runExcept)
 import Control.Monad.State (runStateT)
 import Data.Bifunctor (first)
+import Data.Foldable (foldl')
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -107,7 +108,7 @@ process :: [Tag Text] -> PinboardM Collection
 process tags = do
   mapM_ handle tags
   collectedEntities <- use entities
-  let finalCollection = foldl (\coll entity -> snd $ Collection.upsert entity coll) Collection.empty collectedEntities
+  let finalCollection = foldl' (\coll entity -> snd $ Collection.upsert entity coll) Collection.empty collectedEntities
   collection .= finalCollection
   use collection
 

@@ -3,6 +3,7 @@
 module Main where
 
 import Control.Monad (forM_, when)
+import Data.Foldable (foldl')
 import Data.Set qualified as Set
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
@@ -61,7 +62,7 @@ options =
 parseOptions :: [String] -> IO (Options, [String])
 parseOptions argv =
   case getOpt Permute options argv of
-    (o, n, []) -> return (foldl (flip id) defaultOptions o, n)
+    (o, n, []) -> return (foldl' (flip id) defaultOptions o, n)
     (_, _, errs) -> do
       mapM_ (hPutStrLn stderr) errs
       printUsage

@@ -6,6 +6,7 @@ import Data.Aeson (FromJSON (..), withObject, (.!=), (.:), (.:?))
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as ByteString
+import Data.Foldable (foldl')
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -84,7 +85,7 @@ postToEntity post = do
 postsToCollection :: [PinboardPost] -> Either Error Collection
 postsToCollection posts = do
   entities <- traverse postToEntity (reverse posts)
-  pure $ foldl (\coll entity -> snd $ Collection.upsert entity coll) Collection.empty entities
+  pure $ foldl' (\coll entity -> snd $ Collection.upsert entity coll) Collection.empty entities
 
 parse :: Text -> Either Error Collection
 parse input = do
