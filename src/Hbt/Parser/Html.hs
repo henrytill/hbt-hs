@@ -59,7 +59,7 @@ empty =
     , waitingFor = None
     }
 
-collection :: Lens' ParseState (Collection)
+collection :: Lens' ParseState Collection
 collection f s = (\c -> s {collection = c}) <$> f s.collection
 
 maybeDescription :: Lens' ParseState (Maybe Text)
@@ -84,7 +84,7 @@ runNetscapeM :: NetscapeM a -> ParseState -> Either Error (a, ParseState)
 runNetscapeM (MkNetscapeM m) = runExcept . runStateT m
 
 lookupAttr :: Text -> [Attribute Text] -> Maybe Text
-lookupAttr key attrs = lookup (Text.toLower key) (map (\(k, v) -> (Text.toLower k, v)) attrs)
+lookupAttr key attrs = lookup (Text.toLower key) (map (first Text.toLower) attrs)
 
 parseTimestamp :: [Attribute Text] -> Text -> Maybe Time
 parseTimestamp attrs key

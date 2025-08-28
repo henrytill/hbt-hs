@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Parser.Pinboard.XML where
@@ -57,7 +56,7 @@ runPinboardM :: PinboardM a -> ParseState -> Either Error (a, ParseState)
 runPinboardM (MkPinboardM m) = runExcept . runStateT m
 
 lookupAttr :: Text -> [Attribute Text] -> Maybe Text
-lookupAttr key attrs = lookup (Text.toLower key) (map (\(k, v) -> (Text.toLower k, v)) attrs)
+lookupAttr key attrs = lookup (Text.toLower key) (map (first Text.toLower) attrs)
 
 parseTime :: Text -> Either Error Time
 parseTime timeStr =

@@ -40,7 +40,7 @@ instance ToJSON Id where
 instance FromJSON Id where
   parseJSON = fmap MkId . parseJSON
 
-data Error = MissingEntities [URI]
+newtype Error = MissingEntities [URI]
   deriving (Show, Eq)
 
 data Collection = MkCollection

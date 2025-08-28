@@ -19,6 +19,7 @@ module Hbt.Collection.Entity
 where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.:?), (.=))
+import Data.Maybe (isJust)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -56,7 +57,7 @@ normalizeURI :: URI.URI -> URI.URI
 normalizeURI uri
   | URI.uriScheme uri `elem` ["http:", "https:"]
   , null (URI.uriPath uri)
-  , URI.uriAuthority uri /= Nothing =
+  , isJust (URI.uriAuthority uri) =
       uri {URI.uriPath = "/"}
   | otherwise = uri
 

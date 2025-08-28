@@ -1,11 +1,10 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 
 module Hbt.HtmlTest.TH where
 
 import Data.ByteString qualified as BS
 import Data.List (isSuffixOf, sort)
 import Data.Text (Text)
-import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Text.Encoding.Error qualified as Text.Error
 import Language.Haskell.TH (Exp, Q, runIO)
