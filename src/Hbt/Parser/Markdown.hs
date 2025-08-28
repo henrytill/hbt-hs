@@ -7,7 +7,7 @@ module Hbt.Parser.Markdown where
 import Commonmark qualified
 import Commonmark.Initial (Block, Blocks, Inline, pattern MkBlock, pattern MkInline)
 import Commonmark.Initial qualified as Initial
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
 import Control.Monad.Except (Except, MonadError, liftEither, runExcept, throwError)
 import Control.Monad.State (runStateT)
 import Data.Bifunctor (first)
@@ -92,36 +92,30 @@ runMarkdownM (MkMarkdownM m) = runExcept . runStateT m
 
 -- Helper to convert FoldState-like state to Entity
 toEntity :: ParseState -> Maybe Entity
-toEntity st = case (st.maybeURI, st.maybeTime) of
-  (Just u, Just t) -> Just . Entity.mkEntity u t st.maybeName $ Set.fromList st.labels
-  _ -> Nothing
+toEntity st = Entity.mkEntity <$> st.maybeURI <*> st.maybeTime <*> pure st.maybeName <*> pure (Set.fromList st.labels)
 
 -- Save current entity to collection and reset parsing state
 saveEntity :: MarkdownM ()
 saveEntity = do
   currentState <- use id
-  case toEntity currentState of
-    Nothing -> throwError NoSaveableEntity
-    Just entity -> do
-      currentCollection <- use collection
-      let (entityId, newCollection) = Collection.upsert entity currentCollection
+  entity <- maybe (throwError NoSaveableEntity) return $ toEntity currentState
+  currentCollection <- use collection
+  let (entityId, newCollection) = Collection.upsert entity currentCollection
 
-      -- Update collection
-      collection .= newCollection
+  -- Update collection
+  collection .= newCollection
 
-      -- Add edges if we have a parent from the parent stack (not maybeParent)
-      parentStack <- use parents
-      case parentStack of
-        [] -> return ()
-        (pid : _) -> do
-          coll <- use collection
-          updatedColl <- liftEither . first fromCollectionError $ Collection.addEdges entityId pid coll
-          collection .= updatedColl
+  -- Add edges if we have a parent from the parent stack (not maybeParent)
+  parentStack <- use parents
+  forM_ (take 1 parentStack) $ \pid -> do
+    coll <- use collection
+    updatedColl <- liftEither . first fromCollectionError $ Collection.addEdges entityId pid coll
+    collection .= updatedColl
 
-      -- Set this entity as the new parent and reset parsing fields
-      maybeParent .= Just entityId
-      maybeURI .= Nothing
-      maybeName .= Nothing
+  -- Set this entity as the new parent and reset parsing fields
+  maybeParent .= Just entityId
+  maybeURI .= Nothing
+  maybeName .= Nothing
 
 -- Extract text from inline elements (same as current implementation)
 textFromInlines :: [Inline a] -> Text
@@ -148,17 +142,13 @@ extractLink destination _title description = do
   maybeURI .= Just uri
 
   let linkText = textFromInlines description
-  if Text.null linkText || linkText == destination
-    then maybeName .= Nothing
-    else maybeName .= Just (MkName linkText)
+  when (not (Text.null linkText) && linkText /= destination) $
+    maybeName .= Just (MkName linkText)
 
 -- Handle inline elements
 handleInline :: Inline a -> MarkdownM ()
-handleInline (MkInline _ il) = case il of
-  Initial.Link destination title description -> do
-    extractLink destination title description
-    saveEntity
-  _ -> return ()
+handleInline (MkInline _ (Initial.Link destination title description)) = extractLink destination title description >> saveEntity
+handleInline _ = return ()
 
 -- Process all inlines in a block
 processInlines :: [Inline a] -> MarkdownM ()
@@ -182,9 +172,7 @@ handleBlock (MkBlock _ b) = case b of
   Initial.List _ _ blocksList -> do
     -- Save current parent and push it to parent stack
     currentParent <- use maybeParent
-    case currentParent of
-      Nothing -> return ()
-      Just pid -> parents %= (pid :)
+    forM_ currentParent $ \pid -> parents %= (pid :)
 
     -- Process all blocks in the list
     forM_ blocksList $ mapM_ handleBlock
