@@ -17,6 +17,9 @@ extra-source-files:
     test/data/markdown/*.yaml
     test/data/html/*.html
     test/data/html/*.yaml
+    test/data/pinboard/*.json
+    test/data/pinboard/*.xml
+    test/data/pinboard/*.yaml
 
 common exts
     default-extensions:
@@ -34,6 +37,8 @@ library
         Hbt.Parser
         Hbt.Parser.Html
         Hbt.Parser.Markdown
+        Hbt.Parser.Pinboard.JSON
+        Hbt.Parser.Pinboard.XML
 
     hs-source-dirs:   src
     other-modules:
@@ -42,6 +47,7 @@ library
     build-depends:
         base >=4.17.2.1 && <4.19,
         aeson ^>=2.2.3.0,
+        bytestring ^>=0.11.5.4,
         commonmark ^>=0.2.6.1,
         commonmark-initial ^>=0.1.0.0,
         containers ^>=0.6.7,
@@ -79,6 +85,9 @@ test-suite hbt-test
         Hbt.MarkdownTest.TH
         Hbt.Parser.HtmlTest
         Hbt.Parser.MarkdownTest
+        Hbt.Parser.Pinboard.JSONTest
+        Hbt.Parser.Pinboard.XMLTest
+        Hbt.PinboardTest.TH
 
     default-language: GHC2021
     ghc-options:      -Wall

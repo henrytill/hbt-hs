@@ -5,6 +5,8 @@ import Data.MultimapTest qualified as MultimapTest
 import Hbt.CollectionTest qualified as CollectionTest
 import Hbt.Parser.HtmlTest qualified as HtmlTest
 import Hbt.Parser.MarkdownTest qualified as MarkdownTest
+import Hbt.Parser.Pinboard.JSONTest qualified as PinboardJSONTest
+import Hbt.Parser.Pinboard.XMLTest qualified as PinboardXMLTest
 import System.Exit (exitFailure)
 import Text.Printf (printf)
 
@@ -18,6 +20,10 @@ main = do
   putStr htmlOutput
   let (markdownOutput, markdownPassed) = MarkdownTest.results
   putStr markdownOutput
-  let allPassed = and [multimapPassed, collectionPassed, htmlPassed, markdownPassed]
+  let (pinboardJsonOutput, pinboardJsonPassed) = PinboardJSONTest.results
+  putStr pinboardJsonOutput
+  let (pinboardXmlOutput, pinboardXmlPassed) = PinboardXMLTest.results
+  putStr pinboardXmlOutput
+  let allPassed = and [multimapPassed, collectionPassed, htmlPassed, markdownPassed, pinboardJsonPassed, pinboardXmlPassed]
   printf "Summary: %s\n" (if allPassed then "All tests passed!" else "Some tests failed.")
   unless allPassed exitFailure
