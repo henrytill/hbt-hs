@@ -61,7 +61,9 @@ empty =
     , parents = []
     }
 
--- Lenses following Netscape pattern
+toEntity :: ParseState -> Maybe Entity
+toEntity st = Entity.mkEntity <$> st.maybeURI <*> st.maybeTime <*> pure st.maybeName <*> pure (Set.fromList st.labels)
+
 collection :: Lens' ParseState Collection
 collection f s = (\c -> s {collection = c}) <$> f s.collection
 
@@ -88,10 +90,6 @@ newtype MarkdownM a = MkMarkdownM {unMarkdownM :: StateT ParseState (Except Erro
 
 runMarkdownM :: MarkdownM a -> ParseState -> Either Error (a, ParseState)
 runMarkdownM (MkMarkdownM m) = runExcept . runStateT m
-
--- Helper to convert FoldState-like state to Entity
-toEntity :: ParseState -> Maybe Entity
-toEntity st = Entity.mkEntity <$> st.maybeURI <*> st.maybeTime <*> pure st.maybeName <*> pure (Set.fromList st.labels)
 
 -- Save current entity to collection and reset parsing state
 saveEntity :: MarkdownM ()
