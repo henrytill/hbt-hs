@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Hbt.Collection.Entity
   ( Error (..)
   , URI (..)
@@ -17,10 +19,12 @@ module Hbt.Collection.Entity
 where
 
 import Control.Exception (Exception, throw)
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.:?), (.=))
 import Data.Maybe qualified as Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import Data.Time.Format (defaultTimeLocale, parseTimeM)
@@ -38,14 +42,37 @@ instance Exception Error
 newtype URI = MkURI {unURI :: URI.URI}
   deriving (Show, Eq, Ord)
 
+instance ToJSON URI where
+  toJSON (MkURI uri) = toJSON $ show uri
+
+instance FromJSON URI where
+  parseJSON = withText "URI" $ \t ->
+    case parseURI (Text.unpack t) of
+      Nothing -> fail $ "Invalid URI: " <> Text.unpack t
+      Just uri -> pure $ MkURI (normalizeURI uri)
+
 mkURI :: String -> URI
-mkURI s = MkURI $ Maybe.fromMaybe (throw $ InvalidURI s) (parseURI s)
+mkURI s = MkURI $ Maybe.fromMaybe (throw $ InvalidURI s) (parseURI s >>= Just . normalizeURI)
+
+normalizeURI :: URI.URI -> URI.URI
+normalizeURI uri
+  | URI.uriScheme uri `elem` ["http:", "https:"]
+  , null (URI.uriPath uri)
+  , URI.uriAuthority uri /= Nothing =
+      uri {URI.uriPath = "/"}
+  | otherwise = uri
 
 nullURI :: URI
 nullURI = MkURI URI.nullURI
 
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
+
+instance ToJSON Time where
+  toJSON (MkTime posixTime) = toJSON (round posixTime :: Integer)
+
+instance FromJSON Time where
+  parseJSON = fmap (MkTime . fromInteger) . parseJSON
 
 epoch :: Time
 epoch = MkTime 0
@@ -58,11 +85,29 @@ mkTime s = case parseTimeM True defaultTimeLocale "%B %e, %Y" s :: Maybe UTCTime
 newtype Name = MkName {unName :: Text}
   deriving (Show, Eq, Ord)
 
+instance ToJSON Name where
+  toJSON (MkName name) = toJSON name
+
+instance FromJSON Name where
+  parseJSON = fmap MkName . parseJSON
+
 newtype Label = MkLabel {unLabel :: Text}
   deriving (Show, Eq, Ord)
 
+instance ToJSON Label where
+  toJSON (MkLabel label) = toJSON label
+
+instance FromJSON Label where
+  parseJSON = fmap MkLabel . parseJSON
+
 newtype Extended = MkExtended {unExtended :: Text}
   deriving (Show, Eq, Ord)
+
+instance ToJSON Extended where
+  toJSON (MkExtended extended) = toJSON extended
+
+instance FromJSON Extended where
+  parseJSON = fmap MkExtended . parseJSON
 
 data Entity = MkEntity
   { uri :: URI
@@ -77,6 +122,35 @@ data Entity = MkEntity
   , lastVisitedAt :: Maybe Time
   }
   deriving (Show, Eq, Ord)
+
+instance ToJSON Entity where
+  toJSON entity =
+    object
+      [ "uri" .= entity.uri
+      , "createdAt" .= entity.createdAt
+      , "updatedAt" .= entity.updatedAt
+      , "names" .= Set.toList entity.names
+      , "labels" .= Set.toList entity.labels
+      , "shared" .= entity.shared
+      , "toRead" .= entity.toRead
+      , "isFeed" .= entity.isFeed
+      , "extended" .= entity.extended
+      , "lastVisitedAt" .= entity.lastVisitedAt
+      ]
+
+instance FromJSON Entity where
+  parseJSON = withObject "Entity" $ \o ->
+    MkEntity
+      <$> o .: "uri"
+      <*> o .: "createdAt"
+      <*> o .: "updatedAt"
+      <*> (Set.fromList <$> o .: "names")
+      <*> (Set.fromList <$> o .: "labels")
+      <*> o .: "shared"
+      <*> o .: "toRead"
+      <*> o .: "isFeed"
+      <*> o .:? "extended"
+      <*> o .:? "lastVisitedAt"
 
 mkEntity :: URI -> Time -> Maybe Name -> Set Label -> Entity
 mkEntity uri createdAt maybeName labels =
@@ -113,20 +187,25 @@ update updatedAt names labels entity
   | let createdAt = entity.createdAt
   , createdAt > updatedAt =
       entity
-        { updatedAt = createdAt : entity.updatedAt
+        { updatedAt = insertSorted createdAt entity.updatedAt
         , createdAt = updatedAt
         , names = updatedNames
         , labels = updatedLabels
         }
   | otherwise =
       entity
-        { updatedAt = updatedAt : entity.updatedAt
+        { updatedAt = insertSorted updatedAt entity.updatedAt
         , names = updatedNames
         , labels = updatedLabels
         }
   where
     updatedNames = Set.union entity.names names
     updatedLabels = Set.union entity.labels labels
+    insertSorted :: Time -> [Time] -> [Time]
+    insertSorted t [] = [t]
+    insertSorted t (x : xs)
+      | t <= x = t : x : xs
+      | otherwise = x : insertSorted t xs
 
 absorb :: Entity -> Entity -> Entity
 absorb other existing

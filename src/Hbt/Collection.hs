@@ -1,7 +1,11 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Hbt.Collection
   ( Id (..)
   , Error (..)
   , Collection (..)
+  , SerializedNode (..)
+  , SerializedCollection (..)
   , empty
   , length
   , null
@@ -13,10 +17,13 @@ module Hbt.Collection
   , upsert
   , addEdge
   , addEdges
+  , toSerialized
+  , fromSerialized
   )
 where
 
 import Control.Exception (Exception, throw)
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Vector (Vector, elem, (!), (//))
@@ -27,6 +34,12 @@ import Prelude hiding (elem, id, length, null)
 
 newtype Id = MkId {value :: Int}
   deriving (Show, Eq, Ord)
+
+instance ToJSON Id where
+  toJSON (MkId idValue) = toJSON idValue
+
+instance FromJSON Id where
+  parseJSON = fmap MkId . parseJSON
 
 data Error = MissingEntities [URI]
   deriving (Show, Eq)
@@ -39,6 +52,50 @@ data Collection = MkCollection
   , uris :: Map URI Id
   }
   deriving (Eq, Show)
+
+data SerializedNode = SerializedNode
+  { nodeId :: Id
+  , entity :: Entity
+  , nodeEdges :: [Id]
+  }
+  deriving (Show, Eq)
+
+instance ToJSON SerializedNode where
+  toJSON node =
+    object
+      [ "id" .= node.nodeId
+      , "entity" .= node.entity
+      , "edges" .= node.nodeEdges
+      ]
+
+instance FromJSON SerializedNode where
+  parseJSON = withObject "SerializedNode" $ \o ->
+    SerializedNode
+      <$> o .: "id"
+      <*> o .: "entity"
+      <*> o .: "edges"
+
+data SerializedCollection = SerializedCollection
+  { version :: String
+  , collectionLength :: Int
+  , value :: [SerializedNode]
+  }
+  deriving (Show, Eq)
+
+instance ToJSON SerializedCollection where
+  toJSON coll =
+    object
+      [ "version" .= coll.version
+      , "length" .= coll.collectionLength
+      , "value" .= coll.value
+      ]
+
+instance FromJSON SerializedCollection where
+  parseJSON = withObject "SerializedCollection" $ \o ->
+    SerializedCollection
+      <$> o .: "version"
+      <*> o .: "length"
+      <*> o .: "value"
 
 empty :: Collection
 empty = MkCollection Vector.empty Vector.empty Map.empty
@@ -99,3 +156,34 @@ addEdge from to collection
 
 addEdges :: Id -> Id -> Collection -> Collection
 addEdges from to = addEdge from to . addEdge to from
+
+toSerialized :: Collection -> SerializedCollection
+toSerialized collection =
+  SerializedCollection
+    { version = "0.1.0"
+    , collectionLength = Vector.length collection.nodes
+    , value = Vector.toList $ Vector.imap makeNode collection.nodes
+    }
+  where
+    makeNode i entity =
+      SerializedNode
+        { nodeId = MkId i
+        , entity = entity
+        , nodeEdges = Vector.toList $ collection.edges ! i
+        }
+
+fromSerialized :: SerializedCollection -> Collection
+fromSerialized serialized =
+  let entities = fmap (.entity) serialized.value
+      edgesLists = fmap (.nodeEdges) serialized.value
+   in MkCollection
+        { nodes = Vector.fromList entities
+        , edges = Vector.fromList $ fmap Vector.fromList edgesLists
+        , uris = Map.fromList $ zipWith (\entity i -> (entity.uri, MkId i)) entities [0 ..]
+        }
+
+instance ToJSON Collection where
+  toJSON = toJSON . toSerialized
+
+instance FromJSON Collection where
+  parseJSON = fmap fromSerialized . parseJSON

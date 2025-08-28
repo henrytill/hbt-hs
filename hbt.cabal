@@ -9,8 +9,12 @@ tested-with:        ghc ==9.6.7
 synopsis:           Heterogeneous Bookmark Transformation
 category:           Web
 build-type:         Simple
-extra-source-files: cabal.project
 extra-doc-files:    CHANGELOG.md
+
+extra-source-files:
+    cabal.project
+    test/data/markdown/*.md
+    test/data/markdown/*.yaml
 
 common exts
     default-extensions:
@@ -34,6 +38,7 @@ library
     ghc-options:      -Wall
     build-depends:
         base >=4.17.2.1 && <4.19,
+        aeson ^>=2.2.3.0,
         commonmark ^>=0.2.6.1,
         commonmark-initial ^>=0.1.0.0,
         containers ^>=0.6.7,
@@ -52,7 +57,7 @@ executable hbt
     build-depends:
         base >=4.17.2.1 && <4.19,
         containers ^>=0.6.7,
-        filepath ^>=1.4.2.2,
+        filepath ^>=1.4.301.0,
         text ^>=2.0.2,
         vector ^>=0.13.2.0,
         hbt
@@ -66,15 +71,20 @@ test-suite hbt-test
         Data.MultimapTest
         Hbt.CollectionTest
         Hbt.MarkdownTest
+        Hbt.MarkdownTest.TH
 
     default-language: GHC2021
     ghc-options:      -Wall
     build-depends:
         base >=4.17.2.1 && <4.19,
         containers ^>=0.6.7,
+        directory ^>=1.3.8.5,
         dwergaz ^>=0.3.1.0,
+        filepath ^>=1.4.301.0,
+        template-haskell ^>=2.20.0.0,
         text ^>=2.0.2,
         vector ^>=0.13.2.0,
+        yaml ^>=0.11.11.2,
         hbt
 
 test-suite lens-inspection
