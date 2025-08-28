@@ -10,7 +10,7 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
 import Hbt.Html.Netscape qualified as Html
-import Hbt.Markdown.Initial qualified as Markdown
+import Hbt.Markdown.StateT qualified as Markdown
 import System.Console.GetOpt
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitFailure, exitSuccess)

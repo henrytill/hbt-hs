@@ -5,7 +5,7 @@ module Hbt.MarkdownTest where
 import Data.Bifunctor (first)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Yaml qualified as Yaml
-import Hbt.Markdown.Initial qualified as Initial
+import Hbt.Markdown.StateT qualified as StateT
 import Hbt.MarkdownTest.TH (SimpleTestCase (..), loadAllTestDataTH)
 import Test.Dwergaz
 
@@ -20,7 +20,7 @@ runSimpleTestCase testCase =
   either assertFailure id $
     assertEqual testCase.testName
       <$> addContext "YAML decode failed" (Yaml.decodeEither' (Text.Encoding.encodeUtf8 testCase.expectedYaml))
-      <*> addContext "Parse failed" (Initial.parse testCase.testName testCase.inputMarkdown)
+      <*> addContext "Parse failed" (StateT.parse testCase.testName testCase.inputMarkdown)
 
 allTests :: Test
 allTests = group "Hbt.Markdown tests" (fmap runSimpleTestCase allTestData)

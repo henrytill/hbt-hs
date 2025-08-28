@@ -4,7 +4,6 @@ import Control.Monad (unless)
 import Data.MultimapTest qualified as MultimapTest
 import Hbt.CollectionTest qualified as CollectionTest
 import Hbt.HtmlTest qualified as HtmlTest
-import Hbt.MarkdownStateTTest qualified as MarkdownStateTTest
 import Hbt.MarkdownTest qualified as MarkdownTest
 import System.Exit (exitFailure)
 import Text.Printf (printf)
@@ -19,8 +18,6 @@ main = do
   putStr htmlOutput
   let (markdownOutput, markdownPassed) = MarkdownTest.results
   putStr markdownOutput
-  let (markdownStateTOutput, markdownStateTTPassed) = MarkdownStateTTest.results
-  putStr markdownStateTOutput
-  let allPassed = and [multimapPassed, collectionPassed, htmlPassed, markdownPassed, markdownStateTTPassed]
+  let allPassed = and [multimapPassed, collectionPassed, htmlPassed, markdownPassed]
   printf "Summary: %s\n" (if allPassed then "All tests passed!" else "Some tests failed.")
   unless allPassed exitFailure
