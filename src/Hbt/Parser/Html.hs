@@ -77,7 +77,7 @@ folderStack f s = (\fs -> s {folderStack = fs}) <$> f s.folderStack
 waitingFor :: Lens' ParseState WaitingFor
 waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
 
-newtype NetscapeM a = MkNetscapeM {unNetscapeM :: StateT ParseState (Except Error) a}
+newtype NetscapeM a = MkNetscapeM (StateT ParseState (Except Error) a)
   deriving (Functor, Applicative, Monad, MonadState ParseState, MonadError Error)
 
 runNetscapeM :: NetscapeM a -> ParseState -> Either Error (a, ParseState)

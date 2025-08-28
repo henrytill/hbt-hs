@@ -85,7 +85,7 @@ maybeParent f s = (\p -> s {maybeParent = p}) <$> f s.maybeParent
 parents :: Lens' ParseState [Id]
 parents f s = (\p -> s {parents = p}) <$> f s.parents
 
-newtype MarkdownM a = MkMarkdownM {unMarkdownM :: StateT ParseState (Except Error) a}
+newtype MarkdownM a = MkMarkdownM (StateT ParseState (Except Error) a)
   deriving (Functor, Applicative, Monad, MonadState ParseState, MonadError Error)
 
 runMarkdownM :: MarkdownM a -> ParseState -> Either Error (a, ParseState)

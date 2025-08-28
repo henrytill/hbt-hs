@@ -50,7 +50,7 @@ collection f s = (\c -> s {collection = c}) <$> f s.collection
 entities :: Lens' ParseState [Entity]
 entities f s = (\e -> s {entities = e}) <$> f s.entities
 
-newtype PinboardM a = MkPinboardM {unPinboardM :: StateT ParseState (Except Error) a}
+newtype PinboardM a = MkPinboardM (StateT ParseState (Except Error) a)
   deriving (Functor, Applicative, Monad, MonadState ParseState, MonadError Error)
 
 runPinboardM :: PinboardM a -> ParseState -> Either Error (a, ParseState)
