@@ -8,6 +8,7 @@ import Data.Text.Encoding.Error qualified as Text.Error
 import Data.Text.IO qualified as Text.IO
 import System.Directory (listDirectory)
 import System.FilePath (takeBaseName, (</>))
+import Text.Microstache (Template, compileMustacheFile)
 
 -- Test case data types
 data HtmlTestCase = HtmlTestCase
@@ -36,8 +37,8 @@ data HtmlFormatterTestCase = HtmlFormatterTestCase
   { testName :: String
   , inputHtml :: Text
   , expectedHtml :: Text
+  , template :: Template
   }
-  deriving (Show, Eq)
 
 -- Test data for all test suites
 data AllTestData = AllTestData
@@ -167,11 +168,15 @@ loadHtmlFormatterTestCase name = do
   expectedBytes <- BS.readFile expectedFile
   let expectedContent = Text.Encoding.decodeUtf8With Text.Error.lenientDecode expectedBytes
 
+  -- Load the template
+  template <- compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
+
   return
     HtmlFormatterTestCase
       { testName = name
       , inputHtml = inputContent
       , expectedHtml = expectedContent
+      , template = template
       }
 
 loadAllHtmlFormatterTestCases :: IO [HtmlFormatterTestCase]

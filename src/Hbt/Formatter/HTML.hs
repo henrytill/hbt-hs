@@ -16,20 +16,13 @@ import Data.Vector qualified as Vector
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Extended (..), Label (..), Name (..), Time (..), URI (..))
-import System.IO.Unsafe (unsafePerformIO)
-import Text.Microstache (Template, compileMustacheFile, renderMustache)
+import Text.Microstache (Template, renderMustache)
 
 -- | Format a Collection as an HTML string in Netscape Bookmark format
-format :: Collection -> Text
-format collection = LText.toStrict $ renderMustache template templateData
+format :: Template -> Collection -> Text
+format template collection = LText.toStrict $ renderMustache template templateData
   where
-    template = netscapeBookmarkTemplate
     templateData = object ["entities" .= map entityToJSON (Vector.toList $ Collection.allEntities collection)]
-
--- | Load the template at compile time (cached)
-netscapeBookmarkTemplate :: Template
-netscapeBookmarkTemplate = unsafePerformIO $ compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
-{-# NOINLINE netscapeBookmarkTemplate #-}
 
 -- | Convert an Entity to JSON for template rendering
 entityToJSON :: Entity -> Value

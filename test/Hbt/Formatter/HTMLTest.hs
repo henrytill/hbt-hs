@@ -20,7 +20,7 @@ runHtmlFormatterTestCase testCase =
   either assertFailure id $
     assertEqual testCase.testName
       <$> pure (normalizeHtml testCase.expectedHtml)
-      <*> (normalizeHtml . HTML.format <$> addContext "HTML parse failed" (HTMLParser.parse testCase.inputHtml))
+      <*> (normalizeHtml . HTML.format testCase.template <$> addContext "HTML parse failed" (HTMLParser.parse testCase.inputHtml))
 
 allTests :: [HtmlFormatterTestCase] -> Test
 allTests testData = group "Hbt.Formatter.HTML tests" (fmap runHtmlFormatterTestCase testData)
