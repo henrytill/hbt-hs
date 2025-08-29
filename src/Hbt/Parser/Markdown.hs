@@ -94,20 +94,20 @@ runMarkdownM (MkMarkdownM m) = runExcept . runStateT m
 -- Save current entity to collection and reset parsing state
 saveEntity :: MarkdownM ()
 saveEntity = do
-  currentState <- use id
-  entity <- maybe (throwError NoSaveableEntity) return $ toEntity currentState
-  currentCollection <- use collection
-  let (entityId, newCollection) = Collection.upsert entity currentCollection
+  st0 <- use id
+  entity <- maybe (throwError NoSaveableEntity) return $ toEntity st0
+  coll0 <- use collection
+  let (entityId, coll1) = Collection.upsert entity coll0
 
   -- Update collection
-  collection .= newCollection
+  collection .= coll1
 
   -- Add edges if we have a parent from the parent stack (not maybeParent)
   parentStack <- use parents
   forM_ (take 1 parentStack) $ \pid -> do
-    coll <- use collection
-    updatedColl <- liftEither . first fromCollectionError $ Collection.addEdges entityId pid coll
-    collection .= updatedColl
+    coll2 <- use collection
+    coll3 <- liftEither . first fromCollectionError $ Collection.addEdges entityId pid coll2
+    collection .= coll3
 
   -- Set this entity as the new parent and reset parsing fields
   maybeParent .= Just entityId
@@ -134,17 +134,17 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
 
 -- Extract link information and set up for entity creation
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
-extractLink destination _title description = do
-  uri <- liftEither . first fromEntityError . Entity.mkURI $ Text.unpack destination
+extractLink dest _title desc = do
+  uri <- liftEither . first fromEntityError . Entity.mkURI $ Text.unpack dest
   maybeURI .= Just uri
 
-  let linkText = textFromInlines description
-  when (not (Text.null linkText) && linkText /= destination) $
+  let linkText = textFromInlines desc
+  when (not (Text.null linkText) && linkText /= dest) $
     maybeName .= Just (MkName linkText)
 
 -- Handle inline elements
 handleInline :: Inline a -> MarkdownM ()
-handleInline (MkInline _ (Initial.Link destination title description)) = extractLink destination title description >> saveEntity
+handleInline (MkInline _ (Initial.Link dest title desc)) = extractLink dest title desc >> saveEntity
 handleInline _ = return ()
 
 -- Process all inlines in a block
