@@ -85,14 +85,11 @@ test-suite hbt-test
         Data.MultimapTest
         Hbt.CollectionTest
         Hbt.Formatter.HTMLTest
-        Hbt.Formatter.HTMLTest.TH
-        Hbt.Parser.HTMLTest.TH
-        Hbt.Parser.MarkdownTest.TH
         Hbt.Parser.HTMLTest
         Hbt.Parser.MarkdownTest
         Hbt.Parser.Pinboard.JSONTest
         Hbt.Parser.Pinboard.XMLTest
-        Hbt.Parser.Pinboard.TH
+        TestData
 
     default-language: GHC2021
     ghc-options:      -Wall
@@ -103,7 +100,6 @@ test-suite hbt-test
         directory ^>=1.3.8.5,
         dwergaz ^>=0.3.1.0,
         filepath ^>=1.4.301.0,
-        template-haskell ^>=2.20.0.0,
         text ^>=2.0.2,
         vector ^>=0.13.2.0,
         yaml ^>=0.11.11.2,

@@ -1,17 +1,12 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Hbt.Formatter.HTMLTest where
 
 import Data.Bifunctor (first)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Hbt.Formatter.HTML qualified as HTML
-import Hbt.Formatter.HTMLTest.TH (HtmlFormatterTestCase (..), loadAllHtmlFormatterTestDataTH)
 import Hbt.Parser.HTML qualified as HTMLParser
 import Test.Dwergaz
-
-allTestData :: [HtmlFormatterTestCase]
-allTestData = $(loadAllHtmlFormatterTestDataTH)
+import TestData (HtmlFormatterTestCase (..))
 
 addContext :: (Show e) => String -> Either e a -> Either String a
 addContext context = first $ showString context . showString ": " . flip shows mempty
@@ -27,13 +22,13 @@ runHtmlFormatterTestCase testCase =
       <$> pure (normalizeHtml testCase.expectedHtml)
       <*> (normalizeHtml . HTML.format <$> addContext "HTML parse failed" (HTMLParser.parse testCase.inputHtml))
 
-allTests :: Test
-allTests = group "Hbt.Formatter.HTML tests" (fmap runHtmlFormatterTestCase allTestData)
+allTests :: [HtmlFormatterTestCase] -> Test
+allTests testData = group "Hbt.Formatter.HTML tests" (fmap runHtmlFormatterTestCase testData)
 
-results :: (String, Bool)
-results = (buildString mempty, allPassed)
+results :: [HtmlFormatterTestCase] -> (String, Bool)
+results testData = (buildString mempty, allPassed)
   where
-    result = runTest allTests
+    result = runTest (allTests testData)
     allPassed = resultIsPassed result
     showResults = showString $ resultToString result
     buildString = showResults . showChar '\n'
