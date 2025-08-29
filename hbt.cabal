@@ -72,8 +72,10 @@ executable hbt
         base >=4.17.2.1 && <4.19,
         containers ^>=0.6.7,
         filepath ^>=1.4.301.0,
+        microstache ^>=1.0.3,
         text ^>=2.0.2,
         vector ^>=0.13.2.0,
+        yaml ^>=0.11.11.2,
         hbt
 
 test-suite hbt-test
