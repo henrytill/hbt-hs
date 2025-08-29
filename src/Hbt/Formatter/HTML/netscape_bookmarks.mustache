@@ -1,0 +1,12 @@
+<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+{{#entities}}
+    <DT><A HREF="{{uri}}" ADD_DATE="{{createdAt}}"{{#lastModified}} LAST_MODIFIED="{{.}}"{{/lastModified}}{{#tags}} TAGS="{{.}}"{{/tags}}{{^shared}} PRIVATE="1"{{/shared}}{{#toRead}} TOREAD="1"{{/toRead}}{{#isFeed}} FEED="true"{{/isFeed}}{{#lastVisit}} LAST_VISIT="{{.}}"{{/lastVisit}}>{{title}}</A>
+{{#description}}
+    <DD>{{{.}}}
+{{/description}}
+{{/entities}}
+</DL><p>

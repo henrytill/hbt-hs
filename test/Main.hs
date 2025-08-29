@@ -3,6 +3,7 @@ module Main (main) where
 import Control.Monad (unless)
 import Data.MultimapTest qualified as MultimapTest
 import Hbt.CollectionTest qualified as CollectionTest
+import Hbt.Formatter.HTMLTest qualified as HTMLFormatterTest
 import Hbt.Parser.HTMLTest qualified as HTMLTest
 import Hbt.Parser.MarkdownTest qualified as MarkdownTest
 import Hbt.Parser.Pinboard.JSONTest qualified as PinboardJSONTest
@@ -16,6 +17,8 @@ main = do
   putStr multimapOutput
   let (collectionOutput, collectionPassed) = CollectionTest.results
   putStr collectionOutput
+  let (htmlFormatterOutput, htmlFormatterPassed) = HTMLFormatterTest.results
+  putStr htmlFormatterOutput
   let (htmlOutput, htmlPassed) = HTMLTest.results
   putStr htmlOutput
   let (markdownOutput, markdownPassed) = MarkdownTest.results
@@ -24,6 +27,6 @@ main = do
   putStr pinboardJsonOutput
   let (pinboardXmlOutput, pinboardXmlPassed) = PinboardXMLTest.results
   putStr pinboardXmlOutput
-  let allPassed = and [multimapPassed, collectionPassed, htmlPassed, markdownPassed, pinboardJsonPassed, pinboardXmlPassed]
+  let allPassed = and [multimapPassed, collectionPassed, htmlFormatterPassed, htmlPassed, markdownPassed, pinboardJsonPassed, pinboardXmlPassed]
   printf "Summary: %s\n" (if allPassed then "All tests passed!" else "Some tests failed.")
   unless allPassed exitFailure
