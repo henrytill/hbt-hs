@@ -1,17 +1,22 @@
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeData #-}
 
 module Main where
 
+import Control.Applicative ((<|>))
 import Control.Monad (when)
 import Data.Foldable (foldl')
-import Data.List (elemIndex)
-import Data.Maybe (fromMaybe)
+import Data.List (elemIndex, find, intercalate)
+import Data.Maybe (fromMaybe, isJust)
+import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
-import Data.Yaml qualified as Yaml
 import Data.Yaml.Pretty qualified as YamlPretty
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
@@ -23,16 +28,27 @@ import Hbt.Parser.Pinboard.JSON qualified as PinboardJSON
 import Hbt.Parser.Pinboard.XML qualified as PinboardXML
 import System.Console.GetOpt
 import System.Environment (getArgs, getProgName)
-import System.Exit (exitFailure, exitSuccess)
+import System.Exit (die, exitFailure, exitSuccess)
 import System.FilePath (takeExtension)
 import System.IO (hPutStrLn, stderr)
 import Text.Microstache (compileMustacheFile)
 
-data InputFormat = HTML | JSON | XML | Markdown
-  deriving (Show, Eq)
+type data Flow = From | To
 
-data OutputFormat = YAML | HTMLOut
-  deriving (Show, Eq)
+data Format (f :: Flow) where
+  JSON :: Format From
+  XML :: Format From
+  Markdown :: Format From
+  HTML :: Format f
+  YAML :: Format To
+
+deriving instance Show (Format f)
+
+deriving instance Eq (Format f)
+
+type InputFormat = Format From
+
+type OutputFormat = Format To
 
 data Options = MkOptions
   { inputFormat :: Maybe InputFormat
@@ -57,42 +73,108 @@ defaultOptions =
     , showHelp = False
     }
 
-parseInputFormat :: String -> Maybe InputFormat
-parseInputFormat "html" = Just HTML
-parseInputFormat "json" = Just JSON
-parseInputFormat "xml" = Just XML
-parseInputFormat "markdown" = Just Markdown
-parseInputFormat _ = Nothing
+class FormatFlow (f :: Flow) where
+  -- | Get all format constructors for this flow direction
+  allConstructors :: Proxy f -> [Format f]
 
-parseOutputFormat :: String -> Maybe OutputFormat
-parseOutputFormat "yaml" = Just YAML
-parseOutputFormat "html" = Just HTMLOut
-parseOutputFormat _ = Nothing
+  -- | Convert a format to its string representation
+  formatString :: Format f -> String
+
+  -- | Update options with the given format
+  setFormatFlow :: Format f -> Options -> Options
+
+  -- | Generate flow-specific error message for invalid format
+  formatErrorFlow :: Proxy f -> String -> String
+
+  -- | Detect format from file extension
+  detectFromExtension :: String -> Maybe (Format f)
+
+  -- | Get list of supported format strings (derived)
+  supportedFormats :: Proxy f -> [String]
+  supportedFormats proxy = map formatString (allConstructors proxy)
+
+  -- | Parse format string to format type (derived)
+  parseFormatFlow :: String -> Maybe (Format f)
+  parseFormatFlow s = find (\fmt -> formatString fmt == s) (allConstructors (Proxy @f))
+
+instance FormatFlow From where
+  allConstructors :: Proxy From -> [Format From]
+  allConstructors _ = [HTML, JSON, XML, Markdown]
+
+  formatString :: Format From -> String
+  formatString HTML = "html"
+  formatString JSON = "json"
+  formatString XML = "xml"
+  formatString Markdown = "markdown"
+
+  setFormatFlow :: Format From -> Options -> Options
+  setFormatFlow fmt opts = opts {inputFormat = Just fmt}
+
+  formatErrorFlow :: Proxy From -> String -> String
+  formatErrorFlow _ f = "Invalid input format: " ++ f
+
+  detectFromExtension :: String -> Maybe (Format From)
+  detectFromExtension ".html" = Just HTML
+  detectFromExtension ".json" = Just JSON
+  detectFromExtension ".xml" = Just XML
+  detectFromExtension ".md" = Just Markdown
+  detectFromExtension _ = Nothing
+
+instance FormatFlow To where
+  allConstructors :: Proxy To -> [Format To]
+  allConstructors _ = [YAML, HTML]
+
+  formatString :: Format To -> String
+  formatString YAML = "yaml"
+  formatString HTML = "html"
+
+  setFormatFlow :: Format To -> Options -> Options
+  setFormatFlow fmt opts = opts {outputFormat = Just fmt}
+
+  formatErrorFlow :: Proxy To -> String -> String
+  formatErrorFlow _ f = "Invalid output format: " ++ f
+
+  detectFromExtension :: String -> Maybe (Format To)
+  detectFromExtension _ = Nothing -- Output formats can't be detected from files (yet)
+
+setFormatOption :: forall (f :: Flow). (FormatFlow f) => Proxy f -> String -> Options -> Options
+setFormatOption proxy s opts = case parseFormatFlow @f s of
+  Just fmt -> setFormatFlow fmt opts
+  Nothing -> error $ formatErrorFlow proxy s
+
+setFromFormat :: String -> Options -> Options
+setFromFormat = setFormatOption (Proxy @From)
+
+setToFormat :: String -> Options -> Options
+setToFormat = setFormatOption (Proxy @To)
+
+generateFormatHelp :: forall (f :: Flow). (FormatFlow f) => Proxy f -> String -> String
+generateFormatHelp proxy label =
+  label ++ " format (" ++ formatList ++ ")"
+  where
+    formatList = intercalate ", " (supportedFormats proxy)
+
+inputFormatHelp :: String
+inputFormatHelp = generateFormatHelp (Proxy @From) "Input"
+
+outputFormatHelp :: String
+outputFormatHelp = generateFormatHelp (Proxy @To) "Output"
+
+detectInputFormat :: FilePath -> Maybe InputFormat
+detectInputFormat file = detectFromExtension @From (takeExtension file)
 
 options :: [OptDescr (Options -> Options)]
 options =
   [ Option
       ['f']
       ["from"]
-      ( ReqArg
-          ( \f opts -> case parseInputFormat f of
-              Just fmt -> opts {inputFormat = Just fmt}
-              Nothing -> error $ "Invalid input format: " ++ f
-          )
-          "FORMAT"
-      )
-      "Input format (html, json, xml, markdown)"
+      (ReqArg setFromFormat "FORMAT")
+      inputFormatHelp
   , Option
       ['t']
       ["to"]
-      ( ReqArg
-          ( \f opts -> case parseOutputFormat f of
-              Just fmt -> opts {outputFormat = Just fmt}
-              Nothing -> error $ "Invalid output format: " ++ f
-          )
-          "FORMAT"
-      )
-      "Output format (yaml, html)"
+      (ReqArg setToFormat "FORMAT")
+      outputFormatHelp
   , Option
       ['o']
       ["output"]
@@ -129,15 +211,6 @@ parseOptions argv =
       printUsage
       exitFailure
 
-detectInputFormat :: FilePath -> Maybe InputFormat
-detectInputFormat file =
-  case takeExtension file of
-    ".html" -> Just HTML
-    ".json" -> Just JSON
-    ".xml" -> Just XML
-    ".md" -> Just Markdown
-    _ -> Nothing
-
 printUsage :: IO ()
 printUsage = do
   prog <- getProgName
@@ -146,9 +219,7 @@ printUsage = do
 
 applyMappings :: Maybe FilePath -> Collection -> IO Collection
 applyMappings Nothing collection = return collection
-applyMappings (Just _) _ = do
-  hPutStrLn stderr "Warning: --mappings option not yet implemented"
-  error "Mappings not implemented"
+applyMappings (Just _) _ = die "Warning: --mappings option not yet implemented"
 
 writeOutput :: Maybe FilePath -> String -> IO ()
 writeOutput Nothing content = putStr content
@@ -163,15 +234,15 @@ yamlConfig = YamlPretty.setConfCompare fieldCompare YamlPretty.defConfig
     fieldOrder =
       [ "version"
       , "length"
-      , "value" -- SerializedCollection
+      , "value"
       , "id"
       , "entity"
-      , "edges" -- SerializedNode
+      , "edges"
       , "uri"
       , "createdAt"
       , "updatedAt"
       , "names"
-      , "labels" -- Entity
+      , "labels"
       , "shared"
       , "toRead"
       , "isFeed"
@@ -192,52 +263,26 @@ printCollection file opts collection
       Just YAML -> do
         let yamlOutput = YamlPretty.encodePretty yamlConfig collection
         writeOutput opts.outputFile $ Text.unpack $ Text.decodeUtf8 yamlOutput
-      Just HTMLOut -> do
+      Just HTML -> do
         template <- compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
         let htmlOutput = HTMLFormatter.format template collection
         writeOutput opts.outputFile $ Text.unpack htmlOutput
-      Nothing -> do
-        hPutStrLn stderr "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
-        exitFailure
+      Nothing -> die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
+
+parseOrDie :: (Show e) => FilePath -> Either e a -> IO a
+parseOrDie file (Left err) = die $ "Error parsing " ++ file ++ ": " ++ show err
+parseOrDie _ (Right result) = return result
+
+parseFile :: InputFormat -> FilePath -> Text.Text -> IO Collection
+parseFile Markdown file content = parseOrDie file $ Markdown.parse file content
+parseFile HTML file content = parseOrDie file $ HTMLParser.parse content
+parseFile JSON file content = parseOrDie file $ PinboardJSON.parse content
+parseFile XML file content = parseOrDie file $ PinboardXML.parse content
 
 processFile :: Options -> FilePath -> IO ()
 processFile opts file = do
-  -- Determine input format
-  inputFmt <- case opts.inputFormat of
-    Just fmt -> return fmt
-    Nothing -> case detectInputFormat file of
-      Just fmt -> return fmt
-      Nothing -> do
-        hPutStrLn stderr $ "Error: no parser for file: " ++ file
-        exitFailure
-
-  -- Parse the file
-  content <- Text.readFile file
-  collection <- case inputFmt of
-    Markdown -> case Markdown.parse file content of
-      Left err -> do
-        hPutStrLn stderr $ "Error parsing " ++ file ++ ": " ++ show err
-        exitFailure
-      Right c -> return c
-    HTML -> case HTMLParser.parse content of
-      Left err -> do
-        hPutStrLn stderr $ "Error parsing " ++ file ++ ": " ++ show err
-        exitFailure
-      Right c -> return c
-    JSON -> case PinboardJSON.parse content of
-      Left err -> do
-        hPutStrLn stderr $ "Error parsing " ++ file ++ ": " ++ show err
-        exitFailure
-      Right c -> return c
-    XML -> case PinboardXML.parse content of
-      Left err -> do
-        hPutStrLn stderr $ "Error parsing " ++ file ++ ": " ++ show err
-        exitFailure
-      Right c -> return c
-
-  -- Apply mappings and print
-  collection' <- applyMappings opts.mappingsFile collection
-  printCollection file opts collection'
+  inputFmt <- maybe (die $ "Error: no parser for file: " ++ file) return (opts.inputFormat <|> detectInputFormat file)
+  Text.readFile file >>= parseFile inputFmt file >>= applyMappings opts.mappingsFile >>= printCollection file opts
 
 main :: IO ()
 main = do
@@ -250,22 +295,17 @@ main = do
 
   case files of
     [] -> do
-      hPutStrLn stderr "Error: input file required"
       printUsage
-      exitFailure
+      die "Error: input file required"
     [file] -> do
       -- Validate that we have either output format or analysis flag
-      let hasOutputFormat = case opts.outputFormat of
-            Just _ -> True
-            Nothing -> False
-      let hasAnalysisFlag = opts.showInfo || opts.listTags
+      let hasOutputFormat = isJust opts.outputFormat
+          hasAnalysisFlag = opts.showInfo || opts.listTags
 
-      when (not hasOutputFormat && not hasAnalysisFlag) $ do
-        hPutStrLn stderr "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
-        exitFailure
+      when (not hasOutputFormat && not hasAnalysisFlag) $
+        die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
 
       processFile opts file
     _ -> do
-      hPutStrLn stderr "Error: exactly one input file required"
       printUsage
-      exitFailure
+      die "Error: exactly one input file required"
