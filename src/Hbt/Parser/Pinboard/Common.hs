@@ -13,16 +13,6 @@ import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Hbt.Collection.Entity (Entity, Extended (..), Label (..), Name (..), Time (..))
 import Hbt.Collection.Entity qualified as Entity
 
-data Error
-  = EntityInvalidURI String
-  | EntityInvalidTime String
-  | MissingRequiredAttribute String
-  deriving (Show, Eq)
-
-fromEntityError :: Entity.Error -> Error
-fromEntityError (Entity.InvalidURI s) = EntityInvalidURI s
-fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
-
 data PinboardPost = MkPinboardPost
   { href :: Text
   , description :: Text
@@ -45,11 +35,11 @@ instance FromJSON PinboardPost where
       <*> o .: "shared"
       <*> o .:? "toread" .!= "no"
 
-parseTime :: Text -> Either Error Time
-parseTime timeStr =
+parseTime :: (Entity.Error -> e) -> Text -> Either e Time
+parseTime fromEntityErr timeStr =
   case parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (Text.unpack timeStr) :: Maybe UTCTime of
     Just utcTime -> Right $ MkTime (utcTimeToPOSIXSeconds utcTime)
-    Nothing -> Left $ EntityInvalidTime (Text.unpack timeStr)
+    Nothing -> Left $ fromEntityErr (Entity.InvalidTime (Text.unpack timeStr))
 
 parseTags :: Text -> [Label]
 parseTags tagStr =
@@ -57,10 +47,10 @@ parseTags tagStr =
     filter (not . Text.null) $
       Text.splitOn " " tagStr
 
-postToEntity :: PinboardPost -> Either Error Entity
-postToEntity post = do
-  uri <- first fromEntityError $ Entity.mkURI (Text.unpack post.href)
-  createdAt <- parseTime post.time
+postToEntity :: (Entity.Error -> e) -> PinboardPost -> Either e Entity
+postToEntity fromEntityErr post = do
+  uri <- first fromEntityErr $ Entity.mkURI (Text.unpack post.href)
+  createdAt <- parseTime fromEntityErr post.time
 
   let name = if Text.null post.description then Nothing else Just (MkName post.description)
       labels = Set.fromList $ parseTags post.tags

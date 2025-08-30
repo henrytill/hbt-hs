@@ -7,12 +7,23 @@ import Data.Text (Text)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity)
+import Hbt.Collection.Entity qualified as Entity
 import Hbt.Parser.Common (ParserMonad, attrMatches, attrOrDefault, attrOrEmpty, parseFileWithParser, requireAttr, runParserMonad)
-import Hbt.Parser.Pinboard.Common (Error (..), PinboardPost (..), postToEntity)
+import Hbt.Parser.Pinboard.Common (PinboardPost (..), postToEntity)
 import Lens.Family2
 import Lens.Family2.State.Lazy
 import Text.HTML.TagSoup (Attribute, Tag (..))
 import Text.HTML.TagSoup qualified as TagSoup
+
+data Error
+  = EntityInvalidURI String
+  | EntityInvalidTime String
+  | MissingRequiredAttribute String
+  deriving (Show, Eq)
+
+fromEntityError :: Entity.Error -> Error
+fromEntityError (Entity.InvalidURI s) = EntityInvalidURI s
+fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
 
 data ParseState = MkParseState
   { collection :: Collection
@@ -56,7 +67,7 @@ createPostFromAttrs attrs = do
 handle :: Tag Text -> PinboardM ()
 handle (TagOpen "post" attrs) = do
   post <- liftEither $ createPostFromAttrs attrs
-  result <- liftEither $ postToEntity post
+  result <- liftEither $ postToEntity fromEntityError post
   entities %= (result :)
 handle _ = return ()
 
