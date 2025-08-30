@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Hbt.Parser.HTML where
@@ -31,6 +32,21 @@ data Error
 fromEntityError :: Entity.Error -> Error
 fromEntityError (Entity.InvalidURI s) = EntityInvalidURI s
 fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
+
+pattern OpenH3 :: [Attribute Text] -> Tag Text
+pattern OpenH3 attrs <- TagOpen (Text.toLower -> "h3") attrs
+
+pattern OpenDT :: [Attribute Text] -> Tag Text
+pattern OpenDT attrs <- TagOpen (Text.toLower -> "dt") attrs
+
+pattern OpenA :: [Attribute Text] -> Tag Text
+pattern OpenA attrs <- TagOpen (Text.toLower -> "a") attrs
+
+pattern OpenDD :: [Attribute Text] -> Tag Text
+pattern OpenDD attrs <- TagOpen (Text.toLower -> "dd") attrs
+
+pattern CloseDL :: Tag Text
+pattern CloseDL <- TagClose (Text.toLower -> "dl")
 
 data WaitingFor
   = FolderName
@@ -143,15 +159,15 @@ addPending = do
   maybeExtended .= Nothing
 
 handle :: Tag Text -> NetscapeM ()
-handle (TagOpen (Text.toLower -> "h3") _) =
+handle (OpenH3 _) =
   waitingFor .= FolderName
-handle (TagOpen (Text.toLower -> "dt") _) = do
+handle (OpenDT _) = do
   hasAttrs <- uses attributes (not . null)
   when hasAttrs addPending
-handle (TagOpen (Text.toLower -> "a") attrs) = do
+handle (OpenA attrs) = do
   attributes .= attrs
   waitingFor .= BookmarkDescription
-handle (TagOpen (Text.toLower -> "dd") _) = do
+handle (OpenDD _) = do
   hasAttrs <- uses attributes (not . null)
   when hasAttrs $ waitingFor .= ExtendedDescription
 handle (TagText str) =
@@ -168,7 +184,7 @@ handle (TagText str) =
       when hasAttrs addPending
       waitingFor .= None
     None -> return ()
-handle (TagClose (Text.toLower -> "dl")) = do
+handle CloseDL = do
   hasAttrs <- uses attributes (not . null)
   when hasAttrs addPending
   folderStack %= drop 1
