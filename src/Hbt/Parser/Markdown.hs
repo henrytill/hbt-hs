@@ -7,8 +7,7 @@ import Commonmark qualified
 import Commonmark.Initial (Block, Blocks, Inline, pattern MkBlock, pattern MkInline)
 import Commonmark.Initial qualified as Initial
 import Control.Monad (forM_, when)
-import Control.Monad.Except (Except, MonadError, liftEither, runExcept, throwError)
-import Control.Monad.State (runStateT)
+import Control.Monad.Except (MonadError, liftEither, throwError)
 import Data.Bifunctor (first)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -20,6 +19,7 @@ import Hbt.Collection (Collection, Id)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity, Label (..), Name (..), Time, URI)
 import Hbt.Collection.Entity qualified as Entity
+import Hbt.Parser.Common (ParserMonad, parseFileWithParser, runParserMonad)
 import Lens.Family2
 import Lens.Family2.State.Lazy
 
@@ -85,11 +85,11 @@ maybeParent f s = (\p -> s {maybeParent = p}) <$> f s.maybeParent
 parents :: Lens' ParseState [Id]
 parents f s = (\p -> s {parents = p}) <$> f s.parents
 
-newtype MarkdownM a = MkMarkdownM (StateT ParseState (Except Error) a)
+newtype MarkdownM a = MkMarkdownM (ParserMonad ParseState Error a)
   deriving (Functor, Applicative, Monad, MonadState ParseState, MonadError Error)
 
 runMarkdownM :: MarkdownM a -> ParseState -> Either Error (a, ParseState)
-runMarkdownM (MkMarkdownM m) = runExcept . runStateT m
+runMarkdownM (MkMarkdownM m) = runParserMonad m
 
 -- Save current entity to collection and reset parsing state
 saveEntity :: MarkdownM ()
@@ -197,6 +197,4 @@ parse parseName input = do
 
 -- Parse from file
 parseFile :: FilePath -> IO (Either Error Collection)
-parseFile filepath = do
-  content <- readFile filepath
-  return $ parse filepath (Text.pack content)
+parseFile filepath = parseFileWithParser (parse filepath) filepath

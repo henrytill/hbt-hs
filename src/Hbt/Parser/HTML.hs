@@ -5,8 +5,7 @@
 module Hbt.Parser.HTML where
 
 import Control.Monad (forM_, when)
-import Control.Monad.Except (Except, MonadError, liftEither, runExcept)
-import Control.Monad.State (runStateT)
+import Control.Monad.Except (MonadError, liftEither)
 import Data.Bifunctor (first)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
@@ -17,7 +16,7 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Time)
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Parser.Common (lookupAttr)
+import Hbt.Parser.Common (ParserMonad, attrMatches, attrOrEmpty, lookupAttr, parseFileWithParser, runParserMonad)
 import Lens.Family2
 import Lens.Family2.State.Lazy
 import Text.HTML.TagSoup (Attribute, Tag (..))
@@ -78,11 +77,11 @@ folderStack f s = (\fs -> s {folderStack = fs}) <$> f s.folderStack
 waitingFor :: Lens' ParseState WaitingFor
 waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
 
-newtype NetscapeM a = MkNetscapeM (StateT ParseState (Except Error) a)
+newtype NetscapeM a = MkNetscapeM (ParserMonad ParseState Error a)
   deriving (Functor, Applicative, Monad, MonadState ParseState, MonadError Error)
 
 runNetscapeM :: NetscapeM a -> ParseState -> Either Error (a, ParseState)
-runNetscapeM (MkNetscapeM m) = runExcept . runStateT m
+runNetscapeM (MkNetscapeM m) = runParserMonad m
 
 parseTimestamp :: [Attribute Text] -> Text -> Maybe Time
 parseTimestamp attrs key
@@ -94,11 +93,8 @@ parseTimestamp attrs key
 parseTimestampWithDefault :: [Attribute Text] -> Text -> Time
 parseTimestampWithDefault attrs key = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp attrs key)
 
-parseBoolAttr :: [Attribute Text] -> Text -> Text -> Bool
-parseBoolAttr attrs attrName expectedValue = lookupAttr attrName attrs == Just expectedValue
-
 parseIsPrivate :: [Attribute Text] -> Bool
-parseIsPrivate attrs = parseBoolAttr attrs "private" "1"
+parseIsPrivate attrs = attrMatches "private" "1" attrs
 
 parseTagsFromAttr :: [Attribute Text] -> [Text]
 parseTagsFromAttr attrs
@@ -115,7 +111,7 @@ createLabels tags folderLabels =
 
 createBookmark :: [Text] -> [Attribute Text] -> Maybe Text -> Maybe Text -> Either Error Entity
 createBookmark folderLabels attrs bookmarkDescription extendedDescription = do
-  uri <- first fromEntityError $ Entity.mkURI . Text.unpack $ Maybe.fromMaybe mempty (lookupAttr "href" attrs)
+  uri <- first fromEntityError $ Entity.mkURI . Text.unpack $ attrOrEmpty "href" attrs
   let createdAt = parseTimestampWithDefault attrs "add_date"
       labels = createLabels (parseTagsFromAttr attrs) folderLabels
       entity = Entity.mkEntity uri createdAt (Entity.MkName <$> bookmarkDescription) labels
@@ -123,9 +119,9 @@ createBookmark folderLabels attrs bookmarkDescription extendedDescription = do
       updatedAt = Maybe.maybeToList $ parseTimestamp attrs "last_modified"
       extended = Entity.MkExtended <$> extendedDescription
       shared = not (parseIsPrivate attrs)
-      toRead = parseBoolAttr attrs "toread" "1"
+      toRead = attrMatches "toread" "1" attrs
       lastVisitedAt = parseTimestamp attrs "last_visit"
-      isFeed = parseBoolAttr attrs "feed" "true"
+      isFeed = attrMatches "feed" "true" attrs
   pure
     entity
       { updatedAt
@@ -187,6 +183,4 @@ parse input = do
   return ret
 
 parseFile :: FilePath -> IO (Either Error Collection)
-parseFile filepath = do
-  content <- readFile filepath
-  return $ parse (Text.pack content)
+parseFile = parseFileWithParser parse

@@ -7,6 +7,7 @@ module Hbt.Collection
   , SerializedNode (..)
   , SerializedCollection (..)
   , empty
+  , fromEntities
   , length
   , null
   , lookupId
@@ -96,6 +97,9 @@ instance FromJSON SerializedCollection where
 
 empty :: Collection
 empty = MkCollection Vector.empty Vector.empty Map.empty
+
+fromEntities :: [Entity] -> Collection
+fromEntities entities = foldl' (\coll entity -> snd $ upsert entity coll) empty entities
 
 length :: Collection -> Int
 length = Vector.length . (.nodes)
