@@ -16,7 +16,7 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Time)
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Parser.Common (ParserMonad, attrMatches, attrOrEmpty, lookupAttr, parseFileWithParser, runParserMonad)
+import Hbt.Parser.Common (ParserMonad, attrMatches, lookupAttr, parseFileWithParser, requireAttr, runParserMonad)
 import Lens.Family2
 import Lens.Family2.State.Lazy
 import Text.HTML.TagSoup (Attribute, Tag (..))
@@ -25,6 +25,7 @@ import Text.HTML.TagSoup qualified as TagSoup
 data Error
   = EntityInvalidURI String
   | EntityInvalidTime String
+  | MissingRequiredAttribute String
   deriving (Show, Eq)
 
 fromEntityError :: Entity.Error -> Error
@@ -111,7 +112,8 @@ createLabels tags folderLabels =
 
 createBookmark :: [Text] -> [Attribute Text] -> Maybe Text -> Maybe Text -> Either Error Entity
 createBookmark folderLabels attrs bookmarkDescription extendedDescription = do
-  uri <- first fromEntityError $ Entity.mkURI . Text.unpack $ attrOrEmpty "href" attrs
+  href <- maybe (Left $ MissingRequiredAttribute "href") Right (requireAttr "href" attrs)
+  uri <- first fromEntityError $ Entity.mkURI . Text.unpack $ href
   let createdAt = parseTimestampWithDefault attrs "add_date"
       labels = createLabels (parseTagsFromAttr attrs) folderLabels
       entity = Entity.mkEntity uri createdAt (Entity.MkName <$> bookmarkDescription) labels

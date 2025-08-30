@@ -16,6 +16,7 @@ import Hbt.Collection.Entity qualified as Entity
 data Error
   = EntityInvalidURI String
   | EntityInvalidTime String
+  | MissingRequiredAttribute String
   deriving (Show, Eq)
 
 fromEntityError :: Entity.Error -> Error

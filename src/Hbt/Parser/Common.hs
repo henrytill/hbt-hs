@@ -21,6 +21,13 @@ attrOrEmpty key attrs = attrOrDefault key mempty attrs
 attrMatches :: Text -> Text -> [Attribute Text] -> Bool
 attrMatches key expected attrs = lookupAttr key attrs == Just expected
 
+requireAttr :: Text -> [Attribute Text] -> Maybe Text
+requireAttr key attrs
+  | Just value <- lookupAttr key attrs
+  , not (Text.null value) =
+      Just value
+  | otherwise = Nothing
+
 parseFileWithParser :: (Text -> Either e a) -> FilePath -> IO (Either e a)
 parseFileWithParser parser filepath = do
   content <- readFile filepath
