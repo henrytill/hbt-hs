@@ -5,7 +5,6 @@ module Hbt.Parser.Pinboard.XML where
 import Control.Monad.Except (Except, MonadError, liftEither, runExcept)
 import Control.Monad.State (runStateT)
 import Data.Bifunctor (first)
-import Data.Foldable (foldl')
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)

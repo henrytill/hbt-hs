@@ -8,7 +8,6 @@ module Main where
 
 import Control.Applicative ((<|>))
 import Control.Monad (when)
-import Data.Foldable (foldl')
 import Data.List (elemIndex, find, intercalate)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Proxy (Proxy (..))

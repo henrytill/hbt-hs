@@ -6,7 +6,6 @@ import Data.Aeson (FromJSON (..), withObject, (.!=), (.:), (.:?))
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
 import Data.ByteString.Lazy qualified as ByteString
-import Data.Foldable (foldl')
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text

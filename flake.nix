@@ -30,7 +30,7 @@
       ...
     }:
     let
-      ghcName = "ghc967";
+      ghcName = "ghc9102";
       overlay = final: prev: {
         haskell = prev.haskell // {
           packages = prev.haskell.packages // {
