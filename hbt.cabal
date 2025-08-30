@@ -68,8 +68,7 @@ executable hbt
     import:           exts
     main-is:          Main.hs
     other-modules:
-        Flow
-        Flow.TH
+        TH
     hs-source-dirs:   exe
     default-language: GHC2021
     ghc-options:      -Wall

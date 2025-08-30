@@ -19,8 +19,6 @@ import Data.Text.Encoding qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
 import Data.Yaml.Pretty qualified as YamlPretty
-import Flow (Flow (..))
-import Flow.TH (deriveAllConstructors)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
@@ -34,7 +32,10 @@ import System.Environment (getArgs, getProgName)
 import System.Exit (die, exitFailure, exitSuccess)
 import System.FilePath (takeExtension)
 import System.IO (hPutStrLn, stderr)
+import TH (deriveAllConstructors)
 import Text.Microstache (compileMustacheFile)
+
+type data Flow = From | To
 
 data Format (f :: Flow) where
   JSON :: Format From
@@ -51,7 +52,7 @@ type InputFormat = Format From
 
 type OutputFormat = Format To
 
-$(deriveAllConstructors ''Format)
+$(deriveAllConstructors ''Format ''Flow)
 
 data Options = MkOptions
   { inputFormat :: Maybe InputFormat
