@@ -2,6 +2,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RequiredTypeArguments #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeData #-}
 
@@ -18,6 +19,8 @@ import Data.Text.Encoding qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
 import Data.Yaml.Pretty qualified as YamlPretty
+import Flow (Flow (..))
+import Flow.TH (deriveAllConstructors)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
@@ -33,8 +36,6 @@ import System.FilePath (takeExtension)
 import System.IO (hPutStrLn, stderr)
 import Text.Microstache (compileMustacheFile)
 
-type data Flow = From | To
-
 data Format (f :: Flow) where
   JSON :: Format From
   XML :: Format From
@@ -49,6 +50,8 @@ deriving instance Eq (Format f)
 type InputFormat = Format From
 
 type OutputFormat = Format To
+
+$(deriveAllConstructors ''Format)
 
 data Options = MkOptions
   { inputFormat :: Maybe InputFormat
@@ -99,7 +102,7 @@ class FormatFlow (f :: Flow) where
 
 instance FormatFlow From where
   allConstructors :: Proxy From -> [Format From]
-  allConstructors _ = [HTML, JSON, XML, Markdown]
+  allConstructors _ = allFromConstructors
 
   formatString :: Format From -> String
   formatString HTML = "html"
@@ -122,7 +125,7 @@ instance FormatFlow From where
 
 instance FormatFlow To where
   allConstructors :: Proxy To -> [Format To]
-  allConstructors _ = [YAML, HTML]
+  allConstructors _ = allToConstructors
 
   formatString :: Format To -> String
   formatString YAML = "yaml"

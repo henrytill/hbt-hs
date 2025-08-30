@@ -67,6 +67,9 @@ library
 executable hbt
     import:           exts
     main-is:          Main.hs
+    other-modules:
+        Flow
+        Flow.TH
     hs-source-dirs:   exe
     default-language: GHC2021
     ghc-options:      -Wall
@@ -75,6 +78,7 @@ executable hbt
         containers >=0.7 && <0.9,
         filepath ^>=1.5.2.0,
         microstache ^>=1.0.3,
+        template-haskell >=2.22.0.0 && <2.24,
         text ^>=2.1.1,
         vector ^>=0.13.2.0,
         yaml ^>=0.11.11.2,
