@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RequiredTypeArguments #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeData #-}
 
@@ -136,28 +137,28 @@ instance FormatFlow To where
   detectFromExtension :: String -> Maybe (Format To)
   detectFromExtension _ = Nothing -- Output formats can't be detected from files (yet)
 
-setFormatOption :: forall (f :: Flow). (FormatFlow f) => Proxy f -> String -> Options -> Options
-setFormatOption proxy s opts = case parseFormatFlow @f s of
+setFormatOption :: forall f -> (FormatFlow f) => String -> Options -> Options
+setFormatOption f s opts = case parseFormatFlow @f s of
   Just fmt -> setFormatFlow fmt opts
-  Nothing -> error $ formatErrorFlow proxy s
+  Nothing -> error $ formatErrorFlow (Proxy @f) s
 
 setFromFormat :: String -> Options -> Options
-setFromFormat = setFormatOption (Proxy @From)
+setFromFormat = setFormatOption From
 
 setToFormat :: String -> Options -> Options
-setToFormat = setFormatOption (Proxy @To)
+setToFormat = setFormatOption To
 
-generateFormatHelp :: forall (f :: Flow). (FormatFlow f) => Proxy f -> String -> String
-generateFormatHelp proxy label =
+generateFormatHelp :: forall f -> (FormatFlow f) => String -> String
+generateFormatHelp f label =
   label ++ " format (" ++ formatList ++ ")"
   where
-    formatList = intercalate ", " (supportedFormats proxy)
+    formatList = intercalate ", " (supportedFormats (Proxy @f))
 
 inputFormatHelp :: String
-inputFormatHelp = generateFormatHelp (Proxy @From) "Input"
+inputFormatHelp = generateFormatHelp From "Input"
 
 outputFormatHelp :: String
-outputFormatHelp = generateFormatHelp (Proxy @To) "Output"
+outputFormatHelp = generateFormatHelp To "Output"
 
 detectInputFormat :: FilePath -> Maybe InputFormat
 detectInputFormat file = detectFromExtension @From (takeExtension file)
