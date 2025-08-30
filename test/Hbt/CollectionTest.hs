@@ -10,6 +10,7 @@ import Hbt.Collection
 import Hbt.Collection.Entity (Entity (..), Label (..), Name (..), Time (..), URI, nullURI)
 import Hbt.Collection.Entity qualified as Entity
 import Test.Dwergaz
+import TestUtilities (testResults)
 import Prelude hiding (length, null)
 
 mkTime :: Integer -> Time
@@ -263,9 +264,4 @@ allTests =
     ]
 
 results :: (String, Bool)
-results = (buildString mempty, allPassed)
-  where
-    result = runTest allTests
-    allPassed = resultIsPassed result
-    showResults = showString $ resultToString result
-    buildString = showResults . showChar '\n'
+results = testResults "Hbt.Collection" allTests

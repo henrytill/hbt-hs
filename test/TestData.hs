@@ -5,10 +5,36 @@ import Data.List (isSuffixOf, partition, sort)
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Text.Encoding.Error qualified as Text.Error
-import Data.Text.IO qualified as Text.IO
 import System.Directory (listDirectory)
 import System.FilePath (takeBaseName, (</>))
 import Text.Microstache (Template, compileMustacheFile)
+
+-- Test data directory constants
+testDataBaseDir :: String
+testDataBaseDir = "test/data"
+
+htmlTestDataDir :: String
+htmlTestDataDir = testDataBaseDir </> "html"
+
+markdownTestDataDir :: String
+markdownTestDataDir = testDataBaseDir </> "markdown"
+
+pinboardTestDataDir :: String
+pinboardTestDataDir = testDataBaseDir </> "pinboard"
+
+-- Unified file reading with lenient UTF-8 decoding
+readTextFile :: FilePath -> IO Text
+readTextFile path = do
+  bytes <- BS.readFile path
+  return $ Text.Encoding.decodeUtf8With Text.Error.lenientDecode bytes
+
+-- Generic test case discovery
+discoverTestCases :: String -> String -> IO [String]
+discoverTestCases dir suffix = do
+  allFiles <- listDirectory dir
+  let inputFiles = [f | f <- allFiles, suffix `isSuffixOf` f]
+      testNames = map (takeBaseName . takeBaseName) inputFiles
+  return $ sort testNames
 
 -- Test case data types
 data HtmlTestCase = HtmlTestCase
@@ -51,24 +77,15 @@ data AllTestData = AllTestData
 
 -- HTML Parser test data loading
 discoverHtmlTestCaseNames :: IO [String]
-discoverHtmlTestCaseNames = do
-  let testDataDir = "test/data/html"
-  allFiles <- listDirectory testDataDir
-  let inputFiles = [f | f <- allFiles, ".input.html" `isSuffixOf` f]
-  let testNames = map (takeBaseName . takeBaseName) inputFiles
-  return $ sort testNames
+discoverHtmlTestCaseNames = discoverTestCases htmlTestDataDir ".input.html"
 
 loadHtmlTestCase :: String -> IO HtmlTestCase
 loadHtmlTestCase name = do
-  let testDataDir = "test/data/html"
-      inputFile = testDataDir </> (name ++ ".input.html")
-      expectedFile = testDataDir </> (name ++ ".expected.yaml")
+  let inputFile = htmlTestDataDir </> (name ++ ".input.html")
+      expectedFile = htmlTestDataDir </> (name ++ ".expected.yaml")
 
-  -- Read with lenient UTF-8 decoding to handle encoding issues
-  inputBytes <- BS.readFile inputFile
-  let inputContent = Text.Encoding.decodeUtf8With Text.Error.lenientDecode inputBytes
-  expectedBytes <- BS.readFile expectedFile
-  let expectedContent = Text.Encoding.decodeUtf8With Text.Error.lenientDecode expectedBytes
+  inputContent <- readTextFile inputFile
+  expectedContent <- readTextFile expectedFile
 
   return
     HtmlTestCase
@@ -83,22 +100,16 @@ loadAllHtmlTestCases = do
   mapM loadHtmlTestCase testCaseNames
 
 -- Markdown test data loading
-discoverTestCaseNames :: IO [String]
-discoverTestCaseNames = do
-  let testDataDir = "test/data/markdown"
-  allFiles <- listDirectory testDataDir
-  let inputFiles = [f | f <- allFiles, ".input.md" `isSuffixOf` f]
-  let testNames = map (takeBaseName . takeBaseName) inputFiles
-  return $ sort testNames
+discoverMarkdownTestCaseNames :: IO [String]
+discoverMarkdownTestCaseNames = discoverTestCases markdownTestDataDir ".input.md"
 
 loadSimpleTestCase :: String -> IO SimpleTestCase
 loadSimpleTestCase name = do
-  let testDataDir = "test/data/markdown"
-      inputFile = testDataDir </> (name ++ ".input.md")
-      expectedFile = testDataDir </> (name ++ ".expected.yaml")
+  let inputFile = markdownTestDataDir </> (name ++ ".input.md")
+      expectedFile = markdownTestDataDir </> (name ++ ".expected.yaml")
 
-  inputContent <- Text.IO.readFile inputFile
-  expectedContent <- Text.IO.readFile expectedFile
+  inputContent <- readTextFile inputFile
+  expectedContent <- readTextFile expectedFile
 
   return
     SimpleTestCase
@@ -109,14 +120,13 @@ loadSimpleTestCase name = do
 
 loadAllSimpleTestCases :: IO [SimpleTestCase]
 loadAllSimpleTestCases = do
-  testCaseNames <- discoverTestCaseNames
+  testCaseNames <- discoverMarkdownTestCaseNames
   mapM loadSimpleTestCase testCaseNames
 
 -- Pinboard test data loading
 discoverPinboardTestCaseNames :: IO [(String, String)] -- (name, format)
 discoverPinboardTestCaseNames = do
-  let testDataDir = "test/data/pinboard"
-  allFiles <- listDirectory testDataDir
+  allFiles <- listDirectory pinboardTestDataDir
   let jsonFiles = [f | f <- allFiles, ".input.json" `isSuffixOf` f]
       xmlFiles = [f | f <- allFiles, ".input.xml" `isSuffixOf` f]
       jsonNames = map (\f -> (takeBaseName . takeBaseName $ f, "json")) jsonFiles
@@ -125,14 +135,11 @@ discoverPinboardTestCaseNames = do
 
 loadPinboardTestCase :: String -> String -> IO PinboardTestCase
 loadPinboardTestCase name format = do
-  let testDataDir = "test/data/pinboard"
-      inputFile = testDataDir </> (name ++ ".input." ++ format)
-      expectedFile = testDataDir </> (name ++ ".expected.yaml")
+  let inputFile = pinboardTestDataDir </> (name ++ ".input." ++ format)
+      expectedFile = pinboardTestDataDir </> (name ++ ".expected.yaml")
 
-  inputBytes <- BS.readFile inputFile
-  let inputContent = Text.Encoding.decodeUtf8With Text.Error.lenientDecode inputBytes
-  expectedBytes <- BS.readFile expectedFile
-  let expectedContent = Text.Encoding.decodeUtf8With Text.Error.lenientDecode expectedBytes
+  inputContent <- readTextFile inputFile
+  expectedContent <- readTextFile expectedFile
 
   return
     PinboardTestCase
@@ -149,24 +156,15 @@ loadAllPinboardTestCases = do
 
 -- HTML Formatter test data loading
 discoverHtmlFormatterTestCaseNames :: IO [String]
-discoverHtmlFormatterTestCaseNames = do
-  let testDataDir = "test/data/html"
-  allFiles <- listDirectory testDataDir
-  let inputFiles = [f | f <- allFiles, ".input.html" `isSuffixOf` f]
-  let testNames = map (takeBaseName . takeBaseName) inputFiles
-  return $ sort testNames
+discoverHtmlFormatterTestCaseNames = discoverTestCases htmlTestDataDir ".input.html"
 
 loadHtmlFormatterTestCase :: String -> IO HtmlFormatterTestCase
 loadHtmlFormatterTestCase name = do
-  let testDataDir = "test/data/html"
-      inputFile = testDataDir </> (name ++ ".input.html")
-      expectedFile = testDataDir </> (name ++ ".expected.html")
+  let inputFile = htmlTestDataDir </> (name ++ ".input.html")
+      expectedFile = htmlTestDataDir </> (name ++ ".expected.html")
 
-  -- Read with lenient UTF-8 decoding to handle encoding issues
-  inputBytes <- BS.readFile inputFile
-  let inputContent = Text.Encoding.decodeUtf8With Text.Error.lenientDecode inputBytes
-  expectedBytes <- BS.readFile expectedFile
-  let expectedContent = Text.Encoding.decodeUtf8With Text.Error.lenientDecode expectedBytes
+  inputContent <- readTextFile inputFile
+  expectedContent <- readTextFile expectedFile
 
   -- Load the template
   template <- compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"

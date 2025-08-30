@@ -12,25 +12,32 @@ import System.Exit (exitFailure)
 import TestData (AllTestData (..), loadAllTestData)
 import Text.Printf (printf)
 
+-- | Run a test suite and return its results
+runTestSuite :: IO (String, Bool) -> IO (String, Bool)
+runTestSuite suiteResults = do
+  (output, passed) <- suiteResults
+  putStr output
+  return (output, passed)
+
 main :: IO ()
 main = do
   -- Load all test data once at startup
   testData <- loadAllTestData
 
-  let (multimapOutput, multimapPassed) = MultimapTest.results
-  putStr multimapOutput
-  let (collectionOutput, collectionPassed) = CollectionTest.results
-  putStr collectionOutput
-  let (htmlFormatterOutput, htmlFormatterPassed) = HTMLFormatterTest.results (testData.htmlFormatterTests)
-  putStr htmlFormatterOutput
-  let (htmlOutput, htmlPassed) = HTMLTest.results (testData.htmlParserTests)
-  putStr htmlOutput
-  let (markdownOutput, markdownPassed) = MarkdownTest.results (testData.markdownTests)
-  putStr markdownOutput
-  let (pinboardJsonOutput, pinboardJsonPassed) = PinboardJSONTest.results (testData.pinboardJsonTests)
-  putStr pinboardJsonOutput
-  let (pinboardXmlOutput, pinboardXmlPassed) = PinboardXMLTest.results (testData.pinboardXmlTests)
-  putStr pinboardXmlOutput
-  let allPassed = and [multimapPassed, collectionPassed, htmlFormatterPassed, htmlPassed, markdownPassed, pinboardJsonPassed, pinboardXmlPassed]
+  -- Define all test suites as IO actions
+  let testSuites =
+        [ return MultimapTest.results
+        , return CollectionTest.results
+        , return $ HTMLFormatterTest.results testData.htmlFormatterTests
+        , return $ HTMLTest.results testData.htmlParserTests
+        , return $ MarkdownTest.results testData.markdownTests
+        , return $ PinboardJSONTest.results testData.pinboardJsonTests
+        , return $ PinboardXMLTest.results testData.pinboardXmlTests
+        ]
+
+  -- Run all test suites and collect results
+  results <- mapM runTestSuite testSuites
+  let allPassed = all snd results
+
   printf "Summary: %s\n" (if allPassed then "All tests passed!" else "Some tests failed.")
   unless allPassed exitFailure

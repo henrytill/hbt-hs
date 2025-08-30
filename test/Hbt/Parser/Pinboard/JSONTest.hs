@@ -1,14 +1,11 @@
 module Hbt.Parser.Pinboard.JSONTest where
 
-import Data.Bifunctor (first)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Yaml qualified as Yaml
 import Hbt.Parser.Pinboard.JSON qualified as PinboardJSON
 import Test.Dwergaz
 import TestData (PinboardTestCase (..))
-
-addContext :: (Show e) => String -> Either e a -> Either String a
-addContext context = first $ showString context . showString ": " . flip shows mempty
+import TestUtilities (addContext, testResults)
 
 runPinboardJSONTestCase :: PinboardTestCase -> Test
 runPinboardJSONTestCase testCase =
@@ -21,9 +18,4 @@ allTests :: [PinboardTestCase] -> Test
 allTests testData = group "Hbt.Parser.Pinboard.JSON tests" (fmap runPinboardJSONTestCase testData)
 
 results :: [PinboardTestCase] -> (String, Bool)
-results testData = (buildString mempty, allPassed)
-  where
-    result = runTest (allTests testData)
-    allPassed = resultIsPassed result
-    showResults = showString $ resultToString result
-    buildString = showResults . showChar '\n'
+results testData = testResults "Hbt.Parser.Pinboard.JSON" (allTests testData)

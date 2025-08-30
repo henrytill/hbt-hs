@@ -5,6 +5,7 @@ import Data.Multimap (Multimap)
 import Data.Multimap qualified as Multimap
 import Data.Set qualified as Set
 import Test.Dwergaz
+import TestUtilities (testResults)
 
 a, b, c :: String
 a = "a"
@@ -171,9 +172,4 @@ allTests =
 
 -- Run tests
 results :: (String, Bool)
-results = (buildString mempty, allPassed)
-  where
-    result = runTest allTests
-    allPassed = resultIsPassed result
-    showResults = showString $ resultToString result
-    buildString = showResults . showChar '\n'
+results = testResults "Data.Multimap" allTests

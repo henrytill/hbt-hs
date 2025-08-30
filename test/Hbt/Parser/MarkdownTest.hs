@@ -1,14 +1,11 @@
 module Hbt.Parser.MarkdownTest where
 
-import Data.Bifunctor (first)
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Yaml qualified as Yaml
 import Hbt.Parser.Markdown qualified as Markdown
 import Test.Dwergaz
 import TestData (SimpleTestCase (..))
-
-addContext :: (Show e) => String -> Either e a -> Either String a
-addContext context = first $ showString context . showString ": " . flip shows mempty
+import TestUtilities (addContext, testResults)
 
 runSimpleTestCase :: SimpleTestCase -> Test
 runSimpleTestCase testCase =
@@ -21,9 +18,4 @@ allTests :: [SimpleTestCase] -> Test
 allTests testData = group "Hbt.Markdown tests" (fmap runSimpleTestCase testData)
 
 results :: [SimpleTestCase] -> (String, Bool)
-results testData = (buildString mempty, allPassed)
-  where
-    result = runTest (allTests testData)
-    allPassed = resultIsPassed result
-    showResults = showString $ resultToString result
-    buildString = showResults . showChar '\n'
+results testData = testResults "Hbt.Parser.Markdown" (allTests testData)
