@@ -53,7 +53,7 @@ runPinboardM (MkPinboardM m) = runParserMonad m
 createPostFromAttrs :: [Attribute Text] -> Either Error PinboardPost
 createPostFromAttrs attrs = do
   href <- maybe (Left $ MissingRequiredAttribute "href") Right (requireAttr "href" attrs)
-  pure $
+  return $
     MkPinboardPost
       { href
       , description = attrOrEmpty "description" attrs

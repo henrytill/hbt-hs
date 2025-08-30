@@ -131,23 +131,16 @@ createEntity attrs folders name ext = do
   href <- maybe (Left $ MissingRequiredAttribute "href") Right (requireAttr "href" attrs)
   uri <- first fromEntityError $ Entity.mkURI . Text.unpack $ href
   let createdAt = parseTimestampWithDefault attrs "add_date"
+      entityName = Entity.MkName <$> name
       labels = createLabels (parseTagsFromAttr attrs) folders
-      entity = Entity.mkEntity uri createdAt (Entity.MkName <$> name) labels
-
-      updatedAt = Maybe.maybeToList $ parseTimestamp attrs "last_modified"
-      extended = Entity.MkExtended <$> ext
-      shared = not (parseIsPrivate attrs)
-      toRead = attrMatches "toread" "1" attrs
-      lastVisitedAt = parseTimestamp attrs "last_visit"
-      isFeed = attrMatches "feed" "true" attrs
-  pure
-    entity
-      { updatedAt
-      , extended
-      , shared
-      , toRead
-      , lastVisitedAt
-      , isFeed
+  return
+    (Entity.mkEntity uri createdAt entityName labels)
+      { updatedAt = Maybe.maybeToList $ parseTimestamp attrs "last_modified"
+      , extended = Entity.MkExtended <$> ext
+      , shared = not (parseIsPrivate attrs)
+      , toRead = attrMatches "toread" "1" attrs
+      , lastVisitedAt = parseTimestamp attrs "last_visit"
+      , isFeed = attrMatches "feed" "true" attrs
       }
 
 addPending :: NetscapeM ()
