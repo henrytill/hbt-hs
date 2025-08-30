@@ -4,13 +4,13 @@ module Hbt.Parser.Pinboard.XML where
 
 import Control.Monad.Except (Except, MonadError, liftEither, runExcept)
 import Control.Monad.State (runStateT)
-import Data.Bifunctor (first)
 import Data.Maybe qualified as Maybe
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity)
+import Hbt.Parser.Common (lookupAttr)
 import Hbt.Parser.Pinboard.Common (Error (..), PinboardPost (..), postToEntity)
 import Lens.Family2
 import Lens.Family2.State.Lazy
@@ -41,9 +41,6 @@ newtype PinboardM a = MkPinboardM (StateT ParseState (Except Error) a)
 
 runPinboardM :: PinboardM a -> ParseState -> Either Error (a, ParseState)
 runPinboardM (MkPinboardM m) = runExcept . runStateT m
-
-lookupAttr :: Text -> [Attribute Text] -> Maybe Text
-lookupAttr key attrs = lookup (Text.toLower key) (map (first Text.toLower) attrs)
 
 createPostFromAttrs :: [Attribute Text] -> PinboardPost
 createPostFromAttrs attrs =

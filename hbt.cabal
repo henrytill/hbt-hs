@@ -44,6 +44,7 @@ library
 
     hs-source-dirs:   src
     other-modules:
+        Hbt.Parser.Common
         Hbt.Parser.Pinboard.Common
     default-language: GHC2021
     ghc-options:      -Wall

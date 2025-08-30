@@ -17,6 +17,7 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Time)
 import Hbt.Collection.Entity qualified as Entity
+import Hbt.Parser.Common (lookupAttr)
 import Lens.Family2
 import Lens.Family2.State.Lazy
 import Text.HTML.TagSoup (Attribute, Tag (..))
@@ -82,9 +83,6 @@ newtype NetscapeM a = MkNetscapeM (StateT ParseState (Except Error) a)
 
 runNetscapeM :: NetscapeM a -> ParseState -> Either Error (a, ParseState)
 runNetscapeM (MkNetscapeM m) = runExcept . runStateT m
-
-lookupAttr :: Text -> [Attribute Text] -> Maybe Text
-lookupAttr key attrs = lookup (Text.toLower key) (map (first Text.toLower) attrs)
 
 parseTimestamp :: [Attribute Text] -> Text -> Maybe Time
 parseTimestamp attrs key
