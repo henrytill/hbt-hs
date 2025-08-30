@@ -18,7 +18,7 @@ data PinboardPost = MkPinboardPost
   , description :: Text
   , extended :: Text
   , time :: Text
-  , tags :: Text
+  , tags :: [Text]
   , shared :: Text
   , toread :: Text
   }
@@ -26,14 +26,15 @@ data PinboardPost = MkPinboardPost
 
 instance FromJSON PinboardPost where
   parseJSON = withObject "PinboardPost" $ \o ->
-    MkPinboardPost
-      <$> o .: "href"
-      <*> o .: "description"
-      <*> o .: "extended"
-      <*> o .: "time"
-      <*> o .: "tags"
-      <*> o .: "shared"
-      <*> o .:? "toread" .!= "no"
+    let tags = parseTagString <$> o .: "tags"
+     in MkPinboardPost
+          <$> o .: "href"
+          <*> o .: "description"
+          <*> o .: "extended"
+          <*> o .: "time"
+          <*> tags
+          <*> o .: "shared"
+          <*> o .:? "toread" .!= "no"
 
 parseTime :: (Entity.Error -> e) -> Text -> Either e Time
 parseTime fromEntityErr timeStr =
@@ -41,11 +42,13 @@ parseTime fromEntityErr timeStr =
     Just utcTime -> Right $ MkTime (utcTimeToPOSIXSeconds utcTime)
     Nothing -> Left $ fromEntityErr (Entity.InvalidTime (Text.unpack timeStr))
 
-parseTags :: Text -> [Label]
-parseTags tagStr =
-  map (MkLabel . Text.strip) $
-    filter (not . Text.null) $
-      Text.splitOn " " tagStr
+parseTagString :: Text -> [Text]
+parseTagString tagStr
+  | Text.null tagStr = []
+  | otherwise = filter (not . Text.null) $ map Text.strip $ Text.splitOn " " tagStr
+
+parseTags :: [Text] -> [Label]
+parseTags tagList = map (MkLabel . Text.strip) $ filter (not . Text.null) tagList
 
 postToEntity :: (Entity.Error -> e) -> PinboardPost -> Either e Entity
 postToEntity fromEntityErr post = do

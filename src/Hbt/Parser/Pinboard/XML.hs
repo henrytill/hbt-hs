@@ -9,7 +9,7 @@ import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity)
 import Hbt.Collection.Entity qualified as Entity
 import Hbt.Parser.Common (ParserMonad, attrMatches, attrOrDefault, attrOrEmpty, parseFileWithParser, requireAttr, runParserMonad)
-import Hbt.Parser.Pinboard.Common (PinboardPost (..), postToEntity)
+import Hbt.Parser.Pinboard.Common (PinboardPost (..), parseTagString, postToEntity)
 import Lens.Family2
 import Lens.Family2.State.Lazy
 import Text.HTML.TagSoup (Attribute, Tag (..))
@@ -59,7 +59,7 @@ createPostFromAttrs attrs = do
       , description = attrOrEmpty "description" attrs
       , extended = attrOrEmpty "extended" attrs
       , time = attrOrDefault "time" "1970-01-01T00:00:00Z" attrs
-      , tags = attrOrEmpty "tag" attrs
+      , tags = parseTagString (attrOrEmpty "tag" attrs)
       , shared = if attrMatches "shared" "yes" attrs then "yes" else "no"
       , toread = if attrMatches "toread" "yes" attrs then "yes" else "no"
       }
