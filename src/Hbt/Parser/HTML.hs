@@ -110,16 +110,16 @@ createLabels tags folderLabels =
       labelStrings = filteredTags ++ reverse folderLabels
    in Set.fromList $ map Entity.MkLabel labelStrings
 
-createBookmark :: [Text] -> [Attribute Text] -> Maybe Text -> Maybe Text -> Either Error Entity
-createBookmark folderLabels attrs bookmarkDescription extendedDescription = do
+createEntity :: [Attribute Text] -> [Text] -> Maybe Text -> Maybe Text -> Either Error Entity
+createEntity attrs folders name ext = do
   href <- maybe (Left $ MissingRequiredAttribute "href") Right (requireAttr "href" attrs)
   uri <- first fromEntityError $ Entity.mkURI . Text.unpack $ href
   let createdAt = parseTimestampWithDefault attrs "add_date"
-      labels = createLabels (parseTagsFromAttr attrs) folderLabels
-      entity = Entity.mkEntity uri createdAt (Entity.MkName <$> bookmarkDescription) labels
+      labels = createLabels (parseTagsFromAttr attrs) folders
+      entity = Entity.mkEntity uri createdAt (Entity.MkName <$> name) labels
 
       updatedAt = Maybe.maybeToList $ parseTimestamp attrs "last_modified"
-      extended = Entity.MkExtended <$> extendedDescription
+      extended = Entity.MkExtended <$> ext
       shared = not (parseIsPrivate attrs)
       toRead = attrMatches "toread" "1" attrs
       lastVisitedAt = parseTimestamp attrs "last_visit"
@@ -136,8 +136,7 @@ createBookmark folderLabels attrs bookmarkDescription extendedDescription = do
 
 addPending :: NetscapeM ()
 addPending = do
-  result <- createBookmark <$> use folderStack <*> use attributes <*> use maybeDescription <*> use maybeExtended
-  entity <- liftEither result
+  entity <- liftEither =<< createEntity <$> use attributes <*> use folderStack <*> use maybeDescription <*> use maybeExtended
   collection %= snd . Collection.upsert entity
   attributes .= []
   maybeDescription .= Nothing
