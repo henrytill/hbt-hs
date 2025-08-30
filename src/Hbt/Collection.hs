@@ -129,14 +129,14 @@ insert entity collection = (newId, newCollection)
         }
 
 upsert :: Entity -> Collection -> (Id, Collection)
-upsert entity collection = case lookupId entity.uri collection of
-  Just existingId ->
-    let existing = entityAt existingId collection
-        updated = Entity.absorb entity existing
-     in if updated /= existing
-          then (existingId, collection {nodes = collection.nodes // [(existingId.value, updated)]})
-          else (existingId, collection)
-  Nothing -> insert entity collection
+upsert entity collection
+  | Just existingId <- lookupId entity.uri collection
+  , let existing = entityAt existingId collection
+  , let updated = Entity.absorb entity existing
+  , updated /= existing =
+      (existingId, collection {nodes = collection.nodes // [(existingId.value, updated)]})
+  | Just existingId <- lookupId entity.uri collection = (existingId, collection)
+  | otherwise = insert entity collection
 
 addEdge :: Id -> Id -> Collection -> Either Error Collection
 addEdge from to collection

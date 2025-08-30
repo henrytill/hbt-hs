@@ -297,15 +297,12 @@ main = do
     [] -> do
       printUsage
       die "Error: input file required"
-    [file] -> do
-      -- Validate that we have either output format or analysis flag
-      let hasOutputFormat = isJust opts.outputFormat
-          hasAnalysisFlag = opts.showInfo || opts.listTags
-
-      when (not hasOutputFormat && not hasAnalysisFlag) $
-        die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
-
-      processFile opts file
+    [file]
+      | let hasOutputFormat = isJust opts.outputFormat
+      , let hasAnalysisFlag = opts.showInfo || opts.listTags
+      , hasOutputFormat || hasAnalysisFlag ->
+          processFile opts file
+      | otherwise -> die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
     _ -> do
       printUsage
       die "Error: exactly one input file required"
