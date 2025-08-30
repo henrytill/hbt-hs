@@ -12,7 +12,7 @@ import Data.Maybe (listToMaybe)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Lazy qualified as LText
+import Data.Text.Lazy qualified as LazyText
 import Data.Vector qualified as Vector
 import GHC.Generics (Generic)
 import Hbt.Collection (Collection)
@@ -38,7 +38,7 @@ instance ToJSON TemplateEntity
 
 format :: Template -> Collection -> Text
 format template collection =
-  LText.toStrict . renderMustache template $
+  LazyText.toStrict . renderMustache template $
     object ["entities" .= map toTemplateEntity (Vector.toList $ Collection.allEntities collection)]
 
 toTemplateEntity :: Entity -> TemplateEntity
