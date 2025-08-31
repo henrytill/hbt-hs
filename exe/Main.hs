@@ -1,4 +1,3 @@
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RequiredTypeArguments #-}
 
@@ -10,25 +9,18 @@ import Data.List (intercalate)
 import Data.Maybe (isJust)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
-import Data.Yaml.Pretty qualified as YamlPretty
-import Hbt (Format (..), FormatFlow, From, HasFormat (..), InputFormat, OutputFormat, To, detectFromExtension, setFormat, supportedFormats)
-import Hbt.Collection (Collection, yamlConfig)
+import Hbt (FormatFlow, From, HasFormat (..), InputFormat, OutputFormat, To, detectFromExtension, setFormat, supportedFormats)
+import Hbt.Class (formatDispatch, parseDispatch)
+import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
-import Hbt.Formatter.HTML qualified as HTMLFormatter
-import Hbt.Parser.HTML qualified as HTMLParser
-import Hbt.Parser.Markdown qualified as Markdown
-import Hbt.Parser.Pinboard.JSON qualified as PinboardJSON
-import Hbt.Parser.Pinboard.XML qualified as PinboardXML
 import System.Console.GetOpt
 import System.Environment (getArgs, getProgName)
 import System.Exit (die, exitFailure, exitSuccess)
 import System.FilePath (takeExtension)
 import System.IO (hPutStrLn, stderr)
-import Text.Microstache (compileMustacheFile)
 
 data Options = MkOptions
   { inputFormat :: Maybe InputFormat
@@ -140,13 +132,11 @@ printCollection file opts collection
       let tagsOutput = unlines $ map (Text.unpack . (.unLabel)) $ Set.toAscList allLabels
       writeOutput opts.outputFile tagsOutput
   | otherwise = case opts.outputFormat of
-      Just YAML -> do
-        let yamlOutput = YamlPretty.encodePretty yamlConfig collection
-        writeOutput opts.outputFile $ Text.unpack $ Text.decodeUtf8 yamlOutput
-      Just HTML -> do
-        template <- compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
-        let htmlOutput = HTMLFormatter.format template collection
-        writeOutput opts.outputFile $ Text.unpack htmlOutput
+      Just fmt -> do
+        result <- formatDispatch fmt collection
+        case result of
+          Right output -> writeOutput opts.outputFile $ Text.unpack output
+          Left err -> die $ "Error formatting: " ++ show err
       Nothing -> die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
 
 parseOrDie :: (Show e) => FilePath -> Either e a -> IO a
@@ -154,10 +144,10 @@ parseOrDie file (Left err) = die $ "Error parsing " ++ file ++ ": " ++ show err
 parseOrDie _ (Right result) = return result
 
 parseFile :: InputFormat -> FilePath -> Text.Text -> IO Collection
-parseFile Markdown file content = parseOrDie file $ Markdown.parse file content
-parseFile HTML file content = parseOrDie file $ HTMLParser.parse content
-parseFile JSON file content = parseOrDie file $ PinboardJSON.parse content
-parseFile XML file content = parseOrDie file $ PinboardXML.parse content
+parseFile fmt file content = do
+  case parseDispatch fmt content of
+    Left err -> die $ "Error parsing " ++ file ++ ": " ++ show err
+    Right collection -> return collection
 
 processFile :: Options -> FilePath -> IO ()
 processFile opts file = do

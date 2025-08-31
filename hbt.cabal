@@ -33,6 +33,7 @@ library
     exposed-modules:
         Data.Multimap
         Hbt
+        Hbt.Class
         Hbt.Collection
         Hbt.Collection.Entity
         Hbt.Formatter.HTML
@@ -77,10 +78,8 @@ executable hbt
         base >=4.20.1 && <4.22,
         containers >=0.7 && <0.9,
         filepath ^>=1.5.2.0,
-        microstache ^>=1.0.3,
         text ^>=2.1.1,
         vector ^>=0.13.2.0,
-        yaml ^>=0.11.11.2,
         hbt
 
 test-suite hbt-test
