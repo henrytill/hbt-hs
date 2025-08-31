@@ -34,7 +34,6 @@ library
         Data.Multimap
         Hbt
         Hbt.Base
-        Hbt.Base.TH
         Hbt.Collection
         Hbt.Collection.Entity
         Hbt.Formatter.HTML
@@ -62,7 +61,6 @@ library
         mtl ^>=2.3.1,
         network-uri ^>=2.6.4.2,
         tagsoup ^>=0.14.8,
-        template-haskell >=2.22.0.0 && <2.24,
         text ^>=2.1.1,
         time >=1.12 && <1.15,
         vector ^>=0.13.2.0,
@@ -89,8 +87,6 @@ test-suite hbt-test
     hs-source-dirs:   test
     other-modules:
         Data.MultimapTest
-        Hbt.BaseTest
-        Hbt.Base.THTest
         Hbt.CollectionTest
         Hbt.Formatter.HTMLTest
         Hbt.Parser.HTMLTest

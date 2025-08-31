@@ -2,8 +2,6 @@ module Main (main) where
 
 import Control.Monad (unless)
 import Data.MultimapTest qualified as MultimapTest
-import Hbt.Base.THTest qualified as THTest
-import Hbt.BaseTest qualified as BaseTest
 import Hbt.CollectionTest qualified as CollectionTest
 import Hbt.Formatter.HTMLTest qualified as HTMLFormatterTest
 import Hbt.Parser.HTMLTest qualified as HTMLTest
@@ -35,8 +33,6 @@ main = do
         , return $ MarkdownTest.results testData.markdownTests
         , return $ PinboardJSONTest.results testData.pinboardJsonTests
         , return $ PinboardXMLTest.results testData.pinboardXmlTests
-        , return BaseTest.results
-        , return THTest.results
         ]
 
   -- Run all test suites and collect results

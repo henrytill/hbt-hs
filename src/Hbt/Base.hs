@@ -1,7 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RequiredTypeArguments #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeData #-}
 
 module Hbt.Base
@@ -24,7 +23,6 @@ where
 
 import Data.List (find)
 import Data.Proxy (Proxy (..))
-import Hbt.Base.TH (deriveAllConstructors)
 import Lens.Family2 (Lens', set)
 
 type data Flow = From | To
@@ -44,7 +42,13 @@ type InputFormat = Format From
 
 type OutputFormat = Format To
 
-$(deriveAllConstructors ''Format ''Flow)
+-- | All input format constructors
+allFromConstructors :: [Format From]
+allFromConstructors = [JSON, XML, Markdown, HTML]
+
+-- | All output format constructors
+allToConstructors :: [Format To]
+allToConstructors = [HTML, YAML]
 
 toString :: Format f -> String
 toString HTML = "html"
