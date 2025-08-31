@@ -111,7 +111,6 @@ test-suite hbt-test
         dwergaz ^>=0.3.1.0,
         filepath ^>=1.5.2.0,
         microstache ^>=1.0.3,
-        template-haskell >=2.22.0.0 && <2.24,
         text ^>=2.1.1,
         vector ^>=0.13.2.0,
         yaml ^>=0.11.11.2,
