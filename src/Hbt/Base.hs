@@ -24,7 +24,7 @@ where
 
 import Data.List (find)
 import Data.Proxy (Proxy (..))
-import Hbt.TH (deriveAllConstructors)
+import Hbt.Base.TH (deriveAllConstructors)
 import Lens.Family2 (Lens', set)
 
 type data Flow = From | To

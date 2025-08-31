@@ -34,6 +34,7 @@ library
         Data.Multimap
         Hbt
         Hbt.Base
+        Hbt.Base.TH
         Hbt.Class
         Hbt.Collection
         Hbt.Collection.Entity
@@ -43,7 +44,6 @@ library
         Hbt.Parser.Markdown
         Hbt.Parser.Pinboard.JSON
         Hbt.Parser.Pinboard.XML
-        Hbt.TH
 
     hs-source-dirs:   src
     other-modules:
