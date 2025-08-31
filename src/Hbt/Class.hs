@@ -20,7 +20,7 @@ import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import Data.Yaml.Pretty qualified as YamlPretty
-import Hbt (Flow (..), Format (..))
+import Hbt.Base (Flow (..), Format (..))
 import Hbt.Collection (Collection, yamlConfig)
 import Hbt.Formatter.HTML qualified as HTMLFormatter
 import Hbt.Parser.HTML qualified as HTMLParser
