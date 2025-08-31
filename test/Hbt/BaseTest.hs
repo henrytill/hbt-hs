@@ -1,4 +1,4 @@
-module HbtTest where
+module Hbt.BaseTest where
 
 import Test.Dwergaz
 import TestUtilities (testResults)

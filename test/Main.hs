@@ -2,14 +2,14 @@ module Main (main) where
 
 import Control.Monad (unless)
 import Data.MultimapTest qualified as MultimapTest
+import Hbt.Base.THTest qualified as THTest
+import Hbt.BaseTest qualified as BaseTest
 import Hbt.CollectionTest qualified as CollectionTest
 import Hbt.Formatter.HTMLTest qualified as HTMLFormatterTest
 import Hbt.Parser.HTMLTest qualified as HTMLTest
 import Hbt.Parser.MarkdownTest qualified as MarkdownTest
 import Hbt.Parser.Pinboard.JSONTest qualified as PinboardJSONTest
 import Hbt.Parser.Pinboard.XMLTest qualified as PinboardXMLTest
-import Hbt.THTest qualified as THTest
-import HbtTest qualified as HbtTest
 import System.Exit (exitFailure)
 import TestData (AllTestData (..), loadAllTestData)
 import Text.Printf (printf)
@@ -35,7 +35,7 @@ main = do
         , return $ MarkdownTest.results testData.markdownTests
         , return $ PinboardJSONTest.results testData.pinboardJsonTests
         , return $ PinboardXMLTest.results testData.pinboardXmlTests
-        , return HbtTest.results
+        , return BaseTest.results
         , return THTest.results
         ]
 

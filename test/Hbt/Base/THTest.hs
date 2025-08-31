@@ -1,6 +1,6 @@
-module Hbt.THTest where
+module Hbt.Base.THTest where
 
-import Hbt.TH
+import Hbt.Base.TH
 import Language.Haskell.TH
 import Test.Dwergaz
 import TestUtilities (testResults)
