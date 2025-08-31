@@ -13,7 +13,7 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
-import Hbt (Flow (..), Format (..), InputFormat, OutputFormat, formatDispatch, parseDispatch)
+import Hbt (Flow (..), Format (..), InputFormat, OutputFormat, formatWith, parseWith)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
@@ -182,7 +182,7 @@ detectInputFormat file = detectFromExtension (takeExtension file)
 
 parseFile :: InputFormat -> FilePath -> Text.Text -> IO Collection
 parseFile fmt file content = do
-  case parseDispatch fmt content of
+  case parseWith fmt content of
     Left err -> die $ "Error parsing " ++ file ++ ": " ++ show err
     Right collection -> return collection
 
@@ -205,7 +205,7 @@ printCollection file opts collection
       writeOutput opts.outputFile tagsOutput
   | otherwise = case opts.outputFormat of
       Just fmt -> do
-        result <- formatDispatch fmt collection
+        result <- formatWith fmt collection
         case result of
           Right output -> writeOutput opts.outputFile $ Text.unpack output
           Left err -> die $ "Error formatting: " ++ show err

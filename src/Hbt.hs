@@ -2,20 +2,18 @@
 {-# LANGUAGE TypeData #-}
 
 module Hbt
-  ( -- * Core Types
-    Flow (..)
+  ( Flow (..)
   , Format (..)
   , InputFormat
   , OutputFormat
-
-    -- * Dispatch Functions
-  , parseDispatch
-  , formatDispatch
+  , parseWith
+  , formatWith
   , SomeParseError (..)
-  , SomeFormatError (..)
+  , SomeFormatError
   )
 where
 
+import Control.Exception (SomeException, handle)
 import Data.Bifunctor (first)
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
@@ -50,20 +48,22 @@ data SomeParseError = forall e. (Show e) => SomeParseError e
 instance Show SomeParseError where
   show (SomeParseError e) = show e
 
-data SomeFormatError = forall e. (Show e) => SomeFormatError e
+parseWith :: Format From -> Text -> Either SomeParseError Collection
+parseWith HTML = first SomeParseError . HTMLParser.parse
+parseWith JSON = first SomeParseError . PinboardJSON.parse
+parseWith XML = first SomeParseError . PinboardXML.parse
+parseWith Markdown = first SomeParseError . Markdown.parse "content"
 
-instance Show SomeFormatError where
-  show (SomeFormatError e) = show e
+type SomeFormatError = SomeException
 
-parseDispatch :: Format From -> Text -> Either SomeParseError Collection
-parseDispatch HTML content = first SomeParseError $ HTMLParser.parse content
-parseDispatch JSON content = first SomeParseError $ PinboardJSON.parse content
-parseDispatch XML content = first SomeParseError $ PinboardXML.parse content
-parseDispatch Markdown content = first SomeParseError $ Markdown.parse "content" content
+withFormatError :: IO Text -> IO (Either SomeFormatError Text)
+withFormatError action = handle handler (fmap Right action)
+  where
+    handler :: SomeException -> IO (Either SomeException a)
+    handler = return . Left
 
-formatDispatch :: Format To -> Collection -> IO (Either SomeFormatError Text)
-formatDispatch YAML collection =
-  return $ Right $ Text.decodeUtf8 $ YamlPretty.encodePretty yamlConfig collection
-formatDispatch HTML collection = do
+formatWith :: Format To -> Collection -> IO (Either SomeFormatError Text)
+formatWith YAML collection = pure . Right . Text.decodeUtf8 $ YamlPretty.encodePretty yamlConfig collection
+formatWith HTML collection = withFormatError $ do
   template <- compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
-  return $ Right $ HTMLFormatter.format template collection
+  return $ HTMLFormatter.format template collection
