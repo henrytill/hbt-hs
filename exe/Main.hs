@@ -13,8 +13,7 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
-import Hbt (formatDispatch, parseDispatch)
-import Hbt.Base (Flow (..), Format (..), InputFormat, OutputFormat)
+import Hbt (Flow (..), Format (..), InputFormat, OutputFormat, formatDispatch, parseDispatch)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))

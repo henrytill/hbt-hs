@@ -33,7 +33,6 @@ library
     exposed-modules:
         Data.Multimap
         Hbt
-        Hbt.Base
         Hbt.Collection
         Hbt.Collection.Entity
         Hbt.Formatter.HTML
