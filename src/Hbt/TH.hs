@@ -25,6 +25,7 @@ isValidForEnum ::
   Type ->
   -- | True if the constructor can be used with the target enum value
   Bool
+isValidForEnum (AppT _ (PromotedT conName)) (ConT targetName) | conName == targetName = True
 isValidForEnum (AppT _ enumType) targetEnum | enumType == targetEnum = True
 isValidForEnum (AppT _ (VarT _)) _ = True -- Polymorphic constructors match any enum value
 isValidForEnum _ _ = False
