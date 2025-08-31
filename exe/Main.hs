@@ -113,15 +113,15 @@ supportedFormats f = map toString (allConstructors (Proxy @f))
 
 -- | Set format from string
 setFormat :: forall f -> (FormatFlow f, HasFormat f s) => String -> s -> s
-setFormat f str opts
-  | Just fmt <- parseFormatFlow @f str = set format (Just fmt) opts
-  | otherwise = error $ formatErrorFlow (Proxy @f) str
+setFormat f str opts =
+  case parseFormatFlow @f str of
+    Nothing -> error $ formatErrorFlow (Proxy @f) str
+    Just fmt -> set format (Just fmt) opts
 
 generateFormatHelp :: forall f -> (FormatFlow f) => String -> String
 generateFormatHelp f label =
-  label ++ " format (" ++ formatList ++ ")"
-  where
-    formatList = intercalate ", " (supportedFormats f)
+  let formatList = intercalate ", " (supportedFormats f)
+   in label ++ " format (" ++ formatList ++ ")"
 
 options :: [OptDescr (Options -> Options)]
 options =
@@ -162,6 +162,12 @@ options =
       "Show this help message"
   ]
 
+printUsage :: IO ()
+printUsage = do
+  prog <- getProgName
+  let header = "Usage: " ++ prog ++ " [OPTIONS] FILE\n\nProcess bookmark files in various formats\n\nOptions:"
+  putStrLn (usageInfo header options)
+
 parseOptions :: [String] -> IO (Options, [String])
 parseOptions argv =
   case getOpt Permute options argv of
@@ -170,12 +176,6 @@ parseOptions argv =
       mapM_ (hPutStrLn stderr) errs
       printUsage
       exitFailure
-
-printUsage :: IO ()
-printUsage = do
-  prog <- getProgName
-  let header = "Usage: " ++ prog ++ " [OPTIONS] FILE\n\nProcess bookmark files in various formats\n\nOptions:"
-  putStrLn (usageInfo header options)
 
 detectInputFormat :: FilePath -> Maybe InputFormat
 detectInputFormat file = detectFromExtension (takeExtension file)
@@ -203,13 +203,14 @@ printCollection file opts collection
       let allLabels = foldMap (.labels) (Vector.toList $ Collection.allEntities collection)
       let tagsOutput = unlines $ map (Text.unpack . (.unLabel)) $ Set.toAscList allLabels
       writeOutput opts.outputFile tagsOutput
-  | otherwise = case opts.outputFormat of
-      Just fmt -> do
-        result <- formatWith fmt collection
-        case result of
-          Right output -> writeOutput opts.outputFile $ Text.unpack output
-          Left err -> die $ "Error formatting: " ++ show err
-      Nothing -> die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
+  | otherwise =
+      case opts.outputFormat of
+        Nothing -> die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
+        Just fmt -> do
+          result <- formatWith fmt collection
+          case result of
+            Left err -> die $ "Error formatting: " ++ show err
+            Right output -> writeOutput opts.outputFile $ Text.unpack output
 
 processFile :: Options -> FilePath -> IO ()
 processFile opts file = do
@@ -229,12 +230,12 @@ main = do
     [] -> do
       printUsage
       die "Error: input file required"
-    [file]
-      | let hasOutputFormat = isJust opts.outputFormat
-      , let hasAnalysisFlag = opts.showInfo || opts.listTags
-      , hasOutputFormat || hasAnalysisFlag ->
-          processFile opts file
-      | otherwise -> die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
+    [file] ->
+      let hasOutputFormat = isJust opts.outputFormat
+          hasAnalysisFlag = opts.showInfo || opts.listTags
+       in if hasOutputFormat || hasAnalysisFlag
+            then processFile opts file
+            else die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
     _ -> do
       printUsage
       die "Error: exactly one input file required"

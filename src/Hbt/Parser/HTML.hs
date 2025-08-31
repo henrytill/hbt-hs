@@ -101,11 +101,13 @@ runNetscapeM :: NetscapeM a -> ParseState -> Either Error (a, ParseState)
 runNetscapeM (MkNetscapeM m) = runParserMonad m
 
 parseTimestamp :: [Attribute Text] -> Text -> Maybe Time
-parseTimestamp attrs key
-  | Just timestampStr <- lookupAttr key attrs
-  , Right (timestamp, "") <- Read.decimal timestampStr =
-      Just $ Entity.MkTime (fromInteger timestamp)
-  | otherwise = Nothing
+parseTimestamp attrs key =
+  case lookupAttr key attrs of
+    Nothing -> Nothing
+    Just timestampStr ->
+      case Read.decimal timestampStr of
+        Right (timestamp, "") -> Just $ Entity.MkTime (fromInteger timestamp)
+        _ -> Nothing
 
 parseTimestampWithDefault :: [Attribute Text] -> Text -> Time
 parseTimestampWithDefault attrs key = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp attrs key)
@@ -114,11 +116,12 @@ parseIsPrivate :: [Attribute Text] -> Bool
 parseIsPrivate attrs = attrMatches "private" "1" attrs
 
 parseTagsFromAttr :: [Attribute Text] -> [Text]
-parseTagsFromAttr attrs
-  | Just tagString <- lookupAttr "tags" attrs
-  , not . Text.null $ tagString =
-      Text.splitOn "," tagString
-  | otherwise = []
+parseTagsFromAttr attrs =
+  case lookupAttr "tags" attrs of
+    Nothing -> []
+    Just tagString
+      | Text.null tagString -> []
+      | otherwise -> Text.splitOn "," tagString
 
 createLabels :: [Text] -> [Text] -> Set.Set Entity.Label
 createLabels tags folderLabels =

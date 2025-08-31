@@ -16,20 +16,17 @@ import Prelude hiding (length, null)
 mkTime :: Integer -> Time
 mkTime = MkTime . fromIntegral
 
+fromEither :: (Show e) => Either e a -> a
+fromEither = either (error . show) id
+
 safeURI :: String -> URI
-safeURI s = case Entity.mkURI s of
-  Left err -> error $ "Test URI creation failed: " ++ show err
-  Right uri -> uri
+safeURI = fromEither . Entity.mkURI
 
 safeAddEdge :: Id -> Id -> Collection -> Collection
-safeAddEdge from to collection = case addEdge from to collection of
-  Left err -> error $ "Test addEdge failed: " ++ show err
-  Right newCollection -> newCollection
+safeAddEdge from to = fromEither . addEdge from to
 
 safeAddEdges :: Id -> Id -> Collection -> Collection
-safeAddEdges from to collection = case addEdges from to collection of
-  Left err -> error $ "Test addEdges failed: " ++ show err
-  Right newCollection -> newCollection
+safeAddEdges from to = fromEither . addEdges from to
 
 emptyEntityTests :: Test
 emptyEntityTests =

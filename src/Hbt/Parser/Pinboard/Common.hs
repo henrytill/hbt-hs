@@ -24,6 +24,11 @@ data PinboardPost = MkPinboardPost
   }
   deriving (Show, Eq)
 
+parseTagString :: Text -> [Text]
+parseTagString tagStr
+  | Text.null tagStr = []
+  | otherwise = filter (not . Text.null) $ map Text.strip $ Text.splitOn " " tagStr
+
 instance FromJSON PinboardPost where
   parseJSON = withObject "PinboardPost" $ \o ->
     let tags = parseTagString <$> o .: "tags"
@@ -39,13 +44,8 @@ instance FromJSON PinboardPost where
 parseTime :: (Entity.Error -> e) -> Text -> Either e Time
 parseTime fromEntityErr timeStr =
   case parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (Text.unpack timeStr) :: Maybe UTCTime of
-    Just utcTime -> Right $ MkTime (utcTimeToPOSIXSeconds utcTime)
     Nothing -> Left $ fromEntityErr (Entity.InvalidTime (Text.unpack timeStr))
-
-parseTagString :: Text -> [Text]
-parseTagString tagStr
-  | Text.null tagStr = []
-  | otherwise = filter (not . Text.null) $ map Text.strip $ Text.splitOn " " tagStr
+    Just utcTime -> Right $ MkTime (utcTimeToPOSIXSeconds utcTime)
 
 parseTags :: [Text] -> [Label]
 parseTags tagList = map (MkLabel . Text.strip) $ filter (not . Text.null) tagList

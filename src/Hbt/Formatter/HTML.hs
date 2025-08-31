@@ -43,23 +43,22 @@ format template collection =
 
 toTemplateEntity :: Entity -> TemplateEntity
 toTemplateEntity entity =
-  MkTemplateEntity
-    { uri = uriText
-    , createdAt = formatTime entity.createdAt
-    , title = getFirstName uriText entity.names
-    , lastModified = fmap formatTime (getLastModified entity)
-    , tags = if null tagsList then Nothing else Just tagsText
-    , shared = entity.shared
-    , toRead = entity.toRead
-    , isFeed = entity.isFeed
-    , lastVisit = fmap formatTime entity.lastVisitedAt
-    , description = fmap (.unExtended) entity.extended
-    }
-  where
-    MkURI uriVal = entity.uri
-    uriText = Text.pack $ show uriVal
-    tagsList = sort . map (.unLabel) $ Set.toList entity.labels
-    tagsText = Text.intercalate "," tagsList
+  let MkURI uriVal = entity.uri
+      uriText = Text.pack $ show uriVal
+      tagsList = sort . map (.unLabel) $ Set.toList entity.labels
+      tagsText = Text.intercalate "," tagsList
+   in MkTemplateEntity
+        { uri = uriText
+        , createdAt = formatTime entity.createdAt
+        , title = getFirstName uriText entity.names
+        , lastModified = fmap formatTime (getLastModified entity)
+        , tags = if null tagsList then Nothing else Just tagsText
+        , shared = entity.shared
+        , toRead = entity.toRead
+        , isFeed = entity.isFeed
+        , lastVisit = fmap formatTime entity.lastVisitedAt
+        , description = fmap (.unExtended) entity.extended
+        }
 
 getFirstName :: Text -> Set.Set Name -> Text
 getFirstName def names

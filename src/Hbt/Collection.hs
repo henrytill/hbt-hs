@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Hbt.Collection
   ( Id (..)
@@ -62,6 +63,11 @@ data SerializedNode = SerializedNode
   }
   deriving (Show, Eq)
 
+mkSerializedNode :: Vector (Vector Id) -> Id -> Entity -> SerializedNode
+mkSerializedNode edges nodeId entity =
+  let nodeEdges = Vector.toList $ edges ! nodeId.value
+   in SerializedNode {nodeId, entity, nodeEdges}
+
 instance ToJSON SerializedNode where
   toJSON node =
     object
@@ -79,7 +85,7 @@ instance FromJSON SerializedNode where
 
 data SerializedCollection = SerializedCollection
   { version :: String
-  , collectionLength :: Int
+  , length :: Int
   , value :: [SerializedNode]
   }
   deriving (Show, Eq)
@@ -88,7 +94,7 @@ instance ToJSON SerializedCollection where
   toJSON coll =
     object
       [ "version" .= coll.version
-      , "length" .= coll.collectionLength
+      , "length" .= coll.length
       , "value" .= coll.value
       ]
 
@@ -101,9 +107,6 @@ instance FromJSON SerializedCollection where
 
 empty :: Collection
 empty = MkCollection Vector.empty Vector.empty Map.empty
-
-fromEntities :: [Entity] -> Collection
-fromEntities entities = foldl' (\coll entity -> snd $ upsert entity coll) empty entities
 
 length :: Collection -> Int
 length = Vector.length . (.nodes)
@@ -126,66 +129,57 @@ allEntities :: Collection -> Vector Entity
 allEntities = (.nodes)
 
 insert :: Entity -> Collection -> (Id, Collection)
-insert entity collection = (newId, newCollection)
-  where
-    newId = MkId (Vector.length collection.nodes)
-    newCollection =
-      MkCollection
-        { nodes = Vector.snoc collection.nodes entity
-        , edges = Vector.snoc collection.edges Vector.empty
-        , uris = Map.insert entity.uri newId collection.uris
-        }
+insert entity collection =
+  let newId = MkId (Vector.length collection.nodes)
+      nodes = Vector.snoc collection.nodes entity
+      edges = Vector.snoc collection.edges Vector.empty
+      uris = Map.insert entity.uri newId collection.uris
+   in (newId, MkCollection {nodes, edges, uris})
 
 upsert :: Entity -> Collection -> (Id, Collection)
-upsert entity collection
-  | Just existingId <- lookupId entity.uri collection
-  , let existing = entityAt existingId collection
-  , let updated = Entity.absorb entity existing
-  , updated /= existing =
-      (existingId, collection {nodes = collection.nodes // [(existingId.value, updated)]})
-  | Just existingId <- lookupId entity.uri collection = (existingId, collection)
-  | otherwise = insert entity collection
+upsert entity collection =
+  case lookupId entity.uri collection of
+    Nothing -> insert entity collection
+    Just existingId ->
+      let existing = entityAt existingId collection
+          updated = Entity.absorb entity existing
+       in if updated == existing
+            then (existingId, collection)
+            else (existingId, collection {nodes = collection.nodes // [(existingId.value, updated)]})
+
+fromEntities :: [Entity] -> Collection
+fromEntities entities = foldl' (\coll entity -> snd $ upsert entity coll) empty entities
 
 addEdge :: Id -> Id -> Collection -> Either Error Collection
-addEdge from to collection
-  | validFrom && validTo =
-      let fromEdges = collection.edges ! from.value
-          newFromEdges = if to `elem` fromEdges then fromEdges else Vector.snoc fromEdges to
-       in Right $ collection {edges = collection.edges // [(from.value, newFromEdges)]}
-  | not validFrom && validTo = Left $ MissingEntities [(entityAt from collection).uri]
-  | validFrom && not validTo = Left $ MissingEntities [(entityAt to collection).uri]
-  | otherwise = Left $ MissingEntities [(entityAt from collection).uri, (entityAt to collection).uri]
-  where
-    validFrom = from.value < Vector.length collection.nodes
-    validTo = to.value < Vector.length collection.nodes
+addEdge from to collection =
+  let validFrom = from.value < Vector.length collection.nodes
+      validTo = to.value < Vector.length collection.nodes
+   in case (validFrom, validTo) of
+        (False, False) -> Left $ MissingEntities [(entityAt from collection).uri, (entityAt to collection).uri]
+        (False, True) -> Left $ MissingEntities [(entityAt from collection).uri]
+        (True, False) -> Left $ MissingEntities [(entityAt to collection).uri]
+        (True, True) ->
+          let fromEdges = collection.edges ! from.value
+              newFromEdges = if to `elem` fromEdges then fromEdges else Vector.snoc fromEdges to
+           in Right $ collection {edges = collection.edges // [(from.value, newFromEdges)]}
 
 addEdges :: Id -> Id -> Collection -> Either Error Collection
 addEdges from to collection = addEdge from to collection >>= addEdge to from
 
 toSerialized :: Collection -> SerializedCollection
 toSerialized collection =
-  SerializedCollection
-    { version = "0.1.0"
-    , collectionLength = Vector.length collection.nodes
-    , value = Vector.toList $ Vector.imap makeNode collection.nodes
-    }
-  where
-    makeNode i entity =
-      SerializedNode
-        { nodeId = MkId i
-        , entity = entity
-        , nodeEdges = Vector.toList $ collection.edges ! i
-        }
+  let version = "0.1.0"
+      length = Vector.length collection.nodes
+      value = Vector.toList $ Vector.imap (\i -> mkSerializedNode collection.edges (MkId i)) collection.nodes
+   in SerializedCollection {version, length, value}
 
 fromSerialized :: SerializedCollection -> Collection
 fromSerialized serialized =
   let entities = fmap (.entity) serialized.value
-      edgesLists = fmap (.nodeEdges) serialized.value
-   in MkCollection
-        { nodes = Vector.fromList entities
-        , edges = Vector.fromList $ fmap Vector.fromList edgesLists
-        , uris = Map.fromList $ zipWith (\entity i -> (entity.uri, MkId i)) entities [0 ..]
-        }
+      nodes = Vector.fromList entities
+      edges = Vector.fromList . fmap Vector.fromList $ fmap (.nodeEdges) serialized.value
+      uris = Map.fromList $ zipWith (\entity i -> (entity.uri, MkId i)) entities [0 ..]
+   in MkCollection {nodes, edges, uris}
 
 instance ToJSON Collection where
   toJSON = toJSON . toSerialized
@@ -197,8 +191,6 @@ instance FromJSON Collection where
 yamlConfig :: YamlPretty.Config
 yamlConfig = YamlPretty.setConfCompare fieldCompare YamlPretty.defConfig
   where
-    fieldCompare key1 key2 = compare (fieldIndex key1) (fieldIndex key2)
-    fieldIndex key = fromMaybe 999 (key `elemIndex` fieldOrder)
     fieldOrder =
       [ "version"
       , "length"
@@ -217,3 +209,5 @@ yamlConfig = YamlPretty.setConfCompare fieldCompare YamlPretty.defConfig
       , "extended"
       , "lastVisitedAt"
       ]
+    fieldIndex key = fromMaybe 999 (key `elemIndex` fieldOrder)
+    fieldCompare key1 key2 = compare (fieldIndex key1) (fieldIndex key2)

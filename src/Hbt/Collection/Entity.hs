@@ -39,19 +39,8 @@ data Error
 newtype URI = MkURI {unURI :: URI.URI}
   deriving (Show, Eq, Ord)
 
-instance ToJSON URI where
-  toJSON (MkURI uri) = toJSON $ show uri
-
-instance FromJSON URI where
-  parseJSON = withText "URI" $ \t ->
-    case parseURI (Text.unpack t) of
-      Nothing -> fail $ "Invalid URI: " <> Text.unpack t
-      Just uri -> pure $ MkURI (normalizeURI uri)
-
-mkURI :: String -> Either Error URI
-mkURI s = case parseURI s of
-  Nothing -> Left $ InvalidURI s
-  Just uri -> Right . MkURI $ normalizeURI uri
+nullURI :: URI
+nullURI = MkURI URI.nullURI
 
 normalizeURI :: URI.URI -> URI.URI
 normalizeURI uri
@@ -61,8 +50,19 @@ normalizeURI uri
       uri {URI.uriPath = "/"}
   | otherwise = uri
 
-nullURI :: URI
-nullURI = MkURI URI.nullURI
+mkURI :: String -> Either Error URI
+mkURI s =
+  case parseURI s of
+    Nothing -> Left $ InvalidURI s
+    Just uri -> Right . MkURI $ normalizeURI uri
+
+instance ToJSON URI where
+  toJSON (MkURI uri) = toJSON $ show uri
+
+instance FromJSON URI where
+  parseJSON = withText "URI" $ \t ->
+    let unpacked = Text.unpack t
+     in either (fail . show) pure (mkURI unpacked)
 
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
@@ -77,9 +77,10 @@ epoch :: Time
 epoch = MkTime 0
 
 mkTime :: String -> Either Error Time
-mkTime s = case parseTimeM True defaultTimeLocale "%B %e, %Y" s :: Maybe UTCTime of
-  Nothing -> Left $ InvalidTime s
-  Just utcTime -> Right . MkTime $ utcTimeToPOSIXSeconds utcTime
+mkTime s =
+  case parseTimeM True defaultTimeLocale "%B %e, %Y" s :: Maybe UTCTime of
+    Nothing -> Left $ InvalidTime s
+    Just utcTime -> Right . MkTime $ utcTimeToPOSIXSeconds utcTime
 
 newtype Name = MkName {unName :: Text}
   deriving (Show, Eq, Ord)
@@ -181,30 +182,31 @@ empty =
     , lastVisitedAt = Nothing
     }
 
+insertSorted :: Time -> [Time] -> [Time]
+insertSorted t [] = [t]
+insertSorted t (x : xs)
+  | t <= x = t : x : xs
+  | otherwise = x : insertSorted t xs
+
 update :: Time -> Set Name -> Set Label -> Entity -> Entity
-update updatedAt names labels entity
-  | let createdAt = entity.createdAt
-  , createdAt > updatedAt =
-      entity
-        { updatedAt = insertSorted createdAt entity.updatedAt
-        , createdAt = updatedAt
-        , names = updatedNames
-        , labels = updatedLabels
-        }
-  | otherwise =
-      entity
-        { updatedAt = insertSorted updatedAt entity.updatedAt
-        , names = updatedNames
-        , labels = updatedLabels
-        }
-  where
-    updatedNames = Set.union entity.names names
-    updatedLabels = Set.union entity.labels labels
-    insertSorted :: Time -> [Time] -> [Time]
-    insertSorted t [] = [t]
-    insertSorted t (x : xs)
-      | t <= x = t : x : xs
-      | otherwise = x : insertSorted t xs
+update updatedAt names labels entity =
+  let createdAt = entity.createdAt
+      updatedNames = Set.union entity.names names
+      updatedLabels = Set.union entity.labels labels
+   in if createdAt > updatedAt
+        then
+          entity
+            { updatedAt = insertSorted createdAt entity.updatedAt
+            , createdAt = updatedAt
+            , names = updatedNames
+            , labels = updatedLabels
+            }
+        else
+          entity
+            { updatedAt = insertSorted updatedAt entity.updatedAt
+            , names = updatedNames
+            , labels = updatedLabels
+            }
 
 absorb :: Entity -> Entity -> Entity
 absorb other existing

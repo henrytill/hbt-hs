@@ -119,18 +119,19 @@ textFromInlines :: [Inline a] -> Text
 textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
   where
     go :: Inline a -> Builder
-    go (MkInline _ il) = case il of
-      Initial.LineBreak -> "\n"
-      Initial.SoftBreak -> " "
-      Initial.Str t -> Builder.fromText t
-      Initial.Entity t -> Builder.fromText t
-      Initial.EscapedChar c -> Builder.singleton c
-      Initial.Emph ils -> foldMap go ils
-      Initial.Strong ils -> foldMap go ils
-      Initial.Link _ _ ils -> foldMap go ils
-      Initial.Image _ _ ils -> foldMap go ils
-      Initial.Code t -> "`" <> Builder.fromText t <> "`"
-      Initial.RawInline _ t -> Builder.fromText t
+    go (MkInline _ il) =
+      case il of
+        Initial.LineBreak -> "\n"
+        Initial.SoftBreak -> " "
+        Initial.Str t -> Builder.fromText t
+        Initial.Entity t -> Builder.fromText t
+        Initial.EscapedChar c -> Builder.singleton c
+        Initial.Emph ils -> foldMap go ils
+        Initial.Strong ils -> foldMap go ils
+        Initial.Link _ _ ils -> foldMap go ils
+        Initial.Image _ _ ils -> foldMap go ils
+        Initial.Code t -> "`" <> Builder.fromText t <> "`"
+        Initial.RawInline _ t -> Builder.fromText t
 
 -- Extract link information and set up for entity creation
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
@@ -153,31 +154,32 @@ processInlines = mapM_ handleInline
 
 -- Handle block elements
 handleBlock :: Block a -> MarkdownM ()
-handleBlock (MkBlock _ b) = case b of
-  Initial.Plain inlines ->
-    processInlines inlines
-  Initial.Heading 1 inlines -> do
-    let headingText = textFromInlines inlines
-    time <- liftEither . first fromEntityError . Entity.mkTime $ Text.unpack headingText
-    maybeTime .= Just time
-    maybeParent .= Nothing
-    labels .= []
-  Initial.Heading level inlines -> do
-    let headingText = textFromInlines inlines
-    let label = MkLabel headingText
-    labels %= (label :) . take (level - 2)
-  Initial.List _ _ blocksList -> do
-    -- Save current parent and push it to parent stack
-    currentParent <- use maybeParent
-    forM_ currentParent $ \pid -> parents %= (pid :)
+handleBlock (MkBlock _ b) =
+  case b of
+    Initial.Plain inlines ->
+      processInlines inlines
+    Initial.Heading 1 inlines -> do
+      let headingText = textFromInlines inlines
+      time <- liftEither . first fromEntityError . Entity.mkTime $ Text.unpack headingText
+      maybeTime .= Just time
+      maybeParent .= Nothing
+      labels .= []
+    Initial.Heading level inlines -> do
+      let headingText = textFromInlines inlines
+      let label = MkLabel headingText
+      labels %= (label :) . take (level - 2)
+    Initial.List _ _ blocksList -> do
+      -- Save current parent and push it to parent stack
+      currentParent <- use maybeParent
+      forM_ currentParent $ \pid -> parents %= (pid :)
 
-    -- Process all blocks in the list
-    forM_ blocksList $ mapM_ handleBlock
+      -- Process all blocks in the list
+      forM_ blocksList $ mapM_ handleBlock
 
-    -- Restore parent state
-    maybeParent .= Nothing
-    parents %= drop 1
-  _ -> return ()
+      -- Restore parent state
+      maybeParent .= Nothing
+      parents %= drop 1
+    _ -> return ()
 
 -- Process all blocks
 processBlocks :: [Block a] -> MarkdownM Collection

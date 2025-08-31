@@ -55,11 +55,11 @@ insert k v (MkMultimap m) = MkMultimap $ Map.alter (inserter v) k m
 
 deleter :: (Ord v) => v -> Maybe (Set v) -> Maybe (Set v)
 deleter _ Nothing = Nothing
-deleter v (Just s)
-  | Set.null updated = Nothing
-  | otherwise = Just updated
-  where
-    updated = Set.delete v s
+deleter v (Just s) =
+  let updated = Set.delete v s
+   in if Set.null updated
+        then Nothing
+        else Just updated
 
 delete :: (Ord k, Ord v) => k -> v -> Multimap k v -> Multimap k v
 delete k v (MkMultimap m) = MkMultimap $ Map.alter (deleter v) k m
@@ -71,9 +71,9 @@ lookup :: (Ord k) => k -> Multimap k v -> Set v
 lookup k (MkMultimap m) = Maybe.fromMaybe Set.empty $ Map.lookup k m
 
 fromList :: (Ord k, Ord v) => [(k, v)] -> Multimap k v
-fromList = Prelude.foldr f empty
-  where
-    f (k, v) = insert k v
+fromList =
+  let f (k, v) = insert k v
+   in Prelude.foldr f empty
 
 elems :: Multimap k v -> [v]
 elems (MkMultimap m) = Map.elems m >>= Set.elems

@@ -57,10 +57,10 @@ parseWith Markdown = first SomeParseError . Markdown.parse "content"
 type SomeFormatError = SomeException
 
 withFormatError :: IO Text -> IO (Either SomeFormatError Text)
-withFormatError action = handle handler (fmap Right action)
-  where
-    handler :: SomeException -> IO (Either SomeException a)
-    handler = return . Left
+withFormatError action =
+  let handler :: SomeException -> IO (Either SomeException a)
+      handler = return . Left
+   in handle handler (fmap Right action)
 
 formatWith :: Format To -> Collection -> IO (Either SomeFormatError Text)
 formatWith YAML collection = pure . Right . Text.decodeUtf8 $ YamlPretty.encodePretty yamlConfig collection

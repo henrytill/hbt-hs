@@ -9,9 +9,8 @@ addContext context = first $ showString context . showString ": " . flip shows m
 
 -- | Generate standardized test results with output and pass/fail status
 testResults :: String -> Test -> (String, Bool)
-testResults _groupName test = (buildString mempty, allPassed)
-  where
-    result = runTest test
-    allPassed = resultIsPassed result
-    showResults = showString $ resultToString result
-    buildString = showResults . showChar '\n'
+testResults _groupName test =
+  let result = runTest test
+      buildString = showString (resultToString result) . showChar '\n'
+      allPassed = resultIsPassed result
+   in (buildString mempty, allPassed)
