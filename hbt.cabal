@@ -35,7 +35,6 @@ library
         Hbt
         Hbt.Base
         Hbt.Base.TH
-        Hbt.Class
         Hbt.Collection
         Hbt.Collection.Entity
         Hbt.Formatter.HTML
