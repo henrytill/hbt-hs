@@ -57,9 +57,6 @@ generateFormatHelp f label =
   where
     formatList = intercalate ", " (supportedFormats f)
 
-detectInputFormat :: FilePath -> Maybe InputFormat
-detectInputFormat file = detectFromExtension (takeExtension file)
-
 options :: [OptDescr (Options -> Options)]
 options =
   [ Option
@@ -114,6 +111,15 @@ printUsage = do
   let header = "Usage: " ++ prog ++ " [OPTIONS] FILE\n\nProcess bookmark files in various formats\n\nOptions:"
   putStrLn (usageInfo header options)
 
+detectInputFormat :: FilePath -> Maybe InputFormat
+detectInputFormat file = detectFromExtension (takeExtension file)
+
+parseFile :: InputFormat -> FilePath -> Text.Text -> IO Collection
+parseFile fmt file content = do
+  case parseDispatch fmt content of
+    Left err -> die $ "Error parsing " ++ file ++ ": " ++ show err
+    Right collection -> return collection
+
 applyMappings :: Maybe FilePath -> Collection -> IO Collection
 applyMappings Nothing collection = return collection
 applyMappings (Just _) _ = die "Warning: --mappings option not yet implemented"
@@ -138,16 +144,6 @@ printCollection file opts collection
           Right output -> writeOutput opts.outputFile $ Text.unpack output
           Left err -> die $ "Error formatting: " ++ show err
       Nothing -> die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
-
-parseOrDie :: (Show e) => FilePath -> Either e a -> IO a
-parseOrDie file (Left err) = die $ "Error parsing " ++ file ++ ": " ++ show err
-parseOrDie _ (Right result) = return result
-
-parseFile :: InputFormat -> FilePath -> Text.Text -> IO Collection
-parseFile fmt file content = do
-  case parseDispatch fmt content of
-    Left err -> die $ "Error parsing " ++ file ++ ": " ++ show err
-    Right collection -> return collection
 
 processFile :: Options -> FilePath -> IO ()
 processFile opts file = do
