@@ -1,25 +1,21 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RequiredTypeArguments #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeData #-}
 
 module Main where
 
 import Control.Applicative ((<|>))
 import Control.Monad (when)
-import Data.List (elemIndex, find, intercalate)
-import Data.Maybe (fromMaybe, isJust)
-import Data.Proxy (Proxy (..))
+import Data.List (intercalate)
+import Data.Maybe (isJust)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
 import Data.Yaml.Pretty qualified as YamlPretty
-import Hbt.Collection (Collection)
+import Hbt (Format (..), FormatFlow, From, HasFormat (..), InputFormat, OutputFormat, To, detectFromExtension, setFormat, supportedFormats)
+import Hbt.Collection (Collection, yamlConfig)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
 import Hbt.Formatter.HTML qualified as HTMLFormatter
@@ -32,27 +28,7 @@ import System.Environment (getArgs, getProgName)
 import System.Exit (die, exitFailure, exitSuccess)
 import System.FilePath (takeExtension)
 import System.IO (hPutStrLn, stderr)
-import TH (deriveAllConstructors)
 import Text.Microstache (compileMustacheFile)
-
-type data Flow = From | To
-
-data Format (f :: Flow) where
-  JSON :: Format From
-  XML :: Format From
-  Markdown :: Format From
-  HTML :: Format f
-  YAML :: Format To
-
-deriving instance Show (Format f)
-
-deriving instance Eq (Format f)
-
-type InputFormat = Format From
-
-type OutputFormat = Format To
-
-$(deriveAllConstructors ''Format ''Flow)
 
 data Options = MkOptions
   { inputFormat :: Maybe InputFormat
@@ -64,6 +40,12 @@ data Options = MkOptions
   , showHelp :: Bool
   }
   deriving (Show)
+
+instance HasFormat From Options where
+  format f opts = (\x -> opts {inputFormat = x}) <$> f (opts.inputFormat)
+
+instance HasFormat To Options where
+  format f opts = (\x -> opts {outputFormat = x}) <$> f (opts.outputFormat)
 
 defaultOptions :: Options
 defaultOptions =
@@ -77,108 +59,27 @@ defaultOptions =
     , showHelp = False
     }
 
-class FormatFlow (f :: Flow) where
-  -- | Get all format constructors for this flow direction
-  allConstructors :: Proxy f -> [Format f]
-
-  -- | Convert a format to its string representation
-  formatString :: Format f -> String
-
-  -- | Update options with the given format
-  setFormatFlow :: Format f -> Options -> Options
-
-  -- | Generate flow-specific error message for invalid format
-  formatErrorFlow :: Proxy f -> String -> String
-
-  -- | Detect format from file extension
-  detectFromExtension :: String -> Maybe (Format f)
-
-  -- | Get list of supported format strings (derived)
-  supportedFormats :: Proxy f -> [String]
-  supportedFormats proxy = map formatString (allConstructors proxy)
-
-  -- | Parse format string to format type (derived)
-  parseFormatFlow :: String -> Maybe (Format f)
-  parseFormatFlow s = find (\fmt -> formatString fmt == s) (allConstructors (Proxy @f))
-
-instance FormatFlow From where
-  allConstructors :: Proxy From -> [Format From]
-  allConstructors _ = allFromConstructors
-
-  formatString :: Format From -> String
-  formatString HTML = "html"
-  formatString JSON = "json"
-  formatString XML = "xml"
-  formatString Markdown = "markdown"
-
-  setFormatFlow :: Format From -> Options -> Options
-  setFormatFlow fmt opts = opts {inputFormat = Just fmt}
-
-  formatErrorFlow :: Proxy From -> String -> String
-  formatErrorFlow _ f = "Invalid input format: " ++ f
-
-  detectFromExtension :: String -> Maybe (Format From)
-  detectFromExtension ".html" = Just HTML
-  detectFromExtension ".json" = Just JSON
-  detectFromExtension ".xml" = Just XML
-  detectFromExtension ".md" = Just Markdown
-  detectFromExtension _ = Nothing
-
-instance FormatFlow To where
-  allConstructors :: Proxy To -> [Format To]
-  allConstructors _ = allToConstructors
-
-  formatString :: Format To -> String
-  formatString YAML = "yaml"
-  formatString HTML = "html"
-
-  setFormatFlow :: Format To -> Options -> Options
-  setFormatFlow fmt opts = opts {outputFormat = Just fmt}
-
-  formatErrorFlow :: Proxy To -> String -> String
-  formatErrorFlow _ f = "Invalid output format: " ++ f
-
-  detectFromExtension :: String -> Maybe (Format To)
-  detectFromExtension _ = Nothing -- Output formats can't be detected from files (yet)
-
-setFormatOption :: forall f -> (FormatFlow f) => String -> Options -> Options
-setFormatOption f s opts = case parseFormatFlow @f s of
-  Just fmt -> setFormatFlow fmt opts
-  Nothing -> error $ formatErrorFlow (Proxy @f) s
-
-setFromFormat :: String -> Options -> Options
-setFromFormat = setFormatOption From
-
-setToFormat :: String -> Options -> Options
-setToFormat = setFormatOption To
-
 generateFormatHelp :: forall f -> (FormatFlow f) => String -> String
 generateFormatHelp f label =
   label ++ " format (" ++ formatList ++ ")"
   where
-    formatList = intercalate ", " (supportedFormats (Proxy @f))
-
-inputFormatHelp :: String
-inputFormatHelp = generateFormatHelp From "Input"
-
-outputFormatHelp :: String
-outputFormatHelp = generateFormatHelp To "Output"
+    formatList = intercalate ", " (supportedFormats f)
 
 detectInputFormat :: FilePath -> Maybe InputFormat
-detectInputFormat file = detectFromExtension @From (takeExtension file)
+detectInputFormat file = detectFromExtension (takeExtension file)
 
 options :: [OptDescr (Options -> Options)]
 options =
   [ Option
       ['f']
       ["from"]
-      (ReqArg setFromFormat "FORMAT")
-      inputFormatHelp
+      (ReqArg (setFormat From) "FORMAT")
+      (generateFormatHelp From "Input")
   , Option
       ['t']
       ["to"]
-      (ReqArg setToFormat "FORMAT")
-      outputFormatHelp
+      (ReqArg (setFormat To) "FORMAT")
+      (generateFormatHelp To "Output")
   , Option
       ['o']
       ["output"]
@@ -228,31 +129,6 @@ applyMappings (Just _) _ = die "Warning: --mappings option not yet implemented"
 writeOutput :: Maybe FilePath -> String -> IO ()
 writeOutput Nothing content = putStr content
 writeOutput (Just file) content = writeFile file content
-
--- | YAML configuration that preserves field order as expected by tests
-yamlConfig :: YamlPretty.Config
-yamlConfig = YamlPretty.setConfCompare fieldCompare YamlPretty.defConfig
-  where
-    fieldCompare key1 key2 = compare (fieldIndex key1) (fieldIndex key2)
-    fieldIndex key = fromMaybe 999 (key `elemIndex` fieldOrder)
-    fieldOrder =
-      [ "version"
-      , "length"
-      , "value"
-      , "id"
-      , "entity"
-      , "edges"
-      , "uri"
-      , "createdAt"
-      , "updatedAt"
-      , "names"
-      , "labels"
-      , "shared"
-      , "toRead"
-      , "isFeed"
-      , "extended"
-      , "lastVisitedAt"
-      ]
 
 printCollection :: FilePath -> Options -> Collection -> IO ()
 printCollection file opts collection

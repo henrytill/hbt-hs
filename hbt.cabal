@@ -41,6 +41,7 @@ library
         Hbt.Parser.Markdown
         Hbt.Parser.Pinboard.JSON
         Hbt.Parser.Pinboard.XML
+        Hbt.TH
 
     hs-source-dirs:   src
     other-modules:
@@ -60,15 +61,15 @@ library
         mtl ^>=2.3.1,
         network-uri ^>=2.6.4.2,
         tagsoup ^>=0.14.8,
+        template-haskell >=2.22.0.0 && <2.24,
         text ^>=2.1.1,
         time >=1.12 && <1.15,
-        vector ^>=0.13.2.0
+        vector ^>=0.13.2.0,
+        yaml ^>=0.11.11.2
 
 executable hbt
     import:           exts
     main-is:          Main.hs
-    other-modules:
-        TH
     hs-source-dirs:   exe
     default-language: GHC2021
     ghc-options:      -Wall
@@ -77,7 +78,6 @@ executable hbt
         containers >=0.7 && <0.9,
         filepath ^>=1.5.2.0,
         microstache ^>=1.0.3,
-        template-haskell >=2.22.0.0 && <2.24,
         text ^>=2.1.1,
         vector ^>=0.13.2.0,
         yaml ^>=0.11.11.2,
@@ -90,6 +90,8 @@ test-suite hbt-test
     hs-source-dirs:   test
     other-modules:
         Data.MultimapTest
+        HbtTest
+        Hbt.THTest
         Hbt.CollectionTest
         Hbt.Formatter.HTMLTest
         Hbt.Parser.HTMLTest
@@ -109,6 +111,7 @@ test-suite hbt-test
         dwergaz ^>=0.3.1.0,
         filepath ^>=1.5.2.0,
         microstache ^>=1.0.3,
+        template-haskell >=2.22.0.0 && <2.24,
         text ^>=2.1.1,
         vector ^>=0.13.2.0,
         yaml ^>=0.11.11.2,

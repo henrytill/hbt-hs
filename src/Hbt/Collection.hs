@@ -20,14 +20,18 @@ module Hbt.Collection
   , addEdges
   , toSerialized
   , fromSerialized
+  , yamlConfig
   )
 where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
+import Data.List (elemIndex)
 import Data.Map (Map)
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Vector (Vector, elem, (!), (//))
 import Data.Vector qualified as Vector
+import Data.Yaml.Pretty qualified as YamlPretty
 import Hbt.Collection.Entity (Entity (..), URI)
 import Hbt.Collection.Entity qualified as Entity
 import Prelude hiding (elem, id, length, null)
@@ -188,3 +192,28 @@ instance ToJSON Collection where
 
 instance FromJSON Collection where
   parseJSON = fmap fromSerialized . parseJSON
+
+-- | YAML configuration that preserves field order as expected by tests
+yamlConfig :: YamlPretty.Config
+yamlConfig = YamlPretty.setConfCompare fieldCompare YamlPretty.defConfig
+  where
+    fieldCompare key1 key2 = compare (fieldIndex key1) (fieldIndex key2)
+    fieldIndex key = fromMaybe 999 (key `elemIndex` fieldOrder)
+    fieldOrder =
+      [ "version"
+      , "length"
+      , "value"
+      , "id"
+      , "entity"
+      , "edges"
+      , "uri"
+      , "createdAt"
+      , "updatedAt"
+      , "names"
+      , "labels"
+      , "shared"
+      , "toRead"
+      , "isFeed"
+      , "extended"
+      , "lastVisitedAt"
+      ]

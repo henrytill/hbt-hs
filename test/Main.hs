@@ -8,6 +8,8 @@ import Hbt.Parser.HTMLTest qualified as HTMLTest
 import Hbt.Parser.MarkdownTest qualified as MarkdownTest
 import Hbt.Parser.Pinboard.JSONTest qualified as PinboardJSONTest
 import Hbt.Parser.Pinboard.XMLTest qualified as PinboardXMLTest
+import Hbt.THTest qualified as THTest
+import HbtTest qualified as HbtTest
 import System.Exit (exitFailure)
 import TestData (AllTestData (..), loadAllTestData)
 import Text.Printf (printf)
@@ -33,6 +35,8 @@ main = do
         , return $ MarkdownTest.results testData.markdownTests
         , return $ PinboardJSONTest.results testData.pinboardJsonTests
         , return $ PinboardXMLTest.results testData.pinboardXmlTests
+        , return HbtTest.results
+        , return THTest.results
         ]
 
   -- Run all test suites and collect results

@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module TH where
+module Hbt.TH where
 
 import Control.Monad (liftM)
 import Language.Haskell.TH
