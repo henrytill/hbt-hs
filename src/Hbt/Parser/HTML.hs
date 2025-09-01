@@ -136,7 +136,7 @@ createEntity attrs folders name ext = do
   uri <- Bifunctor.first fromEntityError (Entity.mkURI (Text.unpack href))
   let createdAt = parseTimestampWithDefault attrs "add_date"
       updatedAt = Maybe.maybeToList (parseTimestamp attrs "last_modified")
-      names = maybe Set.empty (\n -> Set.singleton (Entity.MkName n)) name
+      names = maybe Set.empty (Set.singleton . Entity.MkName) name
       labels = createLabels (parseTagsFromAttr attrs) folders
       shared = not (parseIsPrivate attrs)
       toRead = attrMatches "toread" "1" attrs

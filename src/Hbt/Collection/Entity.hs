@@ -63,7 +63,7 @@ instance ToJSON URI where
 instance FromJSON URI where
   parseJSON = Aeson.withText "URI" $ \t ->
     let unpacked = Text.unpack t
-     in either (\e -> fail (show e)) pure (mkURI unpacked)
+     in either (fail . show) pure (mkURI unpacked)
 
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
@@ -72,7 +72,7 @@ instance ToJSON Time where
   toJSON (MkTime posixTime) = toJSON (round posixTime :: Integer)
 
 instance FromJSON Time where
-  parseJSON json = fmap (\i -> MkTime (fromInteger i)) (parseJSON json)
+  parseJSON json = fmap (MkTime . fromInteger) (parseJSON json)
 
 epoch :: Time
 epoch = MkTime 0

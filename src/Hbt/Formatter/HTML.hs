@@ -47,7 +47,7 @@ toTemplateEntity :: Entity -> TemplateEntity
 toTemplateEntity entity =
   let MkURI uriVal = entity.uri
       uriText = Text.pack (show uriVal)
-      tagsList = List.sort (map (\label -> label.unLabel) (Set.toList entity.labels))
+      tagsList = List.sort (map (.unLabel) (Set.toList entity.labels))
       tagsText = Text.intercalate "," tagsList
    in MkTemplateEntity
         { uri = uriText
@@ -59,7 +59,7 @@ toTemplateEntity entity =
         , toRead = entity.toRead
         , isFeed = entity.isFeed
         , lastVisit = fmap formatTime entity.lastVisitedAt
-        , description = fmap (\ext -> ext.unExtended) entity.extended
+        , description = fmap (.unExtended) entity.extended
         }
 
 getFirstName :: Text -> Set Name -> Text

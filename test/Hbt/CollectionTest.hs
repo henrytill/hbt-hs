@@ -17,7 +17,7 @@ mkTime :: Integer -> Time
 mkTime i = MkTime (fromIntegral i)
 
 fromEither :: (Show e) => Either e a -> a
-fromEither = either (\e -> error (show e)) id
+fromEither = either (error . show) id
 
 safeURI :: String -> URI
 safeURI s = fromEither (Entity.mkURI s)

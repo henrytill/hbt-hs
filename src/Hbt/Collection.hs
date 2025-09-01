@@ -116,14 +116,14 @@ toSerialized :: Collection -> SerializedCollection
 toSerialized collection =
   let version = "0.1.0"
       length = Vector.length collection.nodes
-      value = Vector.imap (\i -> mkSerializedNode collection.edges (MkId i)) collection.nodes
+      value = Vector.imap (mkSerializedNode collection.edges . MkId) collection.nodes
    in SerializedCollection {version, length, value}
 
 fromSerialized :: SerializedCollection -> Collection
 fromSerialized serialized =
-  let entities = Vector.map (\node -> node.entity) serialized.value
+  let entities = Vector.map (.entity) serialized.value
       nodes = entities
-      edges = Vector.map (\node -> node.edges) serialized.value
+      edges = Vector.map (.edges) serialized.value
       uris = Map.fromList (zipWith (\entity i -> (entity.uri, MkId i)) (Vector.toList entities) [0 ..])
    in MkCollection {nodes, edges, uris}
 

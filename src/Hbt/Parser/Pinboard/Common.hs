@@ -29,7 +29,7 @@ data PinboardPost = MkPinboardPost
 
 parseTagString :: Text -> [Text]
 parseTagString Null = []
-parseTagString str = filter (\t -> not (isNull t)) (map Text.strip (Text.splitOn " " str))
+parseTagString str = filter (not . isNull) (map Text.strip (Text.splitOn " " str))
 
 instance FromJSON PinboardPost where
   parseJSON = Aeson.withObject "PinboardPost" $ \o ->
@@ -50,7 +50,7 @@ parseTime fromEntityErr timeStr =
     Just utcTime -> Right (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
 
 parseTags :: [Text] -> [Label]
-parseTags tagList = map (\t -> MkLabel (Text.strip t)) (filter (\t -> not (isNull t)) tagList)
+parseTags tagList = map (MkLabel . Text.strip) (filter (not . isNull) tagList)
 
 postToEntity :: (Entity.Error -> e) -> PinboardPost -> Either e Entity
 postToEntity fromEntityErr post = do
