@@ -107,8 +107,9 @@ parseTimestamp attrs key =
     Nothing -> Nothing
     Just timestampStr ->
       case Read.decimal timestampStr of
+        Left {} -> Nothing
         Right (timestamp, "") -> Just (Entity.MkTime (fromInteger timestamp))
-        _ -> Nothing
+        Right {} -> Nothing
 
 parseTimestampWithDefault :: [Attribute Text] -> Text -> Time
 parseTimestampWithDefault attrs key = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp attrs key)

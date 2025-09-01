@@ -229,6 +229,6 @@ main = do
        in if hasOutputFormat || hasAnalysisFlag
             then processFile opts file
             else Exit.die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
-    _ -> do
+    (_ : _ : _) -> do
       printUsage
       Exit.die "Error: exactly one input file required"
