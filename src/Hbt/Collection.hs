@@ -37,7 +37,7 @@ import Hbt.Collection.Id (Id (..))
 import Hbt.Collection.Serialized (SerializedCollection (..), SerializedNode (..))
 import Prelude hiding (elem, id, length, null)
 
-newtype Error = MissingEntities [URI]
+newtype Error = MissingEntities [Id]
   deriving (Show, Eq)
 
 data Collection = MkCollection
@@ -97,9 +97,9 @@ addEdge from to collection =
   let validFrom = from.value < Vector.length collection.nodes
       validTo = to.value < Vector.length collection.nodes
    in case (validFrom, validTo) of
-        (False, False) -> Left (MissingEntities [(entityAt from collection).uri, (entityAt to collection).uri])
-        (False, True) -> Left (MissingEntities [(entityAt from collection).uri])
-        (True, False) -> Left (MissingEntities [(entityAt to collection).uri])
+        (False, False) -> Left (MissingEntities [from, to])
+        (False, True) -> Left (MissingEntities [from])
+        (True, False) -> Left (MissingEntities [to])
         (True, True) ->
           let fromEdges = collection.edges ! from.value
               newFromEdges = if to `elem` fromEdges then fromEdges else Vector.snoc fromEdges to

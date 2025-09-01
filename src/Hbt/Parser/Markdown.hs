@@ -26,7 +26,7 @@ import Lens.Family2.State.Strict
 data Error
   = EntityInvalidURI Text
   | EntityInvalidTime Text
-  | CollectionMissingEntities [Entity.URI]
+  | CollectionMissingEntities [Id]
   | NoSaveableEntity
   | ParseError Commonmark.ParseError
   deriving (Show, Eq)
@@ -36,7 +36,7 @@ fromEntityError (Entity.InvalidURI s) = EntityInvalidURI s
 fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
 
 fromCollectionError :: Collection.Error -> Error
-fromCollectionError (Collection.MissingEntities uris) = CollectionMissingEntities uris
+fromCollectionError (Collection.MissingEntities ids) = CollectionMissingEntities ids
 
 data ParseState = MkParseState
   { collection :: Collection
