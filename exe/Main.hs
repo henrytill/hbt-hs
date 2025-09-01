@@ -9,6 +9,7 @@ import Data.List qualified as List
 import Data.Maybe qualified as Maybe
 import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
+import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
@@ -171,7 +172,7 @@ parseOptions argv =
 detectInputFormat :: FilePath -> Maybe InputFormat
 detectInputFormat file = detectFromExtension (FilePath.takeExtension file)
 
-parseFile :: InputFormat -> FilePath -> Text.Text -> IO Collection
+parseFile :: InputFormat -> FilePath -> Text -> IO Collection
 parseFile fmt file content = do
   case parseWith fmt content of
     Left err -> Exit.die ("Error parsing " ++ file ++ ": " ++ show err)
@@ -181,18 +182,18 @@ applyMappings :: Maybe FilePath -> Collection -> IO Collection
 applyMappings Nothing collection = pure collection
 applyMappings (Just _) _ = Exit.die "Warning: --mappings option not yet implemented"
 
-writeOutput :: Maybe FilePath -> String -> IO ()
-writeOutput Nothing content = putStr content
-writeOutput (Just file) content = writeFile file content
+writeOutput :: Maybe FilePath -> Text -> IO ()
+writeOutput Nothing content = Text.putStr content
+writeOutput (Just file) content = Text.writeFile file content
 
 printCollection :: FilePath -> Options -> Collection -> IO ()
 printCollection file opts collection
   | opts.showInfo = do
-      let output = file ++ ": " ++ show (Collection.length collection) ++ " entities\n"
+      let output = Text.pack (file ++ ": " ++ show (Collection.length collection) ++ " entities\n")
       writeOutput opts.outputFile output
   | opts.listTags = do
       let allLabels = foldMap (\entity -> entity.labels) (Vector.toList (Collection.allEntities collection))
-      let tagsOutput = unlines (map (\label -> Text.unpack label.unLabel) (Set.toAscList allLabels))
+      let tagsOutput = Text.unlines (map (.unLabel) (Set.toAscList allLabels))
       writeOutput opts.outputFile tagsOutput
   | otherwise =
       case opts.outputFormat of
@@ -201,7 +202,7 @@ printCollection file opts collection
           result <- formatWith fmt collection
           case result of
             Left err -> Exit.die ("Error formatting: " ++ show err)
-            Right output -> writeOutput opts.outputFile (Text.unpack output)
+            Right output -> writeOutput opts.outputFile output
 
 processFile :: Options -> FilePath -> IO ()
 processFile opts file = do

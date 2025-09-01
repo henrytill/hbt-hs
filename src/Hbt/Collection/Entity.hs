@@ -33,8 +33,8 @@ import Network.URI qualified as URI
 import Prelude hiding (id)
 
 data Error
-  = InvalidURI String
-  | InvalidTime String
+  = InvalidURI Text
+  | InvalidTime Text
   deriving (Show, Eq)
 
 newtype URI = MkURI {unURI :: URI.URI}
@@ -51,9 +51,9 @@ normalizeURI uri
       uri {URI.uriPath = "/"}
   | otherwise = uri
 
-mkURI :: String -> Either Error URI
+mkURI :: Text -> Either Error URI
 mkURI s =
-  case URI.parseURI s of
+  case URI.parseURI (Text.unpack s) of
     Nothing -> Left (InvalidURI s)
     Just uri -> Right (MkURI (normalizeURI uri))
 
@@ -62,8 +62,7 @@ instance ToJSON URI where
 
 instance FromJSON URI where
   parseJSON = Aeson.withText "URI" $ \t ->
-    let unpacked = Text.unpack t
-     in either (fail . show) pure (mkURI unpacked)
+    either (fail . show) pure (mkURI t)
 
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
@@ -77,9 +76,9 @@ instance FromJSON Time where
 epoch :: Time
 epoch = MkTime 0
 
-mkTime :: String -> Either Error Time
+mkTime :: Text -> Either Error Time
 mkTime s =
-  case Format.parseTimeM True Format.defaultTimeLocale "%B %e, %Y" s :: Maybe UTCTime of
+  case Format.parseTimeM True Format.defaultTimeLocale "%B %e, %Y" (Text.unpack s) :: Maybe UTCTime of
     Nothing -> Left (InvalidTime s)
     Just utcTime -> Right (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
 

@@ -12,7 +12,6 @@ import Control.Monad.Except qualified as Except
 import Data.Bifunctor qualified as Bifunctor
 import Data.Set qualified as Set
 import Data.Text (Text)
-import Data.Text qualified as Text
 import Data.Text.Lazy qualified as LazyText
 import Data.Text.Lazy.Builder (Builder)
 import Data.Text.Lazy.Builder qualified as Builder
@@ -25,8 +24,8 @@ import Lens.Family2
 import Lens.Family2.State.Strict
 
 data Error
-  = EntityInvalidURI String
-  | EntityInvalidTime String
+  = EntityInvalidURI Text
+  | EntityInvalidTime Text
   | CollectionMissingEntities [Entity.URI]
   | NoSaveableEntity
   | ParseError Commonmark.ParseError
@@ -134,7 +133,7 @@ textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input)
 
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
 extractLink dest _title desc = do
-  uri <- liftEitherWith fromEntityError (Entity.mkURI (Text.unpack dest))
+  uri <- liftEitherWith fromEntityError (Entity.mkURI dest)
   maybeURI .= Just uri
 
   let linkText = textFromInlines desc
@@ -156,7 +155,7 @@ handleBlock (MkBlock _ b) =
       processInlines inlines
     Initial.Heading 1 inlines -> do
       let headingText = textFromInlines inlines
-      time <- liftEitherWith fromEntityError (Entity.mkTime (Text.unpack headingText))
+      time <- liftEitherWith fromEntityError (Entity.mkTime headingText)
       maybeTime .= Just time
       maybeParent .= Nothing
       labels .= []

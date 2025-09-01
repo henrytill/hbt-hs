@@ -44,9 +44,9 @@ instance FromJSON PinboardPost where
           <*> o .:? "toread" .!= "no"
 
 parseTime :: (Entity.Error -> e) -> Text -> Either e Time
-parseTime fromEntityErr timeStr =
-  case Format.parseTimeM True Format.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (Text.unpack timeStr) :: Maybe UTCTime of
-    Nothing -> Left (fromEntityErr (Entity.InvalidTime (Text.unpack timeStr)))
+parseTime fromEntityErr s =
+  case Format.parseTimeM True Format.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (Text.unpack s) :: Maybe UTCTime of
+    Nothing -> Left (fromEntityErr (Entity.InvalidTime s))
     Just utcTime -> Right (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
 
 parseTags :: [Text] -> [Label]
@@ -54,7 +54,7 @@ parseTags tagList = map (MkLabel . Text.strip) (filter (not . isNull) tagList)
 
 postToEntity :: (Entity.Error -> e) -> PinboardPost -> Either e Entity
 postToEntity fromEntityErr post = do
-  uri <- Bifunctor.first fromEntityErr (Entity.mkURI (Text.unpack post.href))
+  uri <- Bifunctor.first fromEntityErr (Entity.mkURI post.href)
   createdAt <- parseTime fromEntityErr post.time
   let updatedAt = []
       name = case post.description of

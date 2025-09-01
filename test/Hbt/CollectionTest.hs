@@ -4,6 +4,7 @@ module Hbt.CollectionTest where
 
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
+import Data.Text (Text)
 import Data.Vector ((!))
 import Data.Vector qualified as Vector
 import Hbt.Collection
@@ -19,7 +20,7 @@ mkTime i = MkTime (fromIntegral i)
 fromEither :: (Show e) => Either e a -> a
 fromEither = either (error . show) id
 
-safeURI :: String -> URI
+safeURI :: Text -> URI
 safeURI s = fromEither (Entity.mkURI s)
 
 safeAddEdge :: Id -> Id -> Collection -> Collection

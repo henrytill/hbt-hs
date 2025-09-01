@@ -17,8 +17,8 @@ import Text.HTML.TagSoup (Attribute, Tag (..))
 import Text.HTML.TagSoup qualified as TagSoup
 
 data Error
-  = EntityInvalidURI String
-  | EntityInvalidTime String
+  = EntityInvalidURI Text
+  | EntityInvalidTime Text
   | ParseError String
   deriving (Show, Eq)
 

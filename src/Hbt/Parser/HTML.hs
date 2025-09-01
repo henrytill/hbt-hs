@@ -25,8 +25,8 @@ import Text.HTML.TagSoup (Attribute, Tag (..))
 import Text.HTML.TagSoup qualified as TagSoup
 
 data Error
-  = EntityInvalidURI String
-  | EntityInvalidTime String
+  = EntityInvalidURI Text
+  | EntityInvalidTime Text
   | ParseError String
   deriving (Show, Eq)
 
@@ -133,7 +133,7 @@ createLabels tags folderLabels =
 createEntity :: [Attribute Text] -> [Text] -> Maybe Text -> Maybe Text -> Either Error Entity
 createEntity attrs folders name ext = do
   href <- maybe (Left (ParseError "missing required attribute: href")) Right (requireAttr "href" attrs)
-  uri <- Bifunctor.first fromEntityError (Entity.mkURI (Text.unpack href))
+  uri <- Bifunctor.first fromEntityError (Entity.mkURI href)
   let createdAt = parseTimestampWithDefault attrs "add_date"
       updatedAt = Maybe.maybeToList (parseTimestamp attrs "last_modified")
       names = maybe Set.empty (Set.singleton . Entity.MkName) name

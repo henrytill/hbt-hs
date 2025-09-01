@@ -11,8 +11,8 @@ import Hbt.Parser.Common (parseFileWithParser)
 import Hbt.Parser.Pinboard.Common (PinboardPost, postToEntity)
 
 data Error
-  = EntityInvalidURI String
-  | EntityInvalidTime String
+  = EntityInvalidURI Text
+  | EntityInvalidTime Text
   | ParseError String
   deriving (Show, Eq)
 
