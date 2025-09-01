@@ -1,0 +1,18 @@
+- arguments: [ -XDuplicateRecordFields, -XNoFieldSelectors, -XOverloadedRecordDot, -XStrictData ]
+
+- group: {name: future, enabled: true}
+- group: {name: extra, enabled: true}
+
+- extensions:
+  - default: false
+  - name:
+    - GADTs
+    - OverloadedStrings
+    - PatternSynonyms
+    - RequiredTypeArguments
+    - TypeData
+    - ViewPatterns
+
+- ignore: {name: "Avoid lambda"}
+- ignore: {name: "Use lambda-case"}
+- ignore: {name: "Use drop1"}
