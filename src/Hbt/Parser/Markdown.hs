@@ -100,15 +100,12 @@ saveEntity = do
   entity <- maybe (Except.throwError NoSaveableEntity) pure (toEntity st0)
   coll0 <- use collection
   let (entityId, coll1) = Collection.upsert entity coll0
-
   collection .= coll1
-
   parentStack <- use parents
   forM_ (take 1 parentStack) $ \pid -> do
     coll2 <- use collection
     coll3 <- liftEitherWith fromCollectionError (Collection.addEdges entityId pid coll2)
     collection .= coll3
-
   maybeParent .= Just entityId
   maybeURI .= Nothing
   maybeName .= Nothing
@@ -135,7 +132,6 @@ extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
 extractLink dest _title desc = do
   uri <- liftEitherWith fromEntityError (Entity.mkURI dest)
   maybeURI .= Just uri
-
   let linkText = textFromInlines desc
   when (not (isNull linkText) && linkText /= dest) $
     maybeName .= Just (MkName linkText)
@@ -166,9 +162,7 @@ handleBlock (MkBlock _ b) =
     Initial.List _ _ blocksList -> do
       currentParent <- use maybeParent
       forM_ currentParent $ \pid -> parents %= (pid :)
-
       forM_ blocksList $ mapM_ handleBlock
-
       maybeParent .= Nothing
       parents %= drop 1
     _ -> pure ()
