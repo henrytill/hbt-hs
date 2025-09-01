@@ -105,8 +105,8 @@ parseTimestamp :: [Attribute Text] -> Text -> Maybe Time
 parseTimestamp attrs key =
   case lookupAttr key attrs of
     Nothing -> Nothing
-    Just timestampStr ->
-      case Read.decimal timestampStr of
+    Just str ->
+      case Read.decimal str of
         Left {} -> Nothing
         Right (timestamp, Null) -> Just (Entity.MkTime (fromInteger timestamp))
         Right {} -> Nothing
