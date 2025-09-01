@@ -24,11 +24,11 @@ import Lens.Family2
 import Lens.Family2.State.Lazy
 
 data Error
-  = NoSaveableEntity
-  | ParseError Commonmark.ParseError
-  | EntityInvalidURI String
+  = EntityInvalidURI String
   | EntityInvalidTime String
   | CollectionMissingEntities [Entity.URI]
+  | NoSaveableEntity
+  | ParseError Commonmark.ParseError
   deriving (Show, Eq)
 
 fromEntityError :: Entity.Error -> Error

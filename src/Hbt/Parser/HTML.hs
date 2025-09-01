@@ -26,7 +26,7 @@ import Text.HTML.TagSoup qualified as TagSoup
 data Error
   = EntityInvalidURI String
   | EntityInvalidTime String
-  | MissingRequiredAttribute String
+  | ParseError String
   deriving (Show, Eq)
 
 fromEntityError :: Entity.Error -> Error
@@ -131,7 +131,7 @@ createLabels tags folderLabels =
 
 createEntity :: [Attribute Text] -> [Text] -> Maybe Text -> Maybe Text -> Either Error Entity
 createEntity attrs folders name ext = do
-  href <- maybe (Left $ MissingRequiredAttribute "href") Right (requireAttr "href" attrs)
+  href <- maybe (Left $ ParseError "missing required attribute: href") Right (requireAttr "href" attrs)
   uri <- first fromEntityError $ Entity.mkURI . Text.unpack $ href
   let createdAt = parseTimestampWithDefault attrs "add_date"
       entityName = Entity.MkName <$> name

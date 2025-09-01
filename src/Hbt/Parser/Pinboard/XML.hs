@@ -18,7 +18,7 @@ import Text.HTML.TagSoup qualified as TagSoup
 data Error
   = EntityInvalidURI String
   | EntityInvalidTime String
-  | MissingRequiredAttribute String
+  | ParseError String
   deriving (Show, Eq)
 
 fromEntityError :: Entity.Error -> Error
@@ -52,7 +52,7 @@ runPinboardM (MkPinboardM m) = runParserMonad m
 
 createPostFromAttrs :: [Attribute Text] -> Either Error PinboardPost
 createPostFromAttrs attrs = do
-  href <- maybe (Left $ MissingRequiredAttribute "href") Right (requireAttr "href" attrs)
+  href <- maybe (Left $ ParseError "missing required attribute: href") Right (requireAttr "href" attrs)
   return $
     MkPinboardPost
       { href
