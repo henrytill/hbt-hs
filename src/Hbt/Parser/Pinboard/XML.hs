@@ -51,19 +51,23 @@ newtype PinboardM a = MkPinboardM (ParserMonad ParseState Error a)
 runPinboardM :: PinboardM a -> ParseState -> Either Error (a, ParseState)
 runPinboardM (MkPinboardM m) = runParserMonad m
 
+accumulatePostAttr :: PinboardPost -> Attribute Text -> PinboardPost
+accumulatePostAttr post attr = case attr of
+  Href value -> post {href = value}
+  Description value -> post {description = value}
+  Extended value -> post {extended = value}
+  Time value -> post {time = value}
+  Tags values -> post {tags = values}
+  Shared Yes -> post {shared = "yes"}
+  ToRead Yes -> post {toread = "yes"}
+  _ -> post
+
 createPostFromAttrs :: [Attribute Text] -> Either Error PinboardPost
 createPostFromAttrs attrs = do
-  href <- maybe (Left (ParseError "missing required attribute: href")) Right (requireAttr "href" attrs)
-  pure $
-    MkPinboardPost
-      { href
-      , description = attrOrEmpty "description" attrs
-      , extended = attrOrEmpty "extended" attrs
-      , time = attrOrDefault "time" "1970-01-01T00:00:00Z" attrs
-      , tags = parseTagString (attrOrEmpty "tag" attrs)
-      , shared = if attrMatches "shared" "yes" attrs then "yes" else "no"
-      , toread = if attrMatches "toread" "yes" attrs then "yes" else "no"
-      }
+  let accumulated = foldl' accumulatePostAttr emptyPost attrs
+  if isNull accumulated.href
+    then Left (ParseError "missing required attribute: href")
+    else pure accumulated
 
 -- It's okay to write point-free code here
 handle :: Tag Text -> PinboardM ()

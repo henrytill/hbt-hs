@@ -26,6 +26,18 @@ data PinboardPost = MkPinboardPost
   }
   deriving (Show, Eq)
 
+emptyPost :: PinboardPost
+emptyPost =
+  MkPinboardPost
+    { href = ""
+    , description = ""
+    , extended = ""
+    , time = "1970-01-01T00:00:00Z"
+    , tags = []
+    , shared = "no"
+    , toread = "no"
+    }
+
 parseTagString :: Text -> [Text]
 parseTagString Null = []
 parseTagString str = filter (not . isNull) (map Text.strip (Text.splitOn " " str))

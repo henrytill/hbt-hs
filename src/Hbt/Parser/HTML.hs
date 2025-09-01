@@ -7,9 +7,7 @@ module Hbt.Parser.HTML where
 import Control.Monad (forM_, when)
 import Control.Monad.Except (MonadError)
 import Control.Monad.Except qualified as Except
-import Data.Bifunctor qualified as Bifunctor
 import Data.Maybe qualified as Maybe
-import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -18,7 +16,7 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Time)
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Parser.Common (ParserMonad, attrMatches, lookupAttr, parseFileWithParser, requireAttr, runParserMonad, pattern Null)
+import Hbt.Parser.Common
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.TagSoup (Attribute, Tag (..))
@@ -101,49 +99,42 @@ newtype NetscapeM a = MkNetscapeM (ParserMonad ParseState Error a)
 runNetscapeM :: NetscapeM a -> ParseState -> Either Error (a, ParseState)
 runNetscapeM (MkNetscapeM m) = runParserMonad m
 
-parseTimestamp :: [Attribute Text] -> Text -> Maybe Time
-parseTimestamp attrs key =
-  case lookupAttr key attrs of
-    Nothing -> Nothing
-    Just str ->
-      case Read.decimal str of
-        Left {} -> Nothing
-        Right (timestamp, Null) -> Just (Entity.MkTime (fromInteger timestamp))
-        Right {} -> Nothing
+parseTimestamp :: Text -> Maybe Time
+parseTimestamp str =
+  case Read.decimal str of
+    Left {} -> Nothing
+    Right (timestamp, Null) -> Just (Entity.MkTime (fromInteger timestamp))
+    Right {} -> Nothing
 
-parseTimestampWithDefault :: [Attribute Text] -> Text -> Time
-parseTimestampWithDefault attrs key = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp attrs key)
-
-parseIsPrivate :: [Attribute Text] -> Bool
-parseIsPrivate = attrMatches "private" "1"
-
-parseTagsFromAttr :: [Attribute Text] -> [Text]
-parseTagsFromAttr attrs =
-  case lookupAttr "tags" attrs of
-    Nothing -> []
-    Just Null -> []
-    Just str -> Text.splitOn "," str
-
-createLabels :: [Text] -> [Text] -> Set Entity.Label
-createLabels tags folderLabels =
-  let filteredTags = filter (/= "toread") tags
-      labelStrings = filteredTags ++ reverse folderLabels
-   in Set.fromList (map Entity.MkLabel labelStrings)
+accumulateEntityAttr :: Entity -> Attribute Text -> Entity
+accumulateEntityAttr entity attr = case attr of
+  Href value -> case Entity.mkURI value of
+    Left _ -> entity
+    Right uri -> entity {uri}
+  AddDate value -> entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)}
+  LastModified value -> entity {updatedAt = Maybe.maybeToList (parseTimestamp value)}
+  LastVisit value -> entity {lastVisitedAt = parseTimestamp value}
+  Tags values ->
+    let newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") values))
+        toReadValue = "toread" `elem` values
+     in entity {labels = Set.union entity.labels newLabels, toRead = toReadValue}
+  Private One -> entity {shared = False}
+  ToRead One -> entity {toRead = True}
+  Feed STrue -> entity {isFeed = True}
+  _ -> entity
 
 createEntity :: [Attribute Text] -> [Text] -> Maybe Text -> Maybe Text -> Either Error Entity
 createEntity attrs folders name ext = do
-  href <- maybe (Left (ParseError "missing required attribute: href")) Right (requireAttr "href" attrs)
-  uri <- Bifunctor.first fromEntityError (Entity.mkURI href)
-  let createdAt = parseTimestampWithDefault attrs "add_date"
-      updatedAt = Maybe.maybeToList (parseTimestamp attrs "last_modified")
+  let startEntity = Entity.empty {shared = True} -- Default to shared in HTML context
+      accumulated = foldl' accumulateEntityAttr startEntity attrs
       names = maybe Set.empty (Set.singleton . Entity.MkName) name
-      labels = createLabels (parseTagsFromAttr attrs) folders
-      shared = not (parseIsPrivate attrs)
-      toRead = attrMatches "toread" "1" attrs
-      isFeed = attrMatches "feed" "true" attrs
+      folderLabels = Set.fromList (map Entity.MkLabel (reverse folders))
+      allLabels = Set.unions [accumulated.labels, folderLabels]
       extended = fmap Entity.MkExtended ext
-      lastVisitedAt = parseTimestamp attrs "last_visit"
-  pure Entity.MkEntity {uri, createdAt, updatedAt, names, labels, shared, toRead, isFeed, extended, lastVisitedAt}
+      finalEntity = accumulated {names, labels = allLabels, extended}
+   in if isNull finalEntity.uri
+        then Left (ParseError "missing required attribute: href")
+        else pure finalEntity
 
 addPending :: NetscapeM ()
 addPending = do
