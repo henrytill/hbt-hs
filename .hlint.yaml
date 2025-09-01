@@ -6,6 +6,7 @@
 - extensions:
   - default: false
   - name:
+    - DeriveGeneric
     - GADTs
     - OverloadedStrings
     - PatternSynonyms

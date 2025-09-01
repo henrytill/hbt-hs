@@ -61,8 +61,10 @@ instance IsNull URI.URI where
 instance IsNull URI where
   isNull (MkURI uri) = isNull uri
 
-pattern Null :: (IsNull s) => s
+pattern Null :: (IsNull s, Monoid s) => s
 pattern Null <- (isNull -> True)
+  where
+    Null = mempty
 
 pattern Href :: Text -> Attribute Text
 pattern Href value <- (matchAttr "href" -> Just value)

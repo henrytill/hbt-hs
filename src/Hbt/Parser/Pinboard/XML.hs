@@ -5,6 +5,7 @@ module Hbt.Parser.Pinboard.XML where
 import Control.Monad.Except (MonadError)
 import Control.Monad.Except qualified as Except
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity)
@@ -57,14 +58,14 @@ accumulatePostAttr post attr = case attr of
   Description value -> post {description = value}
   Extended value -> post {extended = value}
   Time value -> post {time = value}
-  Tags values -> post {tags = values}
-  Shared Yes -> post {shared = "yes"}
-  ToRead Yes -> post {toread = "yes"}
+  Tags values -> post {tags = Text.unwords values}
+  Shared Yes -> post {shared = PinboardTrue}
+  ToRead Yes -> post {toread = Just PinboardTrue}
   _ -> post
 
 createPostFromAttrs :: [Attribute Text] -> Either Error PinboardPost
 createPostFromAttrs attrs = do
-  let accumulated = foldl' accumulatePostAttr emptyPost attrs
+  let accumulated = foldl' accumulatePostAttr emptyPinboardPost attrs
   if isNull accumulated.href
     then Left (ParseError "missing required attribute: href")
     else pure accumulated

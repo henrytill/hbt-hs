@@ -1,9 +1,22 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 
-module Hbt.Parser.Pinboard.Common where
+module Hbt.Parser.Pinboard.Common
+  ( PinboardBool (..)
+  , pattern PinboardTrue
+  , pattern PinboardFalse
+  , PinboardPost (..)
+  , emptyPinboardPost
+  , epochTimeText
+  , parseTagString
+  , parseTags
+  , parseTime
+  , postToEntity
+  )
+where
 
-import Data.Aeson (FromJSON (..), (.!=), (.:), (.:?))
+import Data.Aeson (FromJSON (..))
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor qualified as Bifunctor
 import Data.Set qualified as Set
@@ -11,48 +24,59 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Time.Clock.POSIX qualified as POSIX
 import Data.Time.Format qualified as Format
+import GHC.Generics (Generic)
 import Hbt.Collection.Entity (Entity, Extended (..), Label (..), Name (..), Time (..))
 import Hbt.Collection.Entity qualified as Entity
 import Hbt.Parser.Common (IsNull (..), pattern Null)
+
+newtype PinboardBool = MkPinboardBool Text
+  deriving (Show, Eq, Generic)
+
+pattern PinboardTrue :: PinboardBool
+pattern PinboardTrue = MkPinboardBool "yes"
+
+pattern PinboardFalse :: PinboardBool
+pattern PinboardFalse = MkPinboardBool "no"
+
+{-# COMPLETE PinboardTrue, PinboardFalse #-}
+
+instance FromJSON PinboardBool where
+  parseJSON = Aeson.withText "PinboardBool" (pure . MkPinboardBool)
+
+toBool :: PinboardBool -> Bool
+toBool (MkPinboardBool t) = t == "yes"
 
 data PinboardPost = MkPinboardPost
   { href :: Text
   , description :: Text
   , extended :: Text
   , time :: Text
-  , tags :: [Text]
-  , shared :: Text
-  , toread :: Text
+  , tags :: Text
+  , shared :: PinboardBool
+  , toread :: Maybe PinboardBool
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
-emptyPost :: PinboardPost
-emptyPost =
+epochTimeText :: Text
+epochTimeText = Text.pack (Format.formatTime Format.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (POSIX.posixSecondsToUTCTime 0))
+
+emptyPinboardPost :: PinboardPost
+emptyPinboardPost =
   MkPinboardPost
-    { href = ""
-    , description = ""
-    , extended = ""
-    , time = "1970-01-01T00:00:00Z"
-    , tags = []
-    , shared = "no"
-    , toread = "no"
+    { href = Null
+    , description = Null
+    , extended = Null
+    , time = epochTimeText
+    , tags = Null
+    , shared = PinboardFalse
+    , toread = Nothing
     }
 
 parseTagString :: Text -> [Text]
 parseTagString Null = []
 parseTagString str = filter (not . isNull) (map Text.strip (Text.splitOn " " str))
 
-instance FromJSON PinboardPost where
-  parseJSON = Aeson.withObject "PinboardPost" $ \o ->
-    let tags = fmap parseTagString (o .: "tags")
-     in MkPinboardPost
-          <$> o .: "href"
-          <*> o .: "description"
-          <*> o .: "extended"
-          <*> o .: "time"
-          <*> tags
-          <*> o .: "shared"
-          <*> o .:? "toread" .!= "no"
+instance FromJSON PinboardPost
 
 parseTime :: (Entity.Error -> e) -> Text -> Either e Time
 parseTime fromEntityErr s =
@@ -72,12 +96,12 @@ postToEntity fromEntityErr post = do
         Null -> Nothing
         desc -> Just (MkName desc)
       names = maybe Set.empty Set.singleton name
-      labels = Set.fromList (parseTags post.tags)
+      labels = Set.fromList (parseTags (parseTagString post.tags))
       extended = case post.extended of
         Null -> Nothing
         ext -> Just (MkExtended ext)
-      shared = post.shared == "yes"
-      toRead = post.toread == "yes"
+      shared = toBool post.shared
+      toRead = maybe False toBool post.toread
       isFeed = False
       lastVisitedAt = Nothing
   pure Entity.MkEntity {uri, createdAt, updatedAt, names, labels, shared, toRead, isFeed, extended, lastVisitedAt}
