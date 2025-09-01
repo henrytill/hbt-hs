@@ -14,19 +14,19 @@ import TestUtilities (testResults)
 import Prelude hiding (length, null)
 
 mkTime :: Integer -> Time
-mkTime = MkTime . fromIntegral
+mkTime i = MkTime (fromIntegral i)
 
 fromEither :: (Show e) => Either e a -> a
-fromEither = either (error . show) id
+fromEither = either (\e -> error (show e)) id
 
 safeURI :: String -> URI
-safeURI = fromEither . Entity.mkURI
+safeURI s = fromEither (Entity.mkURI s)
 
 safeAddEdge :: Id -> Id -> Collection -> Collection
-safeAddEdge from to = fromEither . addEdge from to
+safeAddEdge from to collection = fromEither (addEdge from to collection)
 
 safeAddEdges :: Id -> Id -> Collection -> Collection
-safeAddEdges from to = fromEither . addEdges from to
+safeAddEdges from to collection = fromEither (addEdges from to collection)
 
 emptyEntityTests :: Test
 emptyEntityTests =

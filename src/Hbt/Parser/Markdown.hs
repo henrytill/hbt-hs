@@ -7,8 +7,9 @@ import Commonmark qualified
 import Commonmark.Initial (Block, Blocks, Inline, pattern MkBlock, pattern MkInline)
 import Commonmark.Initial qualified as Initial
 import Control.Monad (forM_, when)
-import Control.Monad.Except (MonadError, liftEither, throwError)
-import Data.Bifunctor (first)
+import Control.Monad.Except (MonadError)
+import Control.Monad.Except qualified as Except
+import Data.Bifunctor qualified as Bifunctor
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -91,11 +92,14 @@ newtype MarkdownM a = MkMarkdownM (ParserMonad ParseState Error a)
 runMarkdownM :: MarkdownM a -> ParseState -> Either Error (a, ParseState)
 runMarkdownM (MkMarkdownM m) = runParserMonad m
 
+liftEitherWith :: (a -> Error) -> Either a b -> MarkdownM b
+liftEitherWith f ma = Except.liftEither (Bifunctor.first f ma)
+
 -- Save current entity to collection and reset parsing state
 saveEntity :: MarkdownM ()
 saveEntity = do
   st0 <- use id
-  entity <- maybe (throwError NoSaveableEntity) return $ toEntity st0
+  entity <- maybe (Except.throwError NoSaveableEntity) pure (toEntity st0)
   coll0 <- use collection
   let (entityId, coll1) = Collection.upsert entity coll0
 
@@ -106,7 +110,7 @@ saveEntity = do
   parentStack <- use parents
   forM_ (take 1 parentStack) $ \pid -> do
     coll2 <- use collection
-    coll3 <- liftEither . first fromCollectionError $ Collection.addEdges entityId pid coll2
+    coll3 <- liftEitherWith fromCollectionError (Collection.addEdges entityId pid coll2)
     collection .= coll3
 
   -- Set this entity as the new parent and reset parsing fields
@@ -116,7 +120,7 @@ saveEntity = do
 
 -- Extract text from inline elements (same as current implementation)
 textFromInlines :: [Inline a] -> Text
-textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
+textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input))
   where
     go :: Inline a -> Builder
     go (MkInline _ il) =
@@ -136,7 +140,7 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
 -- Extract link information and set up for entity creation
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
 extractLink dest _title desc = do
-  uri <- liftEither . first fromEntityError . Entity.mkURI $ Text.unpack dest
+  uri <- liftEitherWith fromEntityError (Entity.mkURI (Text.unpack dest))
   maybeURI .= Just uri
 
   let linkText = textFromInlines desc
@@ -146,13 +150,14 @@ extractLink dest _title desc = do
 -- Handle inline elements
 handleInline :: Inline a -> MarkdownM ()
 handleInline (MkInline _ (Initial.Link dest title desc)) = extractLink dest title desc >> saveEntity
-handleInline _ = return ()
+handleInline _ = pure ()
 
 -- Process all inlines in a block
 processInlines :: [Inline a] -> MarkdownM ()
 processInlines = mapM_ handleInline
 
 -- Handle block elements
+-- It's okay to write point-free code here
 handleBlock :: Block a -> MarkdownM ()
 handleBlock (MkBlock _ b) =
   case b of
@@ -160,7 +165,7 @@ handleBlock (MkBlock _ b) =
       processInlines inlines
     Initial.Heading 1 inlines -> do
       let headingText = textFromInlines inlines
-      time <- liftEither . first fromEntityError . Entity.mkTime $ Text.unpack headingText
+      time <- liftEitherWith fromEntityError (Entity.mkTime (Text.unpack headingText))
       maybeTime .= Just time
       maybeParent .= Nothing
       labels .= []
@@ -179,7 +184,7 @@ handleBlock (MkBlock _ b) =
       -- Restore parent state
       maybeParent .= Nothing
       parents %= drop 1
-    _ -> return ()
+    _ -> pure ()
 
 -- Process all blocks
 processBlocks :: [Block a] -> MarkdownM Collection
@@ -194,8 +199,9 @@ parseBlocks = Commonmark.commonmark
 -- Parse markdown text using StateT approach
 parse :: String -> Text -> Either Error Collection
 parse parseName input = do
-  blocks <- liftEither . first ParseError $ parseBlocks parseName input
-  fst <$> runMarkdownM (processBlocks blocks) empty
+  blocks <- Bifunctor.first ParseError (parseBlocks parseName input)
+  (ret, _) <- runMarkdownM (processBlocks blocks) empty
+  pure ret
 
 -- Parse from file
 parseFile :: FilePath -> IO (Either Error Collection)

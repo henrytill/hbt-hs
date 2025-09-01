@@ -2,14 +2,15 @@
 
 module Hbt.Parser.Pinboard.XML where
 
-import Control.Monad.Except (MonadError, liftEither)
+import Control.Monad.Except (MonadError)
+import Control.Monad.Except qualified as Except
 import Data.Text (Text)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity)
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Parser.Common (ParserMonad, attrMatches, attrOrDefault, attrOrEmpty, parseFileWithParser, requireAttr, runParserMonad)
-import Hbt.Parser.Pinboard.Common (PinboardPost (..), parseTagString, postToEntity)
+import Hbt.Parser.Common
+import Hbt.Parser.Pinboard.Common
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.TagSoup (Attribute, Tag (..))
@@ -52,8 +53,8 @@ runPinboardM (MkPinboardM m) = runParserMonad m
 
 createPostFromAttrs :: [Attribute Text] -> Either Error PinboardPost
 createPostFromAttrs attrs = do
-  href <- maybe (Left $ ParseError "missing required attribute: href") Right (requireAttr "href" attrs)
-  return $
+  href <- maybe (Left (ParseError "missing required attribute: href")) Right (requireAttr "href" attrs)
+  pure $
     MkPinboardPost
       { href
       , description = attrOrEmpty "description" attrs
@@ -64,12 +65,13 @@ createPostFromAttrs attrs = do
       , toread = if attrMatches "toread" "yes" attrs then "yes" else "no"
       }
 
+-- It's okay to write point-free code here
 handle :: Tag Text -> PinboardM ()
 handle (TagOpen "post" attrs) = do
-  post <- liftEither $ createPostFromAttrs attrs
-  result <- liftEither $ postToEntity fromEntityError post
+  post <- Except.liftEither (createPostFromAttrs attrs)
+  result <- Except.liftEither (postToEntity fromEntityError post)
   entities %= (result :)
-handle _ = return ()
+handle _ = pure ()
 
 process :: [Tag Text] -> PinboardM Collection
 process tags = do
@@ -83,7 +85,7 @@ parse :: Text -> Either Error Collection
 parse input = do
   let tags = TagSoup.parseTags input
   (ret, _) <- runPinboardM (process tags) empty
-  return ret
+  pure ret
 
 parseFile :: FilePath -> IO (Either Error Collection)
 parseFile = parseFileWithParser parse

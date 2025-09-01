@@ -1,10 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
-
-module Hbt.Collection.Serialized
-  ( SerializedNode (..)
-  , SerializedCollection (..)
-  )
-where
+module Hbt.Collection.Serialized where
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Vector (Vector)

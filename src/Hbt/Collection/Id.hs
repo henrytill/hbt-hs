@@ -1,9 +1,6 @@
-module Hbt.Collection.Id
-  ( Id (..)
-  )
-where
+module Hbt.Collection.Id where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), parseJSON)
+import Data.Aeson (FromJSON (..), ToJSON (..))
 
 newtype Id = MkId {value :: Int}
   deriving (Show, Eq, Ord)
@@ -12,4 +9,4 @@ instance ToJSON Id where
   toJSON (MkId idValue) = toJSON idValue
 
 instance FromJSON Id where
-  parseJSON = fmap MkId . parseJSON
+  parseJSON json = fmap MkId (parseJSON json)

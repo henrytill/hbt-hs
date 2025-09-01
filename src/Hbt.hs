@@ -15,18 +15,20 @@ module Hbt
   )
 where
 
-import Control.Exception (SomeException, handle)
-import Data.Bifunctor (first)
+import Control.Exception (SomeException)
+import Control.Exception qualified as Exception
+import Data.Bifunctor qualified as Bifunctor
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import Data.Yaml.Pretty qualified as YamlPretty
-import Hbt.Collection (Collection, yamlConfig)
+import Hbt.Collection (Collection)
+import Hbt.Collection qualified as Collection
 import Hbt.Formatter.HTML qualified as HTMLFormatter
 import Hbt.Parser.HTML qualified as HTMLParser
 import Hbt.Parser.Markdown qualified as Markdown
 import Hbt.Parser.Pinboard.JSON qualified as PinboardJSON
 import Hbt.Parser.Pinboard.XML qualified as PinboardXML
-import Text.Microstache (compileMustacheFile)
+import Text.Microstache qualified as Microstache
 
 type data Flow = From | To
 
@@ -57,21 +59,21 @@ instance Show SomeParseError where
   show (SomeParseError e) = show e
 
 parseWith :: Format From -> Text -> Either SomeParseError Collection
-parseWith HTML = first SomeParseError . HTMLParser.parse
-parseWith JSON = first SomeParseError . PinboardJSON.parse
-parseWith XML = first SomeParseError . PinboardXML.parse
-parseWith Markdown = first SomeParseError . Markdown.parse "content"
+parseWith JSON input = Bifunctor.first SomeParseError (PinboardJSON.parse input)
+parseWith XML input = Bifunctor.first SomeParseError (PinboardXML.parse input)
+parseWith Markdown input = Bifunctor.first SomeParseError (Markdown.parse "content" input)
+parseWith HTML input = Bifunctor.first SomeParseError (HTMLParser.parse input)
 
 type SomeFormatError = SomeException
 
 withFormatError :: IO Text -> IO (Either SomeFormatError Text)
 withFormatError action =
   let handler :: SomeException -> IO (Either SomeException a)
-      handler = return . Left
-   in handle handler (fmap Right action)
+      handler e = pure (Left e)
+   in Exception.handle handler (fmap Right action)
 
 formatWith :: Format To -> Collection -> IO (Either SomeFormatError Text)
-formatWith YAML collection = pure . Right . Text.decodeUtf8 $ YamlPretty.encodePretty yamlConfig collection
+formatWith YAML collection = pure (Right (Text.decodeUtf8 (YamlPretty.encodePretty Collection.yamlConfig collection)))
 formatWith HTML collection = withFormatError $ do
-  template <- compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
-  return $ HTMLFormatter.format template collection
+  template <- Microstache.compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
+  pure (HTMLFormatter.format template collection)

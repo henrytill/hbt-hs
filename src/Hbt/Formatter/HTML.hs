@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Formatter.HTML
@@ -6,9 +5,10 @@ module Hbt.Formatter.HTML
   )
 where
 
-import Data.Aeson (ToJSON (..), object, (.=))
-import Data.List (sort)
-import Data.Maybe (listToMaybe)
+import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson qualified as Aeson
+import Data.List qualified as List
+import Data.Maybe qualified as Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -19,7 +19,8 @@ import GHC.Generics (Generic)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Extended (..), Label (..), Name (..), Time (..), URI (..))
-import Text.Microstache (Template, renderMustache)
+import Text.Microstache (Template)
+import Text.Microstache qualified as Microstache
 
 data TemplateEntity = MkTemplateEntity
   { uri :: Text
@@ -39,14 +40,14 @@ instance ToJSON TemplateEntity
 
 format :: Template -> Collection -> Text
 format template collection =
-  LazyText.toStrict . renderMustache template $
-    object ["entities" .= map toTemplateEntity (Vector.toList $ Collection.allEntities collection)]
+  let toRender = Aeson.object ["entities" .= map toTemplateEntity (Vector.toList (Collection.allEntities collection))]
+   in LazyText.toStrict (Microstache.renderMustache template toRender)
 
 toTemplateEntity :: Entity -> TemplateEntity
 toTemplateEntity entity =
   let MkURI uriVal = entity.uri
-      uriText = Text.pack $ show uriVal
-      tagsList = sort . map (.unLabel) $ Set.toList entity.labels
+      uriText = Text.pack (show uriVal)
+      tagsList = List.sort (map (\label -> label.unLabel) (Set.toList entity.labels))
       tagsText = Text.intercalate "," tagsList
    in MkTemplateEntity
         { uri = uriText
@@ -58,16 +59,16 @@ toTemplateEntity entity =
         , toRead = entity.toRead
         , isFeed = entity.isFeed
         , lastVisit = fmap formatTime entity.lastVisitedAt
-        , description = fmap (.unExtended) entity.extended
+        , description = fmap (\ext -> ext.unExtended) entity.extended
         }
 
 getFirstName :: Text -> Set Name -> Text
 getFirstName def names
   | Set.null names = def
-  | otherwise = (.unName) $ Set.findMin names
+  | otherwise = (Set.findMin names).unName
 
 getLastModified :: Entity -> Maybe Time
-getLastModified = listToMaybe . (.updatedAt)
+getLastModified entity = Maybe.listToMaybe entity.updatedAt
 
 formatTime :: Time -> Text
-formatTime (MkTime posixTime) = Text.pack . show @Integer $ round posixTime
+formatTime (MkTime posixTime) = Text.pack (show @Integer (round posixTime))

@@ -15,7 +15,7 @@ runPinboardXMLTestCase testCase =
       <*> addContext "Parse failed" (PinboardXML.parse testCase.inputText)
 
 allTests :: [PinboardTestCase] -> Test
-allTests testData = group "Hbt.Parser.Pinboard.XML tests" (fmap runPinboardXMLTestCase testData)
+allTests testData = group "Hbt.Parser.Pinboard.XML tests" (map runPinboardXMLTestCase testData)
 
 results :: [PinboardTestCase] -> (String, Bool)
 results testData = testResults "Hbt.Parser.Pinboard.XML" (allTests testData)

@@ -15,7 +15,7 @@ runPinboardJSONTestCase testCase =
       <*> addContext "Parse failed" (PinboardJSON.parse testCase.inputText)
 
 allTests :: [PinboardTestCase] -> Test
-allTests testData = group "Hbt.Parser.Pinboard.JSON tests" (fmap runPinboardJSONTestCase testData)
+allTests testData = group "Hbt.Parser.Pinboard.JSON tests" (map runPinboardJSONTestCase testData)
 
 results :: [PinboardTestCase] -> (String, Bool)
 results testData = testResults "Hbt.Parser.Pinboard.JSON" (allTests testData)

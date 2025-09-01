@@ -8,19 +8,22 @@ import Test.Dwergaz
 import TestData (HtmlFormatterTestCase (..))
 import TestUtilities (addContext, testResults)
 
--- | Normalize HTML by removing extra whitespace for comparison
 normalizeHtml :: Text -> Text
-normalizeHtml = Text.unlines . map Text.strip . Text.lines
+normalizeHtml text = Text.unlines (map Text.strip (Text.lines text))
 
 runHtmlFormatterTestCase :: HtmlFormatterTestCase -> Test
 runHtmlFormatterTestCase testCase =
-  either assertFailure id $
-    assertEqual testCase.testName
-      <$> pure (normalizeHtml testCase.expectedHtml)
-      <*> (normalizeHtml . HTML.format testCase.template <$> addContext "HTML parse failed" (HTMLParser.parse testCase.inputHtml))
+  either
+    assertFailure
+    ( \test ->
+        let normalizedExpected = normalizeHtml testCase.expectedHtml
+            normalizedObtained = normalizeHtml (HTML.format testCase.template test)
+         in assertEqual testCase.testName normalizedExpected normalizedObtained
+    )
+    (addContext "HTML parse failed" (HTMLParser.parse testCase.inputHtml))
 
 allTests :: [HtmlFormatterTestCase] -> Test
-allTests testData = group "Hbt.Formatter.HTML tests" (fmap runHtmlFormatterTestCase testData)
+allTests testData = group "Hbt.Formatter.HTML tests" (map runHtmlFormatterTestCase testData)
 
 results :: [HtmlFormatterTestCase] -> (String, Bool)
 results testData = testResults "Hbt.Formatter.HTML" (allTests testData)

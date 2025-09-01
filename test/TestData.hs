@@ -26,7 +26,7 @@ pinboardTestDataDir = testDataBaseDir </> "pinboard"
 readTextFile :: FilePath -> IO Text
 readTextFile path = do
   bytes <- BS.readFile path
-  return $ Text.Encoding.decodeUtf8With Text.Error.lenientDecode bytes
+  pure $ Text.Encoding.decodeUtf8With Text.Error.lenientDecode bytes
 
 -- Generic test case discovery
 discoverTestCases :: String -> String -> IO [String]
@@ -34,7 +34,7 @@ discoverTestCases dir suffix = do
   allFiles <- listDirectory dir
   let inputFiles = [f | f <- allFiles, suffix `isSuffixOf` f]
       testNames = map (takeBaseName . takeBaseName) inputFiles
-  return $ sort testNames
+  pure $ sort testNames
 
 -- Test case data types
 data HtmlTestCase = HtmlTestCase
@@ -87,7 +87,7 @@ loadHtmlTestCase name = do
   inputContent <- readTextFile inputFile
   expectedContent <- readTextFile expectedFile
 
-  return
+  pure
     HtmlTestCase
       { testName = name
       , inputHtml = inputContent
@@ -111,7 +111,7 @@ loadSimpleTestCase name = do
   inputContent <- readTextFile inputFile
   expectedContent <- readTextFile expectedFile
 
-  return
+  pure
     SimpleTestCase
       { testName = name
       , inputMarkdown = inputContent
@@ -129,9 +129,9 @@ discoverPinboardTestCaseNames = do
   allFiles <- listDirectory pinboardTestDataDir
   let jsonFiles = [f | f <- allFiles, ".input.json" `isSuffixOf` f]
       xmlFiles = [f | f <- allFiles, ".input.xml" `isSuffixOf` f]
-      jsonNames = map (\f -> (takeBaseName . takeBaseName $ f, "json")) jsonFiles
-      xmlNames = map (\f -> (takeBaseName . takeBaseName $ f, "xml")) xmlFiles
-  return $ sort $ jsonNames ++ xmlNames
+      jsonNames = map (\f -> (takeBaseName (takeBaseName f), "json")) jsonFiles
+      xmlNames = map (\f -> (takeBaseName (takeBaseName f), "xml")) xmlFiles
+  pure $ sort $ jsonNames ++ xmlNames
 
 loadPinboardTestCase :: String -> String -> IO PinboardTestCase
 loadPinboardTestCase name format = do
@@ -141,7 +141,7 @@ loadPinboardTestCase name format = do
   inputContent <- readTextFile inputFile
   expectedContent <- readTextFile expectedFile
 
-  return
+  pure
     PinboardTestCase
       { testName = name ++ "_" ++ format
       , inputText = inputContent
@@ -169,7 +169,7 @@ loadHtmlFormatterTestCase name = do
   -- Load the template
   template <- compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
 
-  return
+  pure
     HtmlFormatterTestCase
       { testName = name
       , inputHtml = inputContent
@@ -193,7 +193,7 @@ loadAllTestData = do
   let isJson tc = tc.format == "json"
       (pinboardJsonTests, pinboardXmlTests) = partition isJson allPinboardTests
 
-  return
+  pure
     AllTestData
       { htmlParserTests
       , markdownTests

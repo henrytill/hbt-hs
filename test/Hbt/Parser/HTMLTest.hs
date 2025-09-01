@@ -15,7 +15,7 @@ runHtmlTestCase testCase =
       <*> addContext "Parse failed" (HTML.parse testCase.inputHtml)
 
 allTests :: [HtmlTestCase] -> Test
-allTests testData = group "Hbt.Html tests" (fmap runHtmlTestCase testData)
+allTests testData = group "Hbt.Html tests" (map runHtmlTestCase testData)
 
 results :: [HtmlTestCase] -> (String, Bool)
 results testData = testResults "Hbt.Parser.HTML" (allTests testData)

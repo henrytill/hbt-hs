@@ -1,21 +1,21 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Hbt.Parser.Common where
 
-import Control.Monad.State.Strict (StateT, runStateT)
-import Data.Bifunctor (first)
+import Control.Monad.State.Strict (StateT)
+import Control.Monad.State.Strict qualified as State
+import Data.Bifunctor qualified as Bifunctor
+import Data.Maybe qualified as Maybe
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Text.HTML.TagSoup (Attribute)
 
 lookupAttr :: Text -> [Attribute Text] -> Maybe Text
-lookupAttr key attrs = lookup (Text.toLower key) (map (first Text.toLower) attrs)
+lookupAttr key attrs = lookup (Text.toLower key) (map (Bifunctor.first Text.toLower) attrs)
 
 attrOrDefault :: Text -> Text -> [Attribute Text] -> Text
-attrOrDefault key def attrs = maybe def id (lookupAttr key attrs)
+attrOrDefault key def attrs = Maybe.fromMaybe def (lookupAttr key attrs)
 
 attrOrEmpty :: Text -> [Attribute Text] -> Text
-attrOrEmpty key attrs = attrOrDefault key mempty attrs
+attrOrEmpty key = attrOrDefault key mempty
 
 attrMatches :: Text -> Text -> [Attribute Text] -> Bool
 attrMatches key expected attrs = lookupAttr key attrs == Just expected
@@ -31,9 +31,9 @@ requireAttr key attrs =
 parseFileWithParser :: (Text -> Either e a) -> FilePath -> IO (Either e a)
 parseFileWithParser parser filepath = do
   content <- readFile filepath
-  return $ parser (Text.pack content)
+  pure (parser (Text.pack content))
 
 type ParserMonad s e = StateT s (Either e)
 
 runParserMonad :: ParserMonad s e a -> s -> Either e (a, s)
-runParserMonad m s = runStateT m s
+runParserMonad = State.runStateT

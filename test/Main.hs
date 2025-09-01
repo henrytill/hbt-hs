@@ -11,12 +11,11 @@ import System.Exit (exitFailure)
 import TestData (AllTestData (..), loadAllTestData)
 import Text.Printf (printf)
 
--- | Run a test suite and return its results
 runTestSuite :: IO (String, Bool) -> IO (String, Bool)
 runTestSuite suiteResults = do
   (output, passed) <- suiteResults
   putStr output
-  return (output, passed)
+  pure (output, passed)
 
 main :: IO ()
 main = do
@@ -25,12 +24,12 @@ main = do
 
   -- Define all test suites as IO actions
   let testSuites =
-        [ return CollectionTest.results
-        , return $ HTMLFormatterTest.results testData.htmlFormatterTests
-        , return $ HTMLTest.results testData.htmlParserTests
-        , return $ MarkdownTest.results testData.markdownTests
-        , return $ PinboardJSONTest.results testData.pinboardJsonTests
-        , return $ PinboardXMLTest.results testData.pinboardXmlTests
+        [ pure CollectionTest.results
+        , pure $ HTMLFormatterTest.results testData.htmlFormatterTests
+        , pure $ HTMLTest.results testData.htmlParserTests
+        , pure $ MarkdownTest.results testData.markdownTests
+        , pure $ PinboardJSONTest.results testData.pinboardJsonTests
+        , pure $ PinboardXMLTest.results testData.pinboardXmlTests
         ]
 
   -- Run all test suites and collect results

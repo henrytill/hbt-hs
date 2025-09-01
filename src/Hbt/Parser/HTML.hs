@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -6,8 +5,9 @@
 module Hbt.Parser.HTML where
 
 import Control.Monad (forM_, when)
-import Control.Monad.Except (MonadError, liftEither)
-import Data.Bifunctor (first)
+import Control.Monad.Except (MonadError)
+import Control.Monad.Except qualified as Except
+import Data.Bifunctor qualified as Bifunctor
 import Data.Maybe qualified as Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -18,7 +18,7 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Time)
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Parser.Common (ParserMonad, attrMatches, lookupAttr, parseFileWithParser, requireAttr, runParserMonad)
+import Hbt.Parser.Common
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.TagSoup (Attribute, Tag (..))
@@ -107,14 +107,14 @@ parseTimestamp attrs key =
     Nothing -> Nothing
     Just timestampStr ->
       case Read.decimal timestampStr of
-        Right (timestamp, "") -> Just $ Entity.MkTime (fromInteger timestamp)
+        Right (timestamp, "") -> Just (Entity.MkTime (fromInteger timestamp))
         _ -> Nothing
 
 parseTimestampWithDefault :: [Attribute Text] -> Text -> Time
 parseTimestampWithDefault attrs key = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp attrs key)
 
 parseIsPrivate :: [Attribute Text] -> Bool
-parseIsPrivate attrs = attrMatches "private" "1" attrs
+parseIsPrivate = attrMatches "private" "1"
 
 parseTagsFromAttr :: [Attribute Text] -> [Text]
 parseTagsFromAttr attrs =
@@ -128,37 +128,32 @@ createLabels :: [Text] -> [Text] -> Set Entity.Label
 createLabels tags folderLabels =
   let filteredTags = filter (/= "toread") tags
       labelStrings = filteredTags ++ reverse folderLabels
-   in Set.fromList $ map Entity.MkLabel labelStrings
+   in Set.fromList (map Entity.MkLabel labelStrings)
 
 createEntity :: [Attribute Text] -> [Text] -> Maybe Text -> Maybe Text -> Either Error Entity
 createEntity attrs folders name ext = do
-  href <- maybe (Left $ ParseError "missing required attribute: href") Right (requireAttr "href" attrs)
-  uri <- first fromEntityError $ Entity.mkURI . Text.unpack $ href
+  href <- maybe (Left (ParseError "missing required attribute: href")) Right (requireAttr "href" attrs)
+  uri <- Bifunctor.first fromEntityError (Entity.mkURI (Text.unpack href))
   let createdAt = parseTimestampWithDefault attrs "add_date"
-      entityName = Entity.MkName <$> name
+      updatedAt = Maybe.maybeToList (parseTimestamp attrs "last_modified")
+      names = maybe Set.empty (\n -> Set.singleton (Entity.MkName n)) name
       labels = createLabels (parseTagsFromAttr attrs) folders
-  return
-    Entity.MkEntity
-      { uri
-      , createdAt
-      , updatedAt = Maybe.maybeToList $ parseTimestamp attrs "last_modified"
-      , names = maybe Set.empty Set.singleton entityName
-      , labels
-      , shared = not (parseIsPrivate attrs)
-      , toRead = attrMatches "toread" "1" attrs
-      , isFeed = attrMatches "feed" "true" attrs
-      , extended = Entity.MkExtended <$> ext
-      , lastVisitedAt = parseTimestamp attrs "last_visit"
-      }
+      shared = not (parseIsPrivate attrs)
+      toRead = attrMatches "toread" "1" attrs
+      isFeed = attrMatches "feed" "true" attrs
+      extended = fmap Entity.MkExtended ext
+      lastVisitedAt = parseTimestamp attrs "last_visit"
+  pure Entity.MkEntity {uri, createdAt, updatedAt, names, labels, shared, toRead, isFeed, extended, lastVisitedAt}
 
 addPending :: NetscapeM ()
 addPending = do
-  entity <- liftEither =<< createEntity <$> use attributes <*> use folderStack <*> use maybeDescription <*> use maybeExtended
+  entity <- Except.liftEither =<< createEntity <$> use attributes <*> use folderStack <*> use maybeDescription <*> use maybeExtended
   collection %= snd . Collection.upsert entity
   attributes .= []
   maybeDescription .= Nothing
   maybeExtended .= Nothing
 
+-- It's okay to write point-free code here
 handle :: Tag Text -> NetscapeM ()
 handle (OpenH3 _) =
   waitingFor .= FolderName
@@ -172,24 +167,25 @@ handle (OpenDD _) = do
   hasAttrs <- uses attributes (not . null)
   when hasAttrs $ waitingFor .= ExtendedDescription
 handle (TagText str) =
-  use waitingFor >>= \case
-    FolderName -> do
-      folderStack %= (Text.strip str :)
-      waitingFor .= None
-    BookmarkDescription -> do
-      maybeDescription .= Just (Text.strip str)
-      waitingFor .= None
-    ExtendedDescription -> do
-      maybeExtended .= Just (Text.strip str)
-      hasAttrs <- uses attributes (not . null)
-      when hasAttrs addPending
-      waitingFor .= None
-    None -> return ()
+  use waitingFor >>= \w ->
+    case w of
+      FolderName -> do
+        folderStack %= (Text.strip str :)
+        waitingFor .= None
+      BookmarkDescription -> do
+        maybeDescription .= Just (Text.strip str)
+        waitingFor .= None
+      ExtendedDescription -> do
+        maybeExtended .= Just (Text.strip str)
+        hasAttrs <- uses attributes (not . null)
+        when hasAttrs addPending
+        waitingFor .= None
+      None -> pure ()
 handle CloseDL = do
   hasAttrs <- uses attributes (not . null)
   when hasAttrs addPending
   folderStack %= drop 1
-handle _ = return ()
+handle _ = pure ()
 
 process :: [Tag Text] -> NetscapeM Collection
 process tags = forM_ tags handle >> use collection
@@ -198,7 +194,7 @@ parse :: Text -> Either Error Collection
 parse input = do
   let tags = TagSoup.parseTags input
   (ret, _) <- runNetscapeM (process tags) empty
-  return ret
+  pure ret
 
 parseFile :: FilePath -> IO (Either Error Collection)
 parseFile = parseFileWithParser parse

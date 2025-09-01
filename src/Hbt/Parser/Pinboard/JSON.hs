@@ -1,9 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Hbt.Parser.Pinboard.JSON where
 
 import Data.Aeson qualified as Aeson
-import Data.Bifunctor (first)
+import Data.Bifunctor qualified as Bifunctor
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import Hbt.Collection (Collection)
@@ -25,11 +23,11 @@ fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
 postsToCollection :: [PinboardPost] -> Either Error Collection
 postsToCollection posts = do
   entities <- traverse (postToEntity fromEntityError) (reverse posts)
-  pure $ Collection.fromEntities entities
+  pure (Collection.fromEntities entities)
 
 parse :: Text -> Either Error Collection
 parse input = do
-  posts <- first ParseError $ Aeson.eitherDecodeStrict $ Text.encodeUtf8 input
+  posts <- Bifunctor.first ParseError (Aeson.eitherDecodeStrict (Text.encodeUtf8 input))
   postsToCollection posts
 
 parseFile :: FilePath -> IO (Either Error Collection)

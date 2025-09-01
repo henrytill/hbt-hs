@@ -1,13 +1,12 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RequiredTypeArguments #-}
 
 module Main where
 
 import Control.Applicative ((<|>))
 import Control.Monad (when)
-import Data.List (find, intercalate)
-import Data.Maybe (isJust)
+import Data.List qualified as List
+import Data.Maybe qualified as Maybe
 import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Text qualified as Text
@@ -19,10 +18,10 @@ import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
 import Lens.Family2 (Lens', set)
 import System.Console.GetOpt
-import System.Environment (getArgs, getProgName)
-import System.Exit (die, exitFailure, exitSuccess)
-import System.FilePath (takeExtension)
-import System.IO (hPutStrLn, stderr)
+import System.Environment qualified as Environment
+import System.Exit qualified as Exit
+import System.FilePath qualified as FilePath
+import System.IO qualified as IO
 
 class HasFormat (f :: Flow) s where
   format :: Lens' s (Maybe (Format f))
@@ -39,10 +38,10 @@ data Options = MkOptions
   deriving (Show)
 
 instance HasFormat From Options where
-  format f opts = (\x -> opts {inputFormat = x}) <$> f (opts.inputFormat)
+  format f opts = (\x -> opts {inputFormat = x}) <$> f opts.inputFormat
 
 instance HasFormat To Options where
-  format f opts = (\x -> opts {outputFormat = x}) <$> f (opts.outputFormat)
+  format f opts = (\x -> opts {outputFormat = x}) <$> f opts.outputFormat
 
 defaultOptions :: Options
 defaultOptions =
@@ -75,7 +74,7 @@ class FormatFlow (f :: Flow) where
 
   -- | Parse format string to format type (derived)
   parseFormatFlow :: String -> Maybe (Format f)
-  parseFormatFlow s = find (\fmt -> toString fmt == s) (allConstructors (Proxy @f))
+  parseFormatFlow s = List.find (\fmt -> toString fmt == s) (allConstructors (Proxy @f))
 
 instance FormatFlow From where
   allConstructors :: Proxy From -> [Format From]
@@ -109,12 +108,12 @@ supportedFormats f = map toString (allConstructors (Proxy @f))
 setFormat :: forall f -> (FormatFlow f, HasFormat f s) => String -> s -> s
 setFormat f str opts =
   case parseFormatFlow @f str of
-    Nothing -> error $ formatErrorFlow (Proxy @f) str
+    Nothing -> error (formatErrorFlow (Proxy @f) str)
     Just fmt -> set format (Just fmt) opts
 
 generateFormatHelp :: forall f -> (FormatFlow f) => String -> String
 generateFormatHelp f label =
-  let formatList = intercalate ", " (supportedFormats f)
+  let formatList = List.intercalate ", " (supportedFormats f)
    in label ++ " format (" ++ formatList ++ ")"
 
 options :: [OptDescr (Options -> Options)]
@@ -158,31 +157,31 @@ options =
 
 printUsage :: IO ()
 printUsage = do
-  prog <- getProgName
+  prog <- Environment.getProgName
   let header = "Usage: " ++ prog ++ " [OPTIONS] FILE\n\nProcess bookmark files in various formats\n\nOptions:"
   putStrLn (usageInfo header options)
 
 parseOptions :: [String] -> IO (Options, [String])
 parseOptions argv =
   case getOpt Permute options argv of
-    (o, n, []) -> return (foldl' (flip id) defaultOptions o, n)
+    (o, n, []) -> pure (foldl' (flip id) defaultOptions o, n)
     (_, _, errs) -> do
-      mapM_ (hPutStrLn stderr) errs
+      mapM_ (IO.hPutStrLn IO.stderr) errs
       printUsage
-      exitFailure
+      Exit.exitFailure
 
 detectInputFormat :: FilePath -> Maybe InputFormat
-detectInputFormat file = detectFromExtension (takeExtension file)
+detectInputFormat file = detectFromExtension (FilePath.takeExtension file)
 
 parseFile :: InputFormat -> FilePath -> Text.Text -> IO Collection
 parseFile fmt file content = do
   case parseWith fmt content of
-    Left err -> die $ "Error parsing " ++ file ++ ": " ++ show err
-    Right collection -> return collection
+    Left err -> Exit.die ("Error parsing " ++ file ++ ": " ++ show err)
+    Right collection -> pure collection
 
 applyMappings :: Maybe FilePath -> Collection -> IO Collection
-applyMappings Nothing collection = return collection
-applyMappings (Just _) _ = die "Warning: --mappings option not yet implemented"
+applyMappings Nothing collection = pure collection
+applyMappings (Just _) _ = Exit.die "Warning: --mappings option not yet implemented"
 
 writeOutput :: Maybe FilePath -> String -> IO ()
 writeOutput Nothing content = putStr content
@@ -194,42 +193,42 @@ printCollection file opts collection
       let output = file ++ ": " ++ show (Collection.length collection) ++ " entities\n"
       writeOutput opts.outputFile output
   | opts.listTags = do
-      let allLabels = foldMap (.labels) (Vector.toList $ Collection.allEntities collection)
-      let tagsOutput = unlines $ map (Text.unpack . (.unLabel)) $ Set.toAscList allLabels
+      let allLabels = foldMap (\entity -> entity.labels) (Vector.toList (Collection.allEntities collection))
+      let tagsOutput = unlines (map (\label -> Text.unpack label.unLabel) (Set.toAscList allLabels))
       writeOutput opts.outputFile tagsOutput
   | otherwise =
       case opts.outputFormat of
-        Nothing -> die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
+        Nothing -> Exit.die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
         Just fmt -> do
           result <- formatWith fmt collection
           case result of
-            Left err -> die $ "Error formatting: " ++ show err
-            Right output -> writeOutput opts.outputFile $ Text.unpack output
+            Left err -> Exit.die ("Error formatting: " ++ show err)
+            Right output -> writeOutput opts.outputFile (Text.unpack output)
 
 processFile :: Options -> FilePath -> IO ()
 processFile opts file = do
-  inputFmt <- maybe (die $ "Error: no parser for file: " ++ file) return (opts.inputFormat <|> detectInputFormat file)
+  inputFmt <- maybe (Exit.die ("Error: no parser for file: " ++ file)) pure (opts.inputFormat <|> detectInputFormat file)
   Text.readFile file >>= parseFile inputFmt file >>= applyMappings opts.mappingsFile >>= printCollection file opts
 
 main :: IO ()
 main = do
-  argv <- getArgs
+  argv <- Environment.getArgs
   (opts, files) <- parseOptions argv
 
   when opts.showHelp $ do
     printUsage
-    exitSuccess
+    Exit.exitSuccess
 
   case files of
     [] -> do
       printUsage
-      die "Error: input file required"
+      Exit.die "Error: input file required"
     [file] ->
-      let hasOutputFormat = isJust opts.outputFormat
+      let hasOutputFormat = Maybe.isJust opts.outputFormat
           hasAnalysisFlag = opts.showInfo || opts.listTags
        in if hasOutputFormat || hasAnalysisFlag
             then processFile opts file
-            else die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
+            else Exit.die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
     _ -> do
       printUsage
-      die "Error: exactly one input file required"
+      Exit.die "Error: exactly one input file required"

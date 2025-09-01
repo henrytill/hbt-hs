@@ -15,7 +15,7 @@ runSimpleTestCase testCase =
       <*> addContext "Parse failed" (Markdown.parse testCase.testName testCase.inputMarkdown)
 
 allTests :: [SimpleTestCase] -> Test
-allTests testData = group "Hbt.Markdown tests" (fmap runSimpleTestCase testData)
+allTests testData = group "Hbt.Markdown tests" (map runSimpleTestCase testData)
 
 results :: [SimpleTestCase] -> (String, Bool)
 results testData = testResults "Hbt.Parser.Markdown" (allTests testData)

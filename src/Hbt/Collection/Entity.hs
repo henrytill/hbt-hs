@@ -18,16 +18,17 @@ module Hbt.Collection.Entity
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.:?), (.=))
-import Data.Maybe (isJust)
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
+import Data.Aeson qualified as Aeson
+import Data.Maybe qualified as Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Time.Clock (UTCTime)
-import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
-import Data.Time.Format (defaultTimeLocale, parseTimeM)
-import Network.URI (parseURI)
+import Data.Time.Clock.POSIX (POSIXTime)
+import Data.Time.Clock.POSIX qualified as POSIX
+import Data.Time.Format qualified as Format
 import Network.URI qualified as URI
 import Prelude hiding (id)
 
@@ -46,23 +47,23 @@ normalizeURI :: URI.URI -> URI.URI
 normalizeURI uri
   | URI.uriScheme uri `elem` ["http:", "https:"]
   , null (URI.uriPath uri)
-  , isJust (URI.uriAuthority uri) =
+  , Maybe.isJust (URI.uriAuthority uri) =
       uri {URI.uriPath = "/"}
   | otherwise = uri
 
 mkURI :: String -> Either Error URI
 mkURI s =
-  case parseURI s of
-    Nothing -> Left $ InvalidURI s
-    Just uri -> Right . MkURI $ normalizeURI uri
+  case URI.parseURI s of
+    Nothing -> Left (InvalidURI s)
+    Just uri -> Right (MkURI (normalizeURI uri))
 
 instance ToJSON URI where
-  toJSON (MkURI uri) = toJSON $ show uri
+  toJSON (MkURI uri) = toJSON (show uri)
 
 instance FromJSON URI where
-  parseJSON = withText "URI" $ \t ->
+  parseJSON = Aeson.withText "URI" $ \t ->
     let unpacked = Text.unpack t
-     in either (fail . show) pure (mkURI unpacked)
+     in either (\e -> fail (show e)) pure (mkURI unpacked)
 
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
@@ -71,16 +72,16 @@ instance ToJSON Time where
   toJSON (MkTime posixTime) = toJSON (round posixTime :: Integer)
 
 instance FromJSON Time where
-  parseJSON = fmap (MkTime . fromInteger) . parseJSON
+  parseJSON json = fmap (\i -> MkTime (fromInteger i)) (parseJSON json)
 
 epoch :: Time
 epoch = MkTime 0
 
 mkTime :: String -> Either Error Time
 mkTime s =
-  case parseTimeM True defaultTimeLocale "%B %e, %Y" s :: Maybe UTCTime of
-    Nothing -> Left $ InvalidTime s
-    Just utcTime -> Right . MkTime $ utcTimeToPOSIXSeconds utcTime
+  case Format.parseTimeM True Format.defaultTimeLocale "%B %e, %Y" s :: Maybe UTCTime of
+    Nothing -> Left (InvalidTime s)
+    Just utcTime -> Right (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
 
 newtype Name = MkName {unName :: Text}
   deriving (Show, Eq, Ord)
@@ -89,7 +90,7 @@ instance ToJSON Name where
   toJSON (MkName name) = toJSON name
 
 instance FromJSON Name where
-  parseJSON = fmap MkName . parseJSON
+  parseJSON json = fmap MkName (parseJSON json)
 
 newtype Label = MkLabel {unLabel :: Text}
   deriving (Show, Eq, Ord)
@@ -98,7 +99,7 @@ instance ToJSON Label where
   toJSON (MkLabel label) = toJSON label
 
 instance FromJSON Label where
-  parseJSON = fmap MkLabel . parseJSON
+  parseJSON json = fmap MkLabel (parseJSON json)
 
 newtype Extended = MkExtended {unExtended :: Text}
   deriving (Show, Eq, Ord)
@@ -107,7 +108,7 @@ instance ToJSON Extended where
   toJSON (MkExtended extended) = toJSON extended
 
 instance FromJSON Extended where
-  parseJSON = fmap MkExtended . parseJSON
+  parseJSON json = fmap MkExtended (parseJSON json)
 
 data Entity = MkEntity
   { uri :: URI
@@ -125,7 +126,7 @@ data Entity = MkEntity
 
 instance ToJSON Entity where
   toJSON entity =
-    object
+    Aeson.object
       [ "uri" .= entity.uri
       , "createdAt" .= entity.createdAt
       , "updatedAt" .= entity.updatedAt
@@ -139,13 +140,13 @@ instance ToJSON Entity where
       ]
 
 instance FromJSON Entity where
-  parseJSON = withObject "Entity" $ \o ->
+  parseJSON = Aeson.withObject "Entity" $ \o ->
     MkEntity
       <$> o .: "uri"
       <*> o .: "createdAt"
       <*> o .: "updatedAt"
-      <*> (Set.fromList <$> o .: "names")
-      <*> (Set.fromList <$> o .: "labels")
+      <*> fmap Set.fromList (o .: "names")
+      <*> fmap Set.fromList (o .: "labels")
       <*> o .: "shared"
       <*> o .: "toRead"
       <*> o .: "isFeed"
