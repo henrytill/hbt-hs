@@ -6,7 +6,7 @@ import GHC.Generics (Generic)
 import Hbt.Collection.Entity (Entity)
 import Hbt.Collection.Id (Id)
 
-data SerializedNode = SerializedNode
+data SerializedNode = MkSerializedNode
   { id :: Id
   , entity :: Entity
   , edges :: Vector Id
@@ -17,7 +17,7 @@ instance ToJSON SerializedNode
 
 instance FromJSON SerializedNode
 
-data SerializedCollection = SerializedCollection
+data SerializedCollection = MkSerializedCollection
   { version :: String
   , length :: Int
   , value :: Vector SerializedNode

@@ -33,21 +33,21 @@ discoverTestCases dir suffix = do
       testNames = map (takeBaseName . takeBaseName) inputFiles
   pure (sort testNames)
 
-data HtmlTestCase = HtmlTestCase
+data HtmlTestCase = MkHtmlTestCase
   { testName :: String
   , inputHtml :: Text
   , expectedYaml :: Text
   }
   deriving (Show, Eq)
 
-data SimpleTestCase = SimpleTestCase
+data SimpleTestCase = MkSimpleTestCase
   { testName :: String
   , inputMarkdown :: Text
   , expectedYaml :: Text
   }
   deriving (Show, Eq)
 
-data PinboardTestCase = PinboardTestCase
+data PinboardTestCase = MkPinboardTestCase
   { testName :: String
   , inputText :: Text
   , expectedYaml :: Text
@@ -55,14 +55,14 @@ data PinboardTestCase = PinboardTestCase
   }
   deriving (Show, Eq)
 
-data HtmlFormatterTestCase = HtmlFormatterTestCase
+data HtmlFormatterTestCase = MkHtmlFormatterTestCase
   { testName :: String
   , inputHtml :: Text
   , expectedHtml :: Text
   , template :: Template
   }
 
-data AllTestData = AllTestData
+data AllTestData = MkAllTestData
   { htmlParserTests :: [HtmlTestCase]
   , markdownTests :: [SimpleTestCase]
   , pinboardJsonTests :: [PinboardTestCase]
@@ -79,7 +79,7 @@ loadHtmlTestCase testName = do
       expectedFile = htmlTestDataDir </> (testName ++ ".expected.yaml")
   inputHtml <- readTextFile inputFile
   expectedYaml <- readTextFile expectedFile
-  pure HtmlTestCase {testName, inputHtml, expectedYaml}
+  pure MkHtmlTestCase {testName, inputHtml, expectedYaml}
 
 loadAllHtmlTestCases :: IO [HtmlTestCase]
 loadAllHtmlTestCases = do
@@ -95,7 +95,7 @@ loadSimpleTestCase testName = do
       expectedFile = markdownTestDataDir </> (testName ++ ".expected.yaml")
   inputMarkdown <- readTextFile inputFile
   expectedYaml <- readTextFile expectedFile
-  pure SimpleTestCase {testName, inputMarkdown, expectedYaml}
+  pure MkSimpleTestCase {testName, inputMarkdown, expectedYaml}
 
 loadAllSimpleTestCases :: IO [SimpleTestCase]
 loadAllSimpleTestCases = do
@@ -118,7 +118,7 @@ loadPinboardTestCase name format = do
       expectedFile = pinboardTestDataDir </> (name ++ ".expected.yaml")
   inputText <- readTextFile inputFile
   expectedYaml <- readTextFile expectedFile
-  pure PinboardTestCase {testName, inputText, expectedYaml, format}
+  pure MkPinboardTestCase {testName, inputText, expectedYaml, format}
 
 loadAllPinboardTestCases :: IO [PinboardTestCase]
 loadAllPinboardTestCases = do
@@ -135,7 +135,7 @@ loadHtmlFormatterTestCase testName = do
   inputHtml <- readTextFile inputFile
   expectedHtml <- readTextFile expectedFile
   template <- compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
-  pure HtmlFormatterTestCase {testName, inputHtml, expectedHtml, template}
+  pure MkHtmlFormatterTestCase {testName, inputHtml, expectedHtml, template}
 
 loadAllHtmlFormatterTestCases :: IO [HtmlFormatterTestCase]
 loadAllHtmlFormatterTestCases = do
@@ -147,7 +147,7 @@ loadAllTestData = do
   allPinboardTests <- loadAllPinboardTestCases
   let isJson tc = tc.format == "json"
       (pinboardJsonTests, pinboardXmlTests) = partition isJson allPinboardTests
-  AllTestData
+  MkAllTestData
     <$> loadAllHtmlTestCases
     <*> loadAllSimpleTestCases
     <*> pure pinboardJsonTests

@@ -110,14 +110,14 @@ addEdges :: Id -> Id -> Collection -> Either Error Collection
 addEdges from to collection = addEdge from to collection >>= addEdge to from
 
 mkSerializedNode :: Vector (Vector Id) -> Id -> Entity -> SerializedNode
-mkSerializedNode edges id entity = SerializedNode {id, entity, edges = edges ! id.value}
+mkSerializedNode edges id entity = MkSerializedNode {id, entity, edges = edges ! id.value}
 
 toSerialized :: Collection -> SerializedCollection
 toSerialized collection =
   let version = "0.1.0"
       length = Vector.length collection.nodes
       value = Vector.imap (mkSerializedNode collection.edges . MkId) collection.nodes
-   in SerializedCollection {version, length, value}
+   in MkSerializedCollection {version, length, value}
 
 fromSerialized :: SerializedCollection -> Collection
 fromSerialized serialized =
