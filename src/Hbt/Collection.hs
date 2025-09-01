@@ -25,8 +25,8 @@ where
 
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.List (elemIndex)
-import Data.Map (Map)
-import Data.Map qualified as Map
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Vector (Vector, elem, (!), (//))
 import Data.Vector qualified as Vector

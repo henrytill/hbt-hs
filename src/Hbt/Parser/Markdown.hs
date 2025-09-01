@@ -21,7 +21,7 @@ import Hbt.Collection.Entity (Entity, Label (..), Name (..), Time, URI)
 import Hbt.Collection.Entity qualified as Entity
 import Hbt.Parser.Common (ParserMonad, parseFileWithParser, runParserMonad)
 import Lens.Family2
-import Lens.Family2.State.Lazy
+import Lens.Family2.State.Strict
 
 data Error
   = EntityInvalidURI String

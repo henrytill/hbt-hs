@@ -19,7 +19,7 @@ import Hbt.Collection.Entity (Entity (..), Time)
 import Hbt.Collection.Entity qualified as Entity
 import Hbt.Parser.Common (ParserMonad, attrMatches, lookupAttr, parseFileWithParser, requireAttr, runParserMonad)
 import Lens.Family2
-import Lens.Family2.State.Lazy
+import Lens.Family2.State.Strict
 import Text.HTML.TagSoup (Attribute, Tag (..))
 import Text.HTML.TagSoup qualified as TagSoup
 

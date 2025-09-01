@@ -4,7 +4,6 @@ module Hbt.Parser.Pinboard.JSON where
 
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor (first)
-import Data.ByteString.Lazy qualified as ByteString
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import Hbt.Collection (Collection)
@@ -30,7 +29,7 @@ postsToCollection posts = do
 
 parse :: Text -> Either Error Collection
 parse input = do
-  posts <- first ParseError $ Aeson.eitherDecode $ ByteString.fromStrict $ Text.encodeUtf8 input
+  posts <- first ParseError $ Aeson.eitherDecodeStrict $ Text.encodeUtf8 input
   postsToCollection posts
 
 parseFile :: FilePath -> IO (Either Error Collection)

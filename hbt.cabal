@@ -27,6 +27,7 @@ common exts
         DuplicateRecordFields
         NoFieldSelectors
         OverloadedRecordDot
+        StrictData
 
 library
     import: exts
@@ -52,7 +53,6 @@ library
     build-depends:
         base >=4.20.1 && <4.22,
         aeson ^>=2.2.3.0,
-        bytestring >=0.12.1.0 && <0.13,
         commonmark ^>=0.2.6.1,
         commonmark-initial ^>=0.1.0.0,
         containers >=0.7 && <0.9,

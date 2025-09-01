@@ -2,7 +2,7 @@
 
 module Hbt.Parser.Common where
 
-import Control.Monad.State (StateT, runStateT)
+import Control.Monad.State.Strict (StateT, runStateT)
 import Data.Bifunctor (first)
 import Data.Text (Text)
 import Data.Text qualified as Text
