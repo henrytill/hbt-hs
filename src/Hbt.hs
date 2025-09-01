@@ -6,6 +6,8 @@ module Hbt
   , Format (..)
   , InputFormat
   , OutputFormat
+  , allInputFormats
+  , allOutputFormats
   , parseWith
   , formatWith
   , SomeParseError (..)
@@ -42,6 +44,12 @@ deriving instance Eq (Format f)
 type InputFormat = Format From
 
 type OutputFormat = Format To
+
+allInputFormats :: [InputFormat]
+allInputFormats = [JSON, XML, Markdown, HTML]
+
+allOutputFormats :: [OutputFormat]
+allOutputFormats = [HTML, YAML]
 
 data SomeParseError = forall e. (Show e) => SomeParseError e
 

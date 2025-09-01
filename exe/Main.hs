@@ -13,7 +13,7 @@ import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
-import Hbt (Flow (..), Format (..), InputFormat, OutputFormat, formatWith, parseWith)
+import Hbt (Flow (..), Format (..), InputFormat, OutputFormat, allInputFormats, allOutputFormats, formatWith, parseWith)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
@@ -56,12 +56,6 @@ defaultOptions =
     , showHelp = False
     }
 
-allFromConstructors :: [Format From]
-allFromConstructors = [JSON, XML, Markdown, HTML]
-
-allToConstructors :: [Format To]
-allToConstructors = [HTML, YAML]
-
 toString :: Format f -> String
 toString HTML = "html"
 toString JSON = "json"
@@ -85,7 +79,7 @@ class FormatFlow (f :: Flow) where
 
 instance FormatFlow From where
   allConstructors :: Proxy From -> [Format From]
-  allConstructors _ = allFromConstructors
+  allConstructors _ = allInputFormats
 
   formatErrorFlow :: Proxy From -> String -> String
   formatErrorFlow _ f = "Invalid input format: " ++ f
@@ -99,7 +93,7 @@ instance FormatFlow From where
 
 instance FormatFlow To where
   allConstructors :: Proxy To -> [Format To]
-  allConstructors _ = allToConstructors
+  allConstructors _ = allOutputFormats
 
   formatErrorFlow :: Proxy To -> String -> String
   formatErrorFlow _ f = "Invalid output format: " ++ f
