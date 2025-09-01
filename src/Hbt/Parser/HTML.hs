@@ -117,7 +117,7 @@ accumulateEntityAttr entity attr =
     LastVisit value -> entity {lastVisitedAt = parseTimestamp value}
     Tags values ->
       let newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") values))
-          toRead = "toread" `elem` values
+          toRead = entity.toRead || "toread" `elem` values
           labels = Set.union entity.labels newLabels
        in entity {labels, toRead}
     Private One -> entity {shared = False}
