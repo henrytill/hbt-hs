@@ -20,6 +20,7 @@ where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
+import Data.List qualified as List
 import Data.Maybe qualified as Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -181,12 +182,6 @@ empty =
     , lastVisitedAt = Nothing
     }
 
-insertSorted :: Time -> [Time] -> [Time]
-insertSorted t [] = [t]
-insertSorted t (x : xs)
-  | t <= x = t : x : xs
-  | otherwise = x : insertSorted t xs
-
 update :: Time -> Set Name -> Set Label -> Entity -> Entity
 update updatedAt names labels entity =
   let createdAt = entity.createdAt
@@ -195,14 +190,14 @@ update updatedAt names labels entity =
    in if createdAt > updatedAt
         then
           entity
-            { updatedAt = insertSorted createdAt entity.updatedAt
+            { updatedAt = List.insert createdAt entity.updatedAt
             , createdAt = updatedAt
             , names = updatedNames
             , labels = updatedLabels
             }
         else
           entity
-            { updatedAt = insertSorted updatedAt entity.updatedAt
+            { updatedAt = List.insert updatedAt entity.updatedAt
             , names = updatedNames
             , labels = updatedLabels
             }
