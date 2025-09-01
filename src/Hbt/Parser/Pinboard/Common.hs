@@ -9,7 +9,6 @@ import Data.Bifunctor qualified as Bifunctor
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX qualified as POSIX
 import Data.Time.Format qualified as Format
 import Hbt.Collection.Entity (Entity, Extended (..), Label (..), Name (..), Time (..))
@@ -45,7 +44,7 @@ instance FromJSON PinboardPost where
 
 parseTime :: (Entity.Error -> e) -> Text -> Either e Time
 parseTime fromEntityErr s =
-  case Format.parseTimeM True Format.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (Text.unpack s) :: Maybe UTCTime of
+  case Format.parseTimeM @Maybe True Format.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (Text.unpack s) of
     Nothing -> Left (fromEntityErr (Entity.InvalidTime s))
     Just utcTime -> Right (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
 

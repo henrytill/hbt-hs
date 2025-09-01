@@ -25,7 +25,6 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Time.Clock.POSIX qualified as POSIX
 import Data.Time.Format qualified as Format
@@ -68,7 +67,7 @@ newtype Time = MkTime {unTime :: POSIXTime}
   deriving (Show, Eq, Ord)
 
 instance ToJSON Time where
-  toJSON (MkTime posixTime) = toJSON (round posixTime :: Integer)
+  toJSON (MkTime posixTime) = toJSON @Integer (round posixTime)
 
 instance FromJSON Time where
   parseJSON json = fmap (MkTime . fromInteger) (parseJSON json)
@@ -78,7 +77,7 @@ epoch = MkTime 0
 
 mkTime :: Text -> Either Error Time
 mkTime s =
-  case Format.parseTimeM True Format.defaultTimeLocale "%B %e, %Y" (Text.unpack s) :: Maybe UTCTime of
+  case Format.parseTimeM @Maybe True Format.defaultTimeLocale "%B %e, %Y" (Text.unpack s) of
     Nothing -> Left (InvalidTime s)
     Just utcTime -> Right (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
 
