@@ -53,15 +53,16 @@ runPinboardM :: PinboardM a -> ParseState -> Either Error (a, ParseState)
 runPinboardM (MkPinboardM m) = runParserMonad m
 
 accumulatePostAttr :: PinboardPost -> Attribute Text -> PinboardPost
-accumulatePostAttr post attr = case attr of
-  Href value -> post {href = value}
-  Description value -> post {description = value}
-  Extended value -> post {extended = value}
-  Time value -> post {time = value}
-  Tags values -> post {tags = Text.unwords values}
-  Shared Yes -> post {shared = PinboardTrue}
-  ToRead Yes -> post {toread = Just PinboardTrue}
-  _ -> post
+accumulatePostAttr post attr =
+  case attr of
+    Href href -> post {href}
+    Description description -> post {description}
+    Extended extended -> post {extended}
+    Time time -> post {time}
+    Tags values -> post {tags = Text.unwords values}
+    Shared Yes -> post {shared = PinboardTrue}
+    ToRead Yes -> post {toread = Just PinboardTrue}
+    _ -> post
 
 createPostFromAttrs :: [Attribute Text] -> Either Error PinboardPost
 createPostFromAttrs attrs = do

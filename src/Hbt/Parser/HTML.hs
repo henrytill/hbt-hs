@@ -107,21 +107,23 @@ parseTimestamp str =
     Right {} -> Nothing
 
 accumulateEntityAttr :: Entity -> Attribute Text -> Entity
-accumulateEntityAttr entity attr = case attr of
-  Href value -> case Entity.mkURI value of
-    Left _ -> entity
-    Right uri -> entity {uri}
-  AddDate value -> entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)}
-  LastModified value -> entity {updatedAt = Maybe.maybeToList (parseTimestamp value)}
-  LastVisit value -> entity {lastVisitedAt = parseTimestamp value}
-  Tags values ->
-    let newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") values))
-        toReadValue = "toread" `elem` values
-     in entity {labels = Set.union entity.labels newLabels, toRead = toReadValue}
-  Private One -> entity {shared = False}
-  ToRead One -> entity {toRead = True}
-  Feed STrue -> entity {isFeed = True}
-  _ -> entity
+accumulateEntityAttr entity attr =
+  case attr of
+    Href value -> case Entity.mkURI value of
+      Left _ -> entity
+      Right uri -> entity {uri}
+    AddDate value -> entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)}
+    LastModified value -> entity {updatedAt = Maybe.maybeToList (parseTimestamp value)}
+    LastVisit value -> entity {lastVisitedAt = parseTimestamp value}
+    Tags values ->
+      let newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") values))
+          toRead = "toread" `elem` values
+          labels = Set.union entity.labels newLabels
+       in entity {labels, toRead}
+    Private One -> entity {shared = False}
+    ToRead One -> entity {toRead = True}
+    Feed STrue -> entity {isFeed = True}
+    _ -> entity
 
 createEntity :: [Attribute Text] -> [Text] -> Maybe Text -> Maybe Text -> Either Error Entity
 createEntity attrs folders name ext = do
