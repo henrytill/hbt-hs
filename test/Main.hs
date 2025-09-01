@@ -11,27 +11,21 @@ import System.Exit (exitFailure)
 import TestData (AllTestData (..), loadAllTestData)
 import Text.Printf (printf)
 
-runTestSuite :: IO (String, Bool) -> IO (String, Bool)
-runTestSuite suiteResults = do
-  (output, passed) <- suiteResults
-  putStr output
-  pure (output, passed)
+handleResults :: (String, Bool) -> IO Bool
+handleResults (output, passed) = putStr output >> pure passed
 
 main :: IO ()
 main = do
   testData <- loadAllTestData
-
   let testSuites =
-        [ pure CollectionTest.results
-        , pure $ HTMLFormatterTest.results testData.htmlFormatterTests
-        , pure $ HTMLTest.results testData.htmlParserTests
-        , pure $ MarkdownTest.results testData.markdownTests
-        , pure $ PinboardJSONTest.results testData.pinboardJsonTests
-        , pure $ PinboardXMLTest.results testData.pinboardXmlTests
+        [ CollectionTest.results
+        , HTMLFormatterTest.results testData.htmlFormatterTests
+        , HTMLTest.results testData.htmlParserTests
+        , MarkdownTest.results testData.markdownTests
+        , PinboardJSONTest.results testData.pinboardJsonTests
+        , PinboardXMLTest.results testData.pinboardXmlTests
         ]
-
-  results <- mapM runTestSuite testSuites
-  let allPassed = all snd results
-
+  results <- traverse handleResults testSuites
+  let allPassed = and results
   printf "Summary: %s\n" (if allPassed then "All tests passed!" else "Some tests failed.")
   unless allPassed exitFailure
