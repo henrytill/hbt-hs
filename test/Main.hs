@@ -19,10 +19,8 @@ runTestSuite suiteResults = do
 
 main :: IO ()
 main = do
-  -- Load all test data once at startup
   testData <- loadAllTestData
 
-  -- Define all test suites as IO actions
   let testSuites =
         [ pure CollectionTest.results
         , pure $ HTMLFormatterTest.results testData.htmlFormatterTests
@@ -32,7 +30,6 @@ main = do
         , pure $ PinboardXMLTest.results testData.pinboardXmlTests
         ]
 
-  -- Run all test suites and collect results
   results <- mapM runTestSuite testSuites
   let allPassed = all snd results
 

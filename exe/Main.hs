@@ -100,11 +100,9 @@ instance FormatFlow To where
   detectFromExtension :: String -> Maybe (Format To)
   detectFromExtension _ = Nothing -- Output formats can't be detected from files (yet)
 
--- | Get list of supported format strings
 supportedFormats :: forall f -> (FormatFlow f) => [String]
 supportedFormats f = map toString (allConstructors (Proxy @f))
 
--- | Set format from string
 setFormat :: forall f -> (FormatFlow f, HasFormat f s) => String -> s -> s
 setFormat f str opts =
   case parseFormatFlow @f str of

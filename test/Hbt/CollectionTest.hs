@@ -221,16 +221,13 @@ edgeTests =
       (id1, collection1) = insert entity1 empty
       (id2, collection2) = insert entity2 collection1
 
-      -- Test directed edge
       collectionWithEdge = safeAddEdge id1 id2 collection2
       edgesFromId1 = (collectionWithEdge.edges ! id1.value)
       edgesFromId2 = (collectionWithEdge.edges ! id2.value)
 
-      -- Test duplicate edge
       collectionWithDuplicateEdge = safeAddEdge id1 id2 collectionWithEdge
       edgesFromId1AfterDuplicate = (collectionWithDuplicateEdge.edges ! id1.value)
 
-      -- Test bidirectional edges
       collectionWithBidirectionalEdges = safeAddEdges id1 id2 collection2
       bidirectionalEdgesFromId1 = (collectionWithBidirectionalEdges.edges ! id1.value)
       bidirectionalEdgesFromId2 = (collectionWithBidirectionalEdges.edges ! id2.value)

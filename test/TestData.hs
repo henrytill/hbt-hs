@@ -9,7 +9,6 @@ import System.Directory (listDirectory)
 import System.FilePath (takeBaseName, (</>))
 import Text.Microstache (Template, compileMustacheFile)
 
--- Test data directory constants
 testDataBaseDir :: String
 testDataBaseDir = "test/data"
 
@@ -22,13 +21,11 @@ markdownTestDataDir = testDataBaseDir </> "markdown"
 pinboardTestDataDir :: String
 pinboardTestDataDir = testDataBaseDir </> "pinboard"
 
--- Unified file reading with lenient UTF-8 decoding
 readTextFile :: FilePath -> IO Text
 readTextFile path = do
   bytes <- BS.readFile path
   pure $ Text.Encoding.decodeUtf8With Text.Error.lenientDecode bytes
 
--- Generic test case discovery
 discoverTestCases :: String -> String -> IO [String]
 discoverTestCases dir suffix = do
   allFiles <- listDirectory dir
@@ -36,7 +33,6 @@ discoverTestCases dir suffix = do
       testNames = map (takeBaseName . takeBaseName) inputFiles
   pure $ sort testNames
 
--- Test case data types
 data HtmlTestCase = HtmlTestCase
   { testName :: String
   , inputHtml :: Text
@@ -66,7 +62,6 @@ data HtmlFormatterTestCase = HtmlFormatterTestCase
   , template :: Template
   }
 
--- Test data for all test suites
 data AllTestData = AllTestData
   { htmlParserTests :: [HtmlTestCase]
   , markdownTests :: [SimpleTestCase]
@@ -75,7 +70,6 @@ data AllTestData = AllTestData
   , htmlFormatterTests :: [HtmlFormatterTestCase]
   }
 
--- HTML Parser test data loading
 discoverHtmlTestCaseNames :: IO [String]
 discoverHtmlTestCaseNames = discoverTestCases htmlTestDataDir ".input.html"
 
@@ -99,7 +93,6 @@ loadAllHtmlTestCases = do
   testCaseNames <- discoverHtmlTestCaseNames
   mapM loadHtmlTestCase testCaseNames
 
--- Markdown test data loading
 discoverMarkdownTestCaseNames :: IO [String]
 discoverMarkdownTestCaseNames = discoverTestCases markdownTestDataDir ".input.md"
 
@@ -123,7 +116,6 @@ loadAllSimpleTestCases = do
   testCaseNames <- discoverMarkdownTestCaseNames
   mapM loadSimpleTestCase testCaseNames
 
--- Pinboard test data loading
 discoverPinboardTestCaseNames :: IO [(String, String)] -- (name, format)
 discoverPinboardTestCaseNames = do
   allFiles <- listDirectory pinboardTestDataDir
@@ -154,7 +146,6 @@ loadAllPinboardTestCases = do
   testCaseNames <- discoverPinboardTestCaseNames
   mapM (uncurry loadPinboardTestCase) testCaseNames
 
--- HTML Formatter test data loading
 discoverHtmlFormatterTestCaseNames :: IO [String]
 discoverHtmlFormatterTestCaseNames = discoverTestCases htmlTestDataDir ".input.html"
 
@@ -166,7 +157,6 @@ loadHtmlFormatterTestCase name = do
   inputContent <- readTextFile inputFile
   expectedContent <- readTextFile expectedFile
 
-  -- Load the template
   template <- compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
 
   pure
@@ -182,7 +172,6 @@ loadAllHtmlFormatterTestCases = do
   testCaseNames <- discoverHtmlFormatterTestCaseNames
   mapM loadHtmlFormatterTestCase testCaseNames
 
--- Load all test data
 loadAllTestData :: IO AllTestData
 loadAllTestData = do
   htmlParserTests <- loadAllHtmlTestCases

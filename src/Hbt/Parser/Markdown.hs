@@ -95,7 +95,6 @@ runMarkdownM (MkMarkdownM m) = runParserMonad m
 liftEitherWith :: (a -> Error) -> Either a b -> MarkdownM b
 liftEitherWith f ma = Except.liftEither (Bifunctor.first f ma)
 
--- Save current entity to collection and reset parsing state
 saveEntity :: MarkdownM ()
 saveEntity = do
   st0 <- use id
@@ -103,22 +102,18 @@ saveEntity = do
   coll0 <- use collection
   let (entityId, coll1) = Collection.upsert entity coll0
 
-  -- Update collection
   collection .= coll1
 
-  -- Add edges if we have a parent from the parent stack (not maybeParent)
   parentStack <- use parents
   forM_ (take 1 parentStack) $ \pid -> do
     coll2 <- use collection
     coll3 <- liftEitherWith fromCollectionError (Collection.addEdges entityId pid coll2)
     collection .= coll3
 
-  -- Set this entity as the new parent and reset parsing fields
   maybeParent .= Just entityId
   maybeURI .= Nothing
   maybeName .= Nothing
 
--- Extract text from inline elements (same as current implementation)
 textFromInlines :: [Inline a] -> Text
 textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input))
   where
@@ -137,7 +132,6 @@ textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input)
         Initial.Code t -> "`" <> Builder.fromText t <> "`"
         Initial.RawInline _ t -> Builder.fromText t
 
--- Extract link information and set up for entity creation
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
 extractLink dest _title desc = do
   uri <- liftEitherWith fromEntityError (Entity.mkURI (Text.unpack dest))
@@ -147,16 +141,13 @@ extractLink dest _title desc = do
   when (not (Text.null linkText) && linkText /= dest) $
     maybeName .= Just (MkName linkText)
 
--- Handle inline elements
 handleInline :: Inline a -> MarkdownM ()
 handleInline (MkInline _ (Initial.Link dest title desc)) = extractLink dest title desc >> saveEntity
 handleInline _ = pure ()
 
--- Process all inlines in a block
 processInlines :: [Inline a] -> MarkdownM ()
 processInlines = mapM_ handleInline
 
--- Handle block elements
 -- It's okay to write point-free code here
 handleBlock :: Block a -> MarkdownM ()
 handleBlock (MkBlock _ b) =
@@ -174,35 +165,28 @@ handleBlock (MkBlock _ b) =
       let label = MkLabel headingText
       labels %= (label :) . take (level - 2)
     Initial.List _ _ blocksList -> do
-      -- Save current parent and push it to parent stack
       currentParent <- use maybeParent
       forM_ currentParent $ \pid -> parents %= (pid :)
 
-      -- Process all blocks in the list
       forM_ blocksList $ mapM_ handleBlock
 
-      -- Restore parent state
       maybeParent .= Nothing
       parents %= drop 1
     _ -> pure ()
 
--- Process all blocks
 processBlocks :: [Block a] -> MarkdownM Collection
 processBlocks blocks = do
   mapM_ handleBlock blocks
   use collection
 
--- Parse blocks from text
 parseBlocks :: String -> Text -> Either Commonmark.ParseError Blocks
 parseBlocks = Commonmark.commonmark
 
--- Parse markdown text using StateT approach
 parse :: String -> Text -> Either Error Collection
 parse parseName input = do
   blocks <- Bifunctor.first ParseError (parseBlocks parseName input)
   (ret, _) <- runMarkdownM (processBlocks blocks) empty
   pure ret
 
--- Parse from file
 parseFile :: FilePath -> IO (Either Error Collection)
 parseFile filepath = parseFileWithParser (parse filepath) filepath
