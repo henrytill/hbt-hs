@@ -1,7 +1,6 @@
 module Main (main) where
 
 import Control.Monad (unless)
-import Data.MultimapTest qualified as MultimapTest
 import Hbt.CollectionTest qualified as CollectionTest
 import Hbt.Formatter.HTMLTest qualified as HTMLFormatterTest
 import Hbt.Parser.HTMLTest qualified as HTMLTest
@@ -26,8 +25,7 @@ main = do
 
   -- Define all test suites as IO actions
   let testSuites =
-        [ return MultimapTest.results
-        , return CollectionTest.results
+        [ return CollectionTest.results
         , return $ HTMLFormatterTest.results testData.htmlFormatterTests
         , return $ HTMLTest.results testData.htmlParserTests
         , return $ MarkdownTest.results testData.markdownTests

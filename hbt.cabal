@@ -31,7 +31,6 @@ common exts
 library
     import: exts
     exposed-modules:
-        Data.Multimap
         Hbt
         Hbt.Collection
         Hbt.Collection.Entity
@@ -88,7 +87,6 @@ test-suite hbt-test
     main-is:          Main.hs
     hs-source-dirs:   test
     other-modules:
-        Data.MultimapTest
         Hbt.CollectionTest
         Hbt.Formatter.HTMLTest
         Hbt.Parser.HTMLTest
