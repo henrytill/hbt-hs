@@ -51,7 +51,7 @@ getLastModified entity = Maybe.listToMaybe entity.updatedAt
 
 toTemplateEntity :: Entity -> TemplateEntity
 toTemplateEntity entity =
-  let MkURI uriVal = entity.uri
+  let uriVal = entity.uri.unURI
       uriText = Text.pack (show uriVal)
       tagsList = List.sort (map (.unLabel) (Set.toList entity.labels))
       tagsText = Text.intercalate "," tagsList
