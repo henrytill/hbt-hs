@@ -24,14 +24,14 @@ pinboardTestDataDir = testDataBaseDir </> "pinboard"
 readTextFile :: FilePath -> IO Text
 readTextFile path = do
   bytes <- BS.readFile path
-  pure $ Text.Encoding.decodeUtf8With Text.Error.lenientDecode bytes
+  pure (Text.Encoding.decodeUtf8With Text.Error.lenientDecode bytes)
 
 discoverTestCases :: String -> String -> IO [String]
 discoverTestCases dir suffix = do
   allFiles <- listDirectory dir
   let inputFiles = [f | f <- allFiles, suffix `isSuffixOf` f]
       testNames = map (takeBaseName . takeBaseName) inputFiles
-  pure $ sort testNames
+  pure (sort testNames)
 
 data HtmlTestCase = HtmlTestCase
   { testName :: String
@@ -74,19 +74,12 @@ discoverHtmlTestCaseNames :: IO [String]
 discoverHtmlTestCaseNames = discoverTestCases htmlTestDataDir ".input.html"
 
 loadHtmlTestCase :: String -> IO HtmlTestCase
-loadHtmlTestCase name = do
-  let inputFile = htmlTestDataDir </> (name ++ ".input.html")
-      expectedFile = htmlTestDataDir </> (name ++ ".expected.yaml")
-
-  inputContent <- readTextFile inputFile
-  expectedContent <- readTextFile expectedFile
-
-  pure
-    HtmlTestCase
-      { testName = name
-      , inputHtml = inputContent
-      , expectedYaml = expectedContent
-      }
+loadHtmlTestCase testName = do
+  let inputFile = htmlTestDataDir </> (testName ++ ".input.html")
+      expectedFile = htmlTestDataDir </> (testName ++ ".expected.yaml")
+  inputHtml <- readTextFile inputFile
+  expectedYaml <- readTextFile expectedFile
+  pure HtmlTestCase {testName, inputHtml, expectedYaml}
 
 loadAllHtmlTestCases :: IO [HtmlTestCase]
 loadAllHtmlTestCases = do
@@ -97,19 +90,12 @@ discoverMarkdownTestCaseNames :: IO [String]
 discoverMarkdownTestCaseNames = discoverTestCases markdownTestDataDir ".input.md"
 
 loadSimpleTestCase :: String -> IO SimpleTestCase
-loadSimpleTestCase name = do
-  let inputFile = markdownTestDataDir </> (name ++ ".input.md")
-      expectedFile = markdownTestDataDir </> (name ++ ".expected.yaml")
-
-  inputContent <- readTextFile inputFile
-  expectedContent <- readTextFile expectedFile
-
-  pure
-    SimpleTestCase
-      { testName = name
-      , inputMarkdown = inputContent
-      , expectedYaml = expectedContent
-      }
+loadSimpleTestCase testName = do
+  let inputFile = markdownTestDataDir </> (testName ++ ".input.md")
+      expectedFile = markdownTestDataDir </> (testName ++ ".expected.yaml")
+  inputMarkdown <- readTextFile inputFile
+  expectedYaml <- readTextFile expectedFile
+  pure SimpleTestCase {testName, inputMarkdown, expectedYaml}
 
 loadAllSimpleTestCases :: IO [SimpleTestCase]
 loadAllSimpleTestCases = do
@@ -123,23 +109,16 @@ discoverPinboardTestCaseNames = do
       xmlFiles = [f | f <- allFiles, ".input.xml" `isSuffixOf` f]
       jsonNames = map (\f -> (takeBaseName (takeBaseName f), "json")) jsonFiles
       xmlNames = map (\f -> (takeBaseName (takeBaseName f), "xml")) xmlFiles
-  pure $ sort $ jsonNames ++ xmlNames
+  pure (sort (jsonNames ++ xmlNames))
 
 loadPinboardTestCase :: String -> String -> IO PinboardTestCase
 loadPinboardTestCase name format = do
-  let inputFile = pinboardTestDataDir </> (name ++ ".input." ++ format)
+  let testName = name ++ "_" ++ format
+      inputFile = pinboardTestDataDir </> (name ++ ".input." ++ format)
       expectedFile = pinboardTestDataDir </> (name ++ ".expected.yaml")
-
-  inputContent <- readTextFile inputFile
-  expectedContent <- readTextFile expectedFile
-
-  pure
-    PinboardTestCase
-      { testName = name ++ "_" ++ format
-      , inputText = inputContent
-      , expectedYaml = expectedContent
-      , format = format
-      }
+  inputText <- readTextFile inputFile
+  expectedYaml <- readTextFile expectedFile
+  pure PinboardTestCase {testName, inputText, expectedYaml, format}
 
 loadAllPinboardTestCases :: IO [PinboardTestCase]
 loadAllPinboardTestCases = do
@@ -150,22 +129,13 @@ discoverHtmlFormatterTestCaseNames :: IO [String]
 discoverHtmlFormatterTestCaseNames = discoverTestCases htmlTestDataDir ".input.html"
 
 loadHtmlFormatterTestCase :: String -> IO HtmlFormatterTestCase
-loadHtmlFormatterTestCase name = do
-  let inputFile = htmlTestDataDir </> (name ++ ".input.html")
-      expectedFile = htmlTestDataDir </> (name ++ ".expected.html")
-
-  inputContent <- readTextFile inputFile
-  expectedContent <- readTextFile expectedFile
-
+loadHtmlFormatterTestCase testName = do
+  let inputFile = htmlTestDataDir </> (testName ++ ".input.html")
+      expectedFile = htmlTestDataDir </> (testName ++ ".expected.html")
+  inputHtml <- readTextFile inputFile
+  expectedHtml <- readTextFile expectedFile
   template <- compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
-
-  pure
-    HtmlFormatterTestCase
-      { testName = name
-      , inputHtml = inputContent
-      , expectedHtml = expectedContent
-      , template = template
-      }
+  pure HtmlFormatterTestCase {testName, inputHtml, expectedHtml, template}
 
 loadAllHtmlFormatterTestCases :: IO [HtmlFormatterTestCase]
 loadAllHtmlFormatterTestCases = do
@@ -174,19 +144,12 @@ loadAllHtmlFormatterTestCases = do
 
 loadAllTestData :: IO AllTestData
 loadAllTestData = do
-  htmlParserTests <- loadAllHtmlTestCases
-  markdownTests <- loadAllSimpleTestCases
   allPinboardTests <- loadAllPinboardTestCases
-  htmlFormatterTests <- loadAllHtmlFormatterTestCases
-
   let isJson tc = tc.format == "json"
       (pinboardJsonTests, pinboardXmlTests) = partition isJson allPinboardTests
-
-  pure
-    AllTestData
-      { htmlParserTests
-      , markdownTests
-      , pinboardJsonTests
-      , pinboardXmlTests
-      , htmlFormatterTests
-      }
+  AllTestData
+    <$> loadAllHtmlTestCases
+    <*> loadAllSimpleTestCases
+    <*> pure pinboardJsonTests
+    <*> pure pinboardXmlTests
+    <*> loadAllHtmlFormatterTestCases
