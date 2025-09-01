@@ -2,7 +2,6 @@
 
 module Hbt.Parser.Common where
 
-import Control.Monad.Except (Except, runExcept)
 import Control.Monad.State (StateT, runStateT)
 import Data.Bifunctor (first)
 import Data.Text (Text)
@@ -34,7 +33,7 @@ parseFileWithParser parser filepath = do
   content <- readFile filepath
   return $ parser (Text.pack content)
 
-type ParserMonad s e = StateT s (Except e)
+type ParserMonad s e = StateT s (Either e)
 
 runParserMonad :: ParserMonad s e a -> s -> Either e (a, s)
-runParserMonad m s = runExcept (runStateT m s)
+runParserMonad m s = runStateT m s
