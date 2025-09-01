@@ -38,10 +38,16 @@ data TemplateEntity = MkTemplateEntity
 
 instance ToJSON TemplateEntity
 
-format :: Template -> Collection -> Text
-format template collection =
-  let toRender = Aeson.object ["entities" .= map toTemplateEntity (Vector.toList (Collection.allEntities collection))]
-   in LazyText.toStrict (Microstache.renderMustache template toRender)
+formatTime :: Time -> Text
+formatTime (MkTime posixTime) = Text.pack (show @Integer (round posixTime))
+
+getFirstName :: Text -> Set Name -> Text
+getFirstName def names
+  | Set.null names = def
+  | otherwise = (Set.findMin names).unName
+
+getLastModified :: Entity -> Maybe Time
+getLastModified entity = Maybe.listToMaybe entity.updatedAt
 
 toTemplateEntity :: Entity -> TemplateEntity
 toTemplateEntity entity =
@@ -62,13 +68,7 @@ toTemplateEntity entity =
         , description = fmap (.unExtended) entity.extended
         }
 
-getFirstName :: Text -> Set Name -> Text
-getFirstName def names
-  | Set.null names = def
-  | otherwise = (Set.findMin names).unName
-
-getLastModified :: Entity -> Maybe Time
-getLastModified entity = Maybe.listToMaybe entity.updatedAt
-
-formatTime :: Time -> Text
-formatTime (MkTime posixTime) = Text.pack (show @Integer (round posixTime))
+format :: Template -> Collection -> Text
+format template collection =
+  let toRender = Aeson.object ["entities" .= map toTemplateEntity (Vector.toList (Collection.allEntities collection))]
+   in LazyText.toStrict (Microstache.renderMustache template toRender)
