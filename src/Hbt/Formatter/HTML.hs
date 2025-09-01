@@ -9,6 +9,7 @@ where
 import Data.Aeson (ToJSON (..), object, (.=))
 import Data.List (sort)
 import Data.Maybe (listToMaybe)
+import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -60,7 +61,7 @@ toTemplateEntity entity =
         , description = fmap (.unExtended) entity.extended
         }
 
-getFirstName :: Text -> Set.Set Name -> Text
+getFirstName :: Text -> Set Name -> Text
 getFirstName def names
   | Set.null names = def
   | otherwise = (.unName) $ Set.findMin names

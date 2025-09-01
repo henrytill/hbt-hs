@@ -9,6 +9,7 @@ import Control.Monad (forM_, when)
 import Control.Monad.Except (MonadError, liftEither)
 import Data.Bifunctor (first)
 import Data.Maybe qualified as Maybe
+import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -123,7 +124,7 @@ parseTagsFromAttr attrs =
       | Text.null tagString -> []
       | otherwise -> Text.splitOn "," tagString
 
-createLabels :: [Text] -> [Text] -> Set.Set Entity.Label
+createLabels :: [Text] -> [Text] -> Set Entity.Label
 createLabels tags folderLabels =
   let filteredTags = filter (/= "toread") tags
       labelStrings = filteredTags ++ reverse folderLabels
