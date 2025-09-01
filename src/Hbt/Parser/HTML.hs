@@ -137,13 +137,17 @@ createEntity attrs folders name ext = do
       entityName = Entity.MkName <$> name
       labels = createLabels (parseTagsFromAttr attrs) folders
   return
-    (Entity.mkEntity uri createdAt entityName labels)
-      { updatedAt = Maybe.maybeToList $ parseTimestamp attrs "last_modified"
-      , extended = Entity.MkExtended <$> ext
+    Entity.MkEntity
+      { uri
+      , createdAt
+      , updatedAt = Maybe.maybeToList $ parseTimestamp attrs "last_modified"
+      , names = maybe Set.empty Set.singleton entityName
+      , labels
       , shared = not (parseIsPrivate attrs)
       , toRead = attrMatches "toread" "1" attrs
-      , lastVisitedAt = parseTimestamp attrs "last_visit"
       , isFeed = attrMatches "feed" "true" attrs
+      , extended = Entity.MkExtended <$> ext
+      , lastVisitedAt = parseTimestamp attrs "last_visit"
       }
 
 addPending :: NetscapeM ()

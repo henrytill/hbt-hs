@@ -62,9 +62,15 @@ postToEntity fromEntityErr post = do
       toRead = post.toread == "yes"
 
   pure $
-    (Entity.mkEntity uri createdAt name labels)
-      { Entity.extended = extended
+    Entity.MkEntity
+      { Entity.uri = uri
+      , Entity.createdAt = createdAt
+      , Entity.updatedAt = []
+      , Entity.names = maybe Set.empty Set.singleton name
+      , Entity.labels = labels
       , Entity.shared = shared
       , Entity.toRead = toRead
       , Entity.isFeed = False
+      , Entity.extended = extended
+      , Entity.lastVisitedAt = Nothing
       }
