@@ -20,7 +20,7 @@ import Hbt.Collection (Collection, Id)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity, Label (..), Name (..), Time, URI)
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Parser.Common (ParserMonad, parseFileWithParser, runParserMonad)
+import Hbt.Parser.Common (IsNull (..), ParserMonad, parseFileWithParser, runParserMonad)
 import Lens.Family2
 import Lens.Family2.State.Strict
 
@@ -138,7 +138,7 @@ extractLink dest _title desc = do
   maybeURI .= Just uri
 
   let linkText = textFromInlines desc
-  when (not (Text.null linkText) && linkText /= dest) $
+  when (not (isNull linkText) && linkText /= dest) $
     maybeName .= Just (MkName linkText)
 
 handleInline :: Inline a -> MarkdownM ()

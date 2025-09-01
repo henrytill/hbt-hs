@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Hbt.Parser.Pinboard.Common where
 
@@ -13,6 +14,7 @@ import Data.Time.Clock.POSIX qualified as POSIX
 import Data.Time.Format qualified as Format
 import Hbt.Collection.Entity (Entity, Extended (..), Label (..), Name (..), Time (..))
 import Hbt.Collection.Entity qualified as Entity
+import Hbt.Parser.Common (IsNull (..), pattern Null)
 
 data PinboardPost = MkPinboardPost
   { href :: Text
@@ -26,9 +28,8 @@ data PinboardPost = MkPinboardPost
   deriving (Show, Eq)
 
 parseTagString :: Text -> [Text]
-parseTagString tagStr
-  | Text.null tagStr = []
-  | otherwise = filter (\t -> not (Text.null t)) (map Text.strip (Text.splitOn " " tagStr))
+parseTagString Null = []
+parseTagString str = filter (\t -> not (isNull t)) (map Text.strip (Text.splitOn " " str))
 
 instance FromJSON PinboardPost where
   parseJSON = Aeson.withObject "PinboardPost" $ \o ->
@@ -49,18 +50,21 @@ parseTime fromEntityErr timeStr =
     Just utcTime -> Right (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
 
 parseTags :: [Text] -> [Label]
-parseTags tagList = map (\t -> MkLabel (Text.strip t)) (filter (\t -> not (Text.null t)) tagList)
+parseTags tagList = map (\t -> MkLabel (Text.strip t)) (filter (\t -> not (isNull t)) tagList)
 
 postToEntity :: (Entity.Error -> e) -> PinboardPost -> Either e Entity
 postToEntity fromEntityErr post = do
   uri <- Bifunctor.first fromEntityErr (Entity.mkURI (Text.unpack post.href))
   createdAt <- parseTime fromEntityErr post.time
-
   let updatedAt = []
-      name = if Text.null post.description then Nothing else Just (MkName post.description)
+      name = case post.description of
+        Null -> Nothing
+        desc -> Just (MkName desc)
       names = maybe Set.empty Set.singleton name
       labels = Set.fromList (parseTags post.tags)
-      extended = if Text.null post.extended then Nothing else Just (MkExtended post.extended)
+      extended = case post.extended of
+        Null -> Nothing
+        ext -> Just (MkExtended ext)
       shared = post.shared == "yes"
       toRead = post.toread == "yes"
       isFeed = False

@@ -18,7 +18,7 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Time)
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Parser.Common
+import Hbt.Parser.Common (ParserMonad, attrMatches, lookupAttr, parseFileWithParser, requireAttr, runParserMonad, pattern Null)
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.TagSoup (Attribute, Tag (..))
@@ -108,7 +108,7 @@ parseTimestamp attrs key =
     Just timestampStr ->
       case Read.decimal timestampStr of
         Left {} -> Nothing
-        Right (timestamp, "") -> Just (Entity.MkTime (fromInteger timestamp))
+        Right (timestamp, Null) -> Just (Entity.MkTime (fromInteger timestamp))
         Right {} -> Nothing
 
 parseTimestampWithDefault :: [Attribute Text] -> Text -> Time
@@ -121,9 +121,8 @@ parseTagsFromAttr :: [Attribute Text] -> [Text]
 parseTagsFromAttr attrs =
   case lookupAttr "tags" attrs of
     Nothing -> []
-    Just tagString
-      | Text.null tagString -> []
-      | otherwise -> Text.splitOn "," tagString
+    Just Null -> []
+    Just str -> Text.splitOn "," str
 
 createLabels :: [Text] -> [Text] -> Set Entity.Label
 createLabels tags folderLabels =

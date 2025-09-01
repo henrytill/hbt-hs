@@ -1,3 +1,6 @@
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ViewPatterns #-}
+
 module Hbt.Parser.Common where
 
 import Control.Monad.State.Strict (StateT)
@@ -7,6 +10,18 @@ import Data.Maybe qualified as Maybe
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Text.HTML.TagSoup (Attribute)
+
+class IsNull s where
+  isNull :: s -> Bool
+
+instance IsNull [a] where
+  isNull = null
+
+instance IsNull Text where
+  isNull = Text.null
+
+pattern Null :: (IsNull s) => s
+pattern Null <- (isNull -> True)
 
 lookupAttr :: Text -> [Attribute Text] -> Maybe Text
 lookupAttr key attrs = lookup (Text.toLower key) (map (Bifunctor.first Text.toLower) attrs)
@@ -24,9 +39,8 @@ requireAttr :: Text -> [Attribute Text] -> Maybe Text
 requireAttr key attrs =
   case lookupAttr key attrs of
     Nothing -> Nothing
-    Just value
-      | Text.null value -> Nothing
-      | otherwise -> Just value
+    Just Null -> Nothing
+    Just value -> Just value
 
 parseFileWithParser :: (Text -> Either e a) -> FilePath -> IO (Either e a)
 parseFileWithParser parser filepath = do
