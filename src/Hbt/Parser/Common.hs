@@ -122,10 +122,11 @@ parseTagStringWith separator value
 -- (Pinboard) XML format uses "tag" with space-separated values: tag="web programming haskell"
 -- HTML format uses "tags" with comma-separated values: TAGS="web,programming,haskell"
 matchAttrTagList :: Attribute Text -> Maybe [Text]
-matchAttrTagList (attrKey, attrValue)
-  | Text.toLower attrKey == "tag" = Just (parseTagStringWith " " attrValue)
-  | Text.toLower attrKey == "tags" = Just (parseTagStringWith "," attrValue)
-  | otherwise = Nothing
+matchAttrTagList (attrKey, attrValue) =
+  case Text.toLower attrKey of
+    "tag" -> Just (parseTagStringWith " " attrValue)
+    "tags" -> Just (parseTagStringWith "," attrValue)
+    _ -> Nothing
 
 type ParserMonad s e = StateT s (Either e)
 
