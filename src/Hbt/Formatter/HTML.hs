@@ -70,5 +70,7 @@ toTemplateEntity entity =
 
 format :: Template -> Collection -> Text
 format template collection =
-  let toRender = Aeson.object ["entities" .= map toTemplateEntity (Vector.toList (Collection.allEntities collection))]
+  let f e acc = toTemplateEntity e : acc
+      templateEntities = Vector.foldr f [] (Collection.allEntities collection)
+      toRender = Aeson.object ["entities" .= templateEntities]
    in LazyText.toStrict (Microstache.renderMustache template toRender)
