@@ -3,15 +3,11 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 module Hbt.Parser.Pinboard.Common
-  ( PinboardBool (..)
+  ( PinboardBool
   , pattern PinboardTrue
   , pattern PinboardFalse
   , PinboardPost (..)
   , emptyPinboardPost
-  , epochTimeText
-  , parseTagString
-  , parseTags
-  , parseTime
   , postToEntity
   )
 where
@@ -57,6 +53,8 @@ data PinboardPost = MkPinboardPost
   }
   deriving (Show, Eq, Generic)
 
+instance FromJSON PinboardPost
+
 epochTimeText :: Text
 epochTimeText = Text.pack (Format.formatTime Format.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (POSIX.posixSecondsToUTCTime 0))
 
@@ -75,8 +73,6 @@ emptyPinboardPost =
 parseTagString :: Text -> [Text]
 parseTagString Null = []
 parseTagString str = filter (not . isNull) (map Text.strip (Text.splitOn " " str))
-
-instance FromJSON PinboardPost
 
 parseTime :: (Entity.Error -> e) -> Text -> Either e Time
 parseTime fromEntityErr s =
