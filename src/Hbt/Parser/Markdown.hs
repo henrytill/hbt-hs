@@ -163,7 +163,8 @@ handleBlock (MkBlock _ b) =
       labels %= (label :) . take (level - 2)
     Initial.List _ _ blocksList -> do
       currentParent <- use maybeParent
-      forM_ currentParent $ \pid -> parents %= (pid :)
+      forM_ currentParent $ \pid ->
+        parents %= (pid :)
       forM_ blocksList $ mapM_ handleBlock
       maybeParent .= Nothing
       parents %= drop 1
