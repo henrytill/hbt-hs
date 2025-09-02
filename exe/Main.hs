@@ -192,7 +192,7 @@ printCollection file opts collection
       let output = Text.pack (file ++ ": " ++ show (Collection.length collection) ++ " entities\n")
       writeOutput opts.outputFile output
   | opts.listTags = do
-      let allLabels = foldMap (\entity -> entity.labels) (Vector.toList (Collection.allEntities collection))
+      let allLabels = foldMap (.labels) (Vector.toList (Collection.allEntities collection))
       let tagsOutput = Text.unlines (map (.unLabel) (Set.toAscList allLabels))
       writeOutput opts.outputFile tagsOutput
   | otherwise =

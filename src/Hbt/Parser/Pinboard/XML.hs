@@ -71,7 +71,6 @@ createPostFromAttrs attrs = do
     then Left (ParseError "missing required attribute: href")
     else pure accumulated
 
--- It's okay to write point-free code here
 handle :: Tag Text -> PinboardM ()
 handle (TagOpen "post" attrs) = do
   post <- Except.liftEither (createPostFromAttrs attrs)
