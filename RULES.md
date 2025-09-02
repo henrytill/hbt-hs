@@ -16,7 +16,7 @@ After almost a decade, we need some discipline in here.
 
 - Avoid point-free code.
 
-    Or, Parens are good, actually.
+    Or, parens are good, actually.
 
     **Exceptions**
     - Okay to use with lenses in restricted settings, like with `Lens.Family2.State`
@@ -60,5 +60,7 @@ After almost a decade, we need some discipline in here.
     **Exceptions**
     - It's okay to import operators unqualified.
     - Functions from neighboring "common" modules may be imported and used unqualified.
+
+- The optimizer is fallable.
 
 - **When in doubt, ask "What would an OCaml programmer do?"**
