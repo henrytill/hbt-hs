@@ -19,7 +19,7 @@ import Hbt.Collection (Collection, Id)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity, Label (..), Name (..), Time, URI)
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Parser.Common (IsNull (..), ParserMonad, runParserMonad)
+import Hbt.Parser.Common (IsNull (..), ParserMonad, drop1, runParserMonad)
 import Lens.Family2
 import Lens.Family2.State.Strict
 
@@ -164,7 +164,7 @@ handleBlock (MkBlock _ b) =
         parents %= (pid :)
       forM_ blocksList $ mapM_ handleBlock
       maybeParent .= Nothing
-      parents %= drop 1
+      parents %= drop1
     _ -> pure ()
 
 processBlocks :: [Block a] -> MarkdownM Collection

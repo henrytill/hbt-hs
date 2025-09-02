@@ -172,7 +172,7 @@ handle (TagText str) =
 handle CloseDL = do
   hasAttrs <- uses attributes (not . null)
   when hasAttrs addPending
-  folderStack %= drop 1
+  folderStack %= drop1
 handle _ = pure ()
 
 process :: [Tag Text] -> NetscapeM Collection

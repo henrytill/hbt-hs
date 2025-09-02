@@ -33,6 +33,9 @@ module Hbt.Parser.Common
     -- * Parser monad
   , ParserMonad
   , runParserMonad
+
+    -- * Misc
+  , drop1
   )
 where
 
@@ -128,3 +131,7 @@ type ParserMonad s e = StateT s (Either e)
 
 runParserMonad :: ParserMonad s e a -> s -> Either e (a, s)
 runParserMonad = State.runStateT
+
+drop1 :: [a] -> [a]
+drop1 [] = []
+drop1 (_ : xs) = xs
