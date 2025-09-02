@@ -94,6 +94,7 @@ runMarkdownM (MkMarkdownM m) = runParserMonad m
 liftEitherWith :: (a -> Error) -> Either a b -> MarkdownM b
 liftEitherWith f ma = Except.liftEither (Bifunctor.first f ma)
 
+-- It's okay to write point-free code here
 saveEntity :: MarkdownM ()
 saveEntity = do
   st0 <- use id
@@ -128,6 +129,7 @@ textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input)
         Initial.Code t -> "`" <> Builder.fromText t <> "`"
         Initial.RawInline _ t -> Builder.fromText t
 
+-- It's okay to write point-free code here
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
 extractLink dest _title desc = do
   uri <- liftEitherWith fromEntityError (Entity.mkURI dest)

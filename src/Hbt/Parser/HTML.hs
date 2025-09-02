@@ -134,6 +134,7 @@ createEntity attrs folders name ext = do
         then Left (ParseError "missing required attribute: href")
         else pure finalEntity
 
+-- It's okay to write point-free code here
 addPending :: NetscapeM ()
 addPending = do
   entity <- Except.liftEither =<< createEntity <$> use attributes <*> use folderStack <*> use maybeDescription <*> use maybeExtended

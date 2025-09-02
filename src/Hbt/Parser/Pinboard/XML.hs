@@ -83,8 +83,7 @@ process :: [Tag Text] -> PinboardM Collection
 process tags = do
   mapM_ handle tags
   collectedEntities <- use entities
-  let finalCollection = Collection.fromEntities collectedEntities
-  collection .= finalCollection
+  collection .= Collection.fromEntities collectedEntities
   use collection
 
 parse :: Text -> Either Error Collection
