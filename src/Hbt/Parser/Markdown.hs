@@ -19,7 +19,7 @@ import Hbt.Collection (Collection, Id)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity, Label (..), Name (..), Time, URI)
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Parser.Common (IsNull (..), ParserMonad, parseFileWithParser, runParserMonad)
+import Hbt.Parser.Common (IsNull (..), ParserMonad, runParserMonad)
 import Lens.Family2
 import Lens.Family2.State.Strict
 
@@ -180,6 +180,3 @@ parse parseName input = do
   blocks <- Bifunctor.first ParseError (parseBlocks parseName input)
   (ret, _) <- runMarkdownM (processBlocks blocks) empty
   pure ret
-
-parseFile :: FilePath -> IO (Either Error Collection)
-parseFile filepath = parseFileWithParser (parse filepath) filepath

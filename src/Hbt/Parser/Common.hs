@@ -29,7 +29,6 @@ module Hbt.Parser.Common
     -- * Helper functions
   , matchAttr
   , matchAttrTagList
-  , parseFileWithParser
 
     -- * Parser monad
   , ParserMonad
@@ -41,16 +40,12 @@ import Control.Monad.State.Strict (StateT)
 import Control.Monad.State.Strict qualified as State
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.IO qualified as Text
 import Hbt.Collection.Entity (URI (..))
 import Network.URI qualified as URI
 import Text.HTML.TagSoup (Attribute)
 
 class IsNull s where
   isNull :: s -> Bool
-
-instance IsNull [a] where
-  isNull = null
 
 instance IsNull Text where
   isNull = Text.null
@@ -128,11 +123,6 @@ matchAttrTagList (attrKey, attrValue)
   | Text.toLower attrKey == "tag" = Just (parseTagStringWith " " attrValue)
   | Text.toLower attrKey == "tags" = Just (parseTagStringWith "," attrValue)
   | otherwise = Nothing
-
-parseFileWithParser :: (Text -> Either e a) -> FilePath -> IO (Either e a)
-parseFileWithParser parser filepath = do
-  content <- Text.readFile filepath
-  pure (parser content)
 
 type ParserMonad s e = StateT s (Either e)
 

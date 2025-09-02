@@ -92,6 +92,3 @@ parse input = do
   let tags = TagSoup.parseTags input
   (ret, _) <- runPinboardM (process tags) empty
   pure ret
-
-parseFile :: FilePath -> IO (Either Error Collection)
-parseFile = parseFileWithParser parse

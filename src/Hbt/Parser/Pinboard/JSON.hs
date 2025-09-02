@@ -7,7 +7,6 @@ import Data.Text.Encoding qualified as Text
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Parser.Common (parseFileWithParser)
 import Hbt.Parser.Pinboard.Common (PinboardPost, postToEntity)
 
 data Error
@@ -29,6 +28,3 @@ parse :: Text -> Either Error Collection
 parse input = do
   posts <- Bifunctor.first ParseError (Aeson.eitherDecodeStrict (Text.encodeUtf8 input))
   postsToCollection posts
-
-parseFile :: FilePath -> IO (Either Error Collection)
-parseFile = parseFileWithParser parse

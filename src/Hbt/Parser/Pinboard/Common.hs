@@ -30,7 +30,7 @@ import Hbt.Collection.Entity qualified as Entity
 import Hbt.Parser.Common (IsNull (..), pattern Null)
 
 newtype PinboardBool = MkPinboardBool Text
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq)
 
 pattern PinboardTrue :: PinboardBool
 pattern PinboardTrue = MkPinboardBool "yes"

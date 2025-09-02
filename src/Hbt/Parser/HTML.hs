@@ -28,10 +28,6 @@ data Error
   | ParseError String
   deriving (Show, Eq)
 
-fromEntityError :: Entity.Error -> Error
-fromEntityError (Entity.InvalidURI s) = EntityInvalidURI s
-fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
-
 pattern OpenH3 :: [Attribute Text] -> Tag Text
 pattern OpenH3 attrs <- TagOpen (Text.toLower -> "h3") attrs
 
@@ -188,6 +184,3 @@ parse input = do
   let tags = TagSoup.parseTags input
   (ret, _) <- runNetscapeM (process tags) empty
   pure ret
-
-parseFile :: FilePath -> IO (Either Error Collection)
-parseFile = parseFileWithParser parse
