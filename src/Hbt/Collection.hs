@@ -4,14 +4,15 @@
 module Hbt.Collection
   ( Id (value)
   , Error (..)
-  , Collection (..)
+  , Collection
   , empty
   , fromEntities
   , length
   , null
+  , entityAt
+  , edgesAt
   , lookupId
   , lookupEntity
-  , entityAt
   , allEntities
   , insert
   , upsert
@@ -40,9 +41,11 @@ import Prelude hiding (elem, id, length, null)
 newtype Error = MissingEntities [Id]
   deriving (Show, Eq)
 
+type Edges = Vector Id
+
 data Collection = MkCollection
   { nodes :: Vector Entity
-  , edges :: Vector (Vector Id)
+  , edges :: Vector Edges
   , uris :: Map URI Id
   }
   deriving (Eq, Show)
@@ -56,16 +59,19 @@ length collection = Vector.length collection.nodes
 null :: Collection -> Bool
 null collection = Vector.null collection.nodes
 
+entityAt :: Id -> Collection -> Entity
+entityAt id collection = collection.nodes ! id.value
+
+edgesAt :: Id -> Collection -> Edges
+edgesAt id collection = collection.edges ! id.value
+
 lookupId :: URI -> Collection -> Maybe Id
 lookupId uri collection = Map.lookup uri collection.uris
 
 lookupEntity :: URI -> Collection -> Maybe Entity
 lookupEntity uri collection = do
   id <- lookupId uri collection
-  pure (collection.nodes ! id.value)
-
-entityAt :: Id -> Collection -> Entity
-entityAt id collection = collection.nodes ! id.value
+  pure (entityAt id collection)
 
 allEntities :: Collection -> Vector Entity
 allEntities collection = collection.nodes
@@ -101,7 +107,7 @@ addEdge from to collection =
         (False, True) -> Left (MissingEntities [from])
         (True, False) -> Left (MissingEntities [to])
         (True, True) ->
-          let fromEdges = collection.edges ! from.value
+          let fromEdges = edgesAt from collection
               newFromEdges = if to `elem` fromEdges then fromEdges else Vector.snoc fromEdges to
               edges = collection.edges // [(from.value, newFromEdges)]
            in Right (collection {Hbt.Collection.edges = edges}) -- lame. are we allowing duplicate records fields or not GHC?
@@ -109,14 +115,16 @@ addEdge from to collection =
 addEdges :: Id -> Id -> Collection -> Either Error Collection
 addEdges from to collection = addEdge from to collection >>= addEdge to from
 
-mkSerializedNode :: Vector (Vector Id) -> Id -> Entity -> SerializedNode
-mkSerializedNode edges id entity = MkSerializedNode {id, entity, edges = edges ! id.value}
+mkSerializedNode :: Collection -> Id -> Entity -> SerializedNode
+mkSerializedNode collection id entity =
+  let edges = edgesAt id collection
+   in MkSerializedNode {id, entity, edges}
 
 toSerialized :: Collection -> SerializedCollection
 toSerialized collection =
   let version = "0.1.0"
       length = Vector.length collection.nodes
-      value = Vector.imap (mkSerializedNode collection.edges . MkId) collection.nodes
+      value = Vector.imap (mkSerializedNode collection . MkId) collection.nodes
    in MkSerializedCollection {version, length, value}
 
 fromSerialized :: SerializedCollection -> Collection

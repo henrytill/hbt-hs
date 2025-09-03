@@ -5,7 +5,6 @@ module Hbt.CollectionTest (results) where
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
-import Data.Vector ((!))
 import Data.Vector qualified as Vector
 import Hbt.Collection
 import Hbt.Collection.Entity (Entity (..), Label (..), Name (..), Time (..), URI, nullURI)
@@ -128,8 +127,6 @@ emptyCollectionTests =
     "Empty collection"
     [ assertBool "empty collection is null" $ null empty
     , assertEqual "empty collection has zero length" 0 $ length empty
-    , assertBool "empty collection has empty nodes vector" $ Vector.null empty.nodes
-    , assertBool "empty collection has empty edges vector" $ Vector.null empty.edges
     ]
 
 insertTests :: Test
@@ -223,15 +220,15 @@ edgeTests =
       (id2, collection2) = insert entity2 collection1
 
       collectionWithEdge = safeAddEdge id1 id2 collection2
-      edgesFromId1 = (collectionWithEdge.edges ! id1.value)
-      edgesFromId2 = (collectionWithEdge.edges ! id2.value)
+      edgesFromId1 = edgesAt id1 collectionWithEdge
+      edgesFromId2 = edgesAt id2 collectionWithEdge
 
       collectionWithDuplicateEdge = safeAddEdge id1 id2 collectionWithEdge
-      edgesFromId1AfterDuplicate = (collectionWithDuplicateEdge.edges ! id1.value)
+      edgesFromId1AfterDuplicate = edgesAt id1 collectionWithDuplicateEdge
 
       collectionWithBidirectionalEdges = safeAddEdges id1 id2 collection2
-      bidirectionalEdgesFromId1 = (collectionWithBidirectionalEdges.edges ! id1.value)
-      bidirectionalEdgesFromId2 = (collectionWithBidirectionalEdges.edges ! id2.value)
+      bidirectionalEdgesFromId1 = edgesAt id1 collectionWithBidirectionalEdges
+      bidirectionalEdgesFromId2 = edgesAt id2 collectionWithBidirectionalEdges
    in group
         "Edge operations"
         [ assertBool "ids are different for edge tests" $ entity1.uri /= entity2.uri
