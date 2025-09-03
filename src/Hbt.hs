@@ -77,13 +77,13 @@ parseWith HTML input = Bifunctor.first SomeParseError (HTMLParser.parse input)
 type SomeFormatError = SomeException
 
 withFormatError :: IO Text -> IO (Either SomeFormatError Text)
-withFormatError action =
-  let handler :: SomeException -> IO (Either SomeException a)
-      handler e = pure (Left e)
-   in Exception.handle handler (fmap Right action)
+withFormatError action = Exception.handle (pure . Left) (fmap Right action)
+
+mustacheFile :: String
+mustacheFile = "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
 
 formatWith :: Format To -> Collection -> IO (Either SomeFormatError Text)
 formatWith YAML collection = pure (Right (Text.decodeUtf8 (YamlPretty.encodePretty Collection.yamlConfig collection)))
 formatWith HTML collection = withFormatError $ do
-  template <- Microstache.compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
+  template <- Microstache.compileMustacheFile mustacheFile
   pure (HTMLFormatter.format template collection)
