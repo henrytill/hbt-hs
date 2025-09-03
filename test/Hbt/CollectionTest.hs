@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Hbt.CollectionTest where
+module Hbt.CollectionTest (results) where
 
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set

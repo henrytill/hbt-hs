@@ -1,4 +1,8 @@
-module TestUtilities where
+module TestUtilities
+  ( addContext
+  , testResults
+  )
+where
 
 import Data.Bifunctor (first)
 import Test.Dwergaz

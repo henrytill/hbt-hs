@@ -13,7 +13,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
-import Hbt (Flow (..), Format (..), InputFormat, OutputFormat, allInputFormats, allOutputFormats, formatWith, parseWith)
+import Hbt (Flow (..), Format (..), InputFormat, OutputFormat, allInputFormats, allOutputFormats, formatWith, parseWith, toString)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Label (..))
@@ -55,13 +55,6 @@ defaultOptions =
     , mappingsFile = Nothing
     , showHelp = False
     }
-
-toString :: Format f -> String
-toString HTML = "html"
-toString JSON = "json"
-toString XML = "xml"
-toString Markdown = "markdown"
-toString YAML = "yaml"
 
 class FormatFlow (f :: Flow) where
   -- | Get all format constructors for this flow direction

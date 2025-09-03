@@ -10,6 +10,7 @@ module Hbt
   , allOutputFormats
   , parseWith
   , formatWith
+  , toString
   , SomeParseError (..)
   , SomeFormatError
   )
@@ -43,6 +44,8 @@ deriving instance Show (Format f)
 
 deriving instance Eq (Format f)
 
+deriving instance Ord (Format f)
+
 type InputFormat = Format From
 
 type OutputFormat = Format To
@@ -52,6 +55,13 @@ allInputFormats = [JSON, XML, Markdown, HTML]
 
 allOutputFormats :: [OutputFormat]
 allOutputFormats = [HTML, YAML]
+
+toString :: Format f -> String
+toString JSON = "json"
+toString XML = "xml"
+toString Markdown = "markdown"
+toString HTML = "html"
+toString YAML = "yaml"
 
 data SomeParseError = forall e. (Show e) => SomeParseError e
 
