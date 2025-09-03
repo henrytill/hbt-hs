@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Hbt.Collection
-  ( Id (..)
+  ( Id (value)
   , Error (..)
   , Collection (..)
   , empty
