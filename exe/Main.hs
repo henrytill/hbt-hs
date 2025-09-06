@@ -16,7 +16,7 @@ import Data.Vector qualified as Vector
 import Hbt (Flow (..), Format (..), InputFormat, OutputFormat, allInputFormats, allOutputFormats, formatWith, parseWith, toString)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Collection.Entity (Entity (..), Label (..))
+import Hbt.Entity (Entity (..), Label (..))
 import Lens.Family2 (Lens', set)
 import System.Console.GetOpt
 import System.Environment qualified as Environment

@@ -34,7 +34,7 @@ library
     exposed-modules:
         Hbt
         Hbt.Collection
-        Hbt.Collection.Entity
+        Hbt.Entity
         Hbt.Formatter.HTML
         Hbt.Parser
         Hbt.Parser.HTML

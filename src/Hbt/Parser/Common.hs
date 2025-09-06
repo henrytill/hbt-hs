@@ -43,7 +43,7 @@ import Control.Monad.State.Strict (StateT)
 import Control.Monad.State.Strict qualified as State
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Hbt.Collection.Entity (URI (..), nullURI)
+import Hbt.Entity (URI (..), nullURI)
 import Text.HTML.TagSoup (Attribute)
 
 class IsNull s where

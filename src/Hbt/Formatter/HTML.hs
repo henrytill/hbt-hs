@@ -19,7 +19,7 @@ import Data.Vector qualified as Vector
 import GHC.Generics (Generic)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Collection.Entity (Entity (..), Extended (..), Label (..), Name (..), Time (..), URI (..))
+import Hbt.Entity (Entity (..), Extended (..), Label (..), Name (..), Time (..), URI (..))
 import Text.Microstache (Template)
 import Text.Microstache qualified as Microstache
 import URI.ByteString qualified as URI

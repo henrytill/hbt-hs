@@ -32,10 +32,10 @@ import Data.Maybe qualified as Maybe
 import Data.Vector (Vector, elem, (!), (//))
 import Data.Vector qualified as Vector
 import Data.Yaml.Pretty qualified as YamlPretty
-import Hbt.Collection.Entity (Entity (..), URI)
-import Hbt.Collection.Entity qualified as Entity
 import Hbt.Collection.Id (Id (..))
 import Hbt.Collection.Serialized (SerializedCollection (..), SerializedNode (..))
+import Hbt.Entity (Entity (..), URI)
+import Hbt.Entity qualified as Entity
 import Prelude hiding (elem, id, length, null)
 
 newtype Error = MissingEntities [Id]

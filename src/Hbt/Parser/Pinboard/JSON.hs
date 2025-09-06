@@ -6,7 +6,7 @@ import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Collection.Entity qualified as Entity
+import Hbt.Entity qualified as Entity
 import Hbt.Parser.Pinboard.Common (PinboardPost, postToEntity)
 import URI.ByteString (URIParseError)
 

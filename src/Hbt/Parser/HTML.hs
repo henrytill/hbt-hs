@@ -14,8 +14,8 @@ import Data.Text qualified as Text
 import Data.Text.Read qualified as Read
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Collection.Entity (Entity (..), Time)
-import Hbt.Collection.Entity qualified as Entity
+import Hbt.Entity (Entity (..), Time)
+import Hbt.Entity qualified as Entity
 import Hbt.Parser.Common (IsNull (..), ParserMonad, drop1, runParserMonad, pattern Null)
 import Lens.Family2
 import Lens.Family2.State.Strict

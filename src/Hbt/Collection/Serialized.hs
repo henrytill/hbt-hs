@@ -3,8 +3,8 @@ module Hbt.Collection.Serialized where
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Vector (Vector)
 import GHC.Generics (Generic)
-import Hbt.Collection.Entity (Entity)
 import Hbt.Collection.Id (Id)
+import Hbt.Entity (Entity)
 
 data SerializedNode = MkSerializedNode
   { id :: Id

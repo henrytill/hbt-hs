@@ -8,8 +8,8 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Collection.Entity (Entity)
-import Hbt.Collection.Entity qualified as Entity
+import Hbt.Entity (Entity)
+import Hbt.Entity qualified as Entity
 import Hbt.Parser.Common
 import Hbt.Parser.Pinboard.Common
 import Lens.Family2

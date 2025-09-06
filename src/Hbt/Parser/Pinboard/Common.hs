@@ -21,8 +21,8 @@ import Data.Text qualified as Text
 import Data.Time.Clock.POSIX qualified as POSIX
 import Data.Time.Format qualified as Format
 import GHC.Generics (Generic)
-import Hbt.Collection.Entity (Entity, Extended (..), Label (..), Name (..), Time (..))
-import Hbt.Collection.Entity qualified as Entity
+import Hbt.Entity (Entity, Extended (..), Label (..), Name (..), Time (..))
+import Hbt.Entity qualified as Entity
 import Hbt.Parser.Common (IsNull (..), pattern Null)
 
 newtype PinboardBool = MkPinboardBool Text

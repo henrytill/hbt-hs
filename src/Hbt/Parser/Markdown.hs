@@ -17,8 +17,8 @@ import Data.Text.Lazy.Builder (Builder)
 import Data.Text.Lazy.Builder qualified as Builder
 import Hbt.Collection (Collection, Id)
 import Hbt.Collection qualified as Collection
-import Hbt.Collection.Entity (Entity, Label (..), Name (..), Time, URI)
-import Hbt.Collection.Entity qualified as Entity
+import Hbt.Entity (Entity, Label (..), Name (..), Time, URI)
+import Hbt.Entity qualified as Entity
 import Hbt.Parser.Common (IsNull (..), ParserMonad, drop1, runParserMonad)
 import Lens.Family2
 import Lens.Family2.State.Strict

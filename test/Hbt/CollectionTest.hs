@@ -7,8 +7,8 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Vector qualified as Vector
 import Hbt.Collection
-import Hbt.Collection.Entity (Entity (..), Label (..), Name (..), Time (..), URI, nullURI)
-import Hbt.Collection.Entity qualified as Entity
+import Hbt.Entity (Entity (..), Label (..), Name (..), Time (..), URI, nullURI)
+import Hbt.Entity qualified as Entity
 import Test.Dwergaz
 import TestUtilities (testResults)
 import Prelude hiding (length, null)

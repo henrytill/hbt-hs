@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Hbt.Collection.Entity
+module Hbt.Entity
   ( Error (..)
   , URI (..)
   , mkURI
