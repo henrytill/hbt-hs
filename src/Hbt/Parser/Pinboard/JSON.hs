@@ -8,9 +8,10 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity qualified as Entity
 import Hbt.Parser.Pinboard.Common (PinboardPost, postToEntity)
+import URI.ByteString (URIParseError)
 
 data Error
-  = EntityInvalidURI Text
+  = EntityInvalidURI URIParseError
   | EntityInvalidTime Text
   | ParseError String
   deriving (Show, Eq)

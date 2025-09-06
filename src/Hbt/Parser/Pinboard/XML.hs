@@ -16,9 +16,10 @@ import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.TagSoup (Attribute, Tag (..))
 import Text.HTML.TagSoup qualified as TagSoup
+import URI.ByteString (URIParseError)
 
 data Error
-  = EntityInvalidURI Text
+  = EntityInvalidURI URIParseError
   | EntityInvalidTime Text
   | ParseError String
   deriving (Show, Eq)

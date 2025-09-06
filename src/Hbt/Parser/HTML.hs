@@ -4,7 +4,7 @@
 
 module Hbt.Parser.HTML where
 
-import Control.Monad (forM_, when)
+import Control.Monad (foldM, forM_, when)
 import Control.Monad.Except (MonadError)
 import Control.Monad.Except qualified as Except
 import Data.Maybe qualified as Maybe
@@ -20,12 +20,17 @@ import Hbt.Parser.Common (IsNull (..), ParserMonad, drop1, runParserMonad, patte
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
+import URI.ByteString (URIParseError)
 
 data Error
-  = EntityInvalidURI Text
+  = EntityInvalidURI URIParseError
   | EntityInvalidTime Text
   | ParseError String
   deriving (Show, Eq)
+
+fromEntityError :: Entity.Error -> Error
+fromEntityError (Entity.InvalidURI s) = EntityInvalidURI s
+fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
 
 isTagName :: Text -> Text -> Bool
 isTagName expected actual = Text.toLower expected == Text.toLower actual
@@ -104,31 +109,31 @@ parseTimestamp str =
     Right (timestamp, Null) -> Just (Entity.MkTime (fromInteger timestamp))
     Right {} -> Nothing
 
-accumulateEntityAttr :: Entity -> Attr -> Entity
+accumulateEntityAttr :: Entity -> Attr -> Either Error Entity
 accumulateEntityAttr entity (Attr name value) =
   case Text.toLower name of
     "href" -> case Entity.mkURI value of
-      Left _ -> entity
-      Right uri -> entity {uri}
-    "add_date" -> entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)}
-    "last_modified" -> entity {updatedAt = Maybe.maybeToList (parseTimestamp value)}
-    "last_visit" -> entity {lastVisitedAt = parseTimestamp value}
+      Left err -> Left (fromEntityError err)
+      Right uri -> Right entity {uri}
+    "add_date" -> Right entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)}
+    "last_modified" -> Right entity {updatedAt = Maybe.maybeToList (parseTimestamp value)}
+    "last_visit" -> Right entity {lastVisitedAt = parseTimestamp value}
     "tags" ->
       let tagList = Text.splitOn "," value
           newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") tagList))
           toRead = entity.toRead || "toread" `elem` tagList
           labels = Set.union entity.labels newLabels
-       in entity {labels, toRead}
-    "private" -> entity {shared = value /= "1"}
-    "toread" -> entity {toRead = value == "1"}
-    "feed" -> entity {isFeed = value == "true"}
-    _ -> entity
+       in Right entity {labels, toRead}
+    "private" -> Right entity {shared = value /= "1"}
+    "toread" -> Right entity {toRead = value == "1"}
+    "feed" -> Right entity {isFeed = value == "true"}
+    _ -> Right entity
 
 createEntity :: [Attr] -> [Text] -> Maybe Text -> Maybe Text -> Either Error Entity
 createEntity attrs folders name ext = do
   let startEntity = Entity.empty {shared = True} -- Default to shared in HTML context
-      accumulated = foldl' accumulateEntityAttr startEntity attrs
-      names = maybe Set.empty (Set.singleton . Entity.MkName) name
+  accumulated <- foldM accumulateEntityAttr startEntity attrs
+  let names = maybe Set.empty (Set.singleton . Entity.MkName) name
       folderLabels = Set.fromList (map Entity.MkLabel (reverse folders))
       allLabels = Set.unions [accumulated.labels, folderLabels]
       extended = fmap Entity.MkExtended ext

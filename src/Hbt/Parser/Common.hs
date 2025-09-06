@@ -43,8 +43,7 @@ import Control.Monad.State.Strict (StateT)
 import Control.Monad.State.Strict qualified as State
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Hbt.Collection.Entity (URI (..))
-import Network.URI qualified as URI
+import Hbt.Collection.Entity (URI (..), nullURI)
 import Text.HTML.TagSoup (Attribute)
 
 class IsNull s where
@@ -53,11 +52,8 @@ class IsNull s where
 instance IsNull Text where
   isNull = Text.null
 
-instance IsNull URI.URI where
-  isNull uri = uri == URI.nullURI
-
 instance IsNull URI where
-  isNull (MkURI uri) = isNull uri
+  isNull uri = uri == nullURI
 
 pattern Null :: (IsNull s, Monoid s) => s
 pattern Null <- (isNull -> True)

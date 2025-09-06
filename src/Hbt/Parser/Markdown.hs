@@ -22,9 +22,10 @@ import Hbt.Collection.Entity qualified as Entity
 import Hbt.Parser.Common (IsNull (..), ParserMonad, drop1, runParserMonad)
 import Lens.Family2
 import Lens.Family2.State.Strict
+import URI.ByteString (URIParseError)
 
 data Error
-  = EntityInvalidURI Text
+  = EntityInvalidURI URIParseError
   | EntityInvalidTime Text
   | CollectionMissingEntities [Id]
   | NoSaveableEntity

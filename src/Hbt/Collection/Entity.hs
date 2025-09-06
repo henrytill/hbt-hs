@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Collection.Entity
@@ -18,47 +19,64 @@ module Hbt.Collection.Entity
   )
 where
 
+import Control.Applicative ((<|>))
+import Control.Monad.Except (liftEither, runExcept)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
+import Data.Bifunctor qualified as Bifunctor
 import Data.List qualified as List
 import Data.Maybe qualified as Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text.Encoding
 import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Time.Clock.POSIX qualified as POSIX
 import Data.Time.Format qualified as Format
-import Network.URI qualified as URI
+import URI.ByteString (URIParseError)
+import URI.ByteString qualified as URI
 import Prelude hiding (id)
 
 data Error
-  = InvalidURI Text
+  = InvalidURI URIParseError
   | InvalidTime Text
   deriving (Show, Eq)
 
-newtype URI = MkURI {unURI :: URI.URI}
+newtype URI = MkURI {unURI :: URI.URIRef URI.Absolute}
   deriving (Show, Eq, Ord)
 
 nullURI :: URI
-nullURI = MkURI URI.nullURI
+nullURI = MkURI $ URI.URI (URI.Scheme "") Nothing "" (URI.Query []) Nothing
 
-normalizeURI :: URI.URI -> URI.URI
+translate :: Text -> Text
+translate uriText =
+  let (beforeQuery, afterQuery) = Text.breakOn "?" uriText
+   in if Text.null afterQuery
+        then uriText
+        else beforeQuery <> Text.replace ";" "&" afterQuery
+
+normalizeURI :: URI.URIRef URI.Absolute -> URI.URIRef URI.Absolute
 normalizeURI uri
-  | URI.uriScheme uri `elem` ["http:", "https:"]
-  , null (URI.uriPath uri)
+  | URI.schemeBS (URI.uriScheme uri) `elem` ["http", "https"]
+  , URI.uriPath uri == mempty
   , Maybe.isJust (URI.uriAuthority uri) =
       uri {URI.uriPath = "/"}
   | otherwise = uri
 
 mkURI :: Text -> Either Error URI
 mkURI s =
-  case URI.parseURI (Text.unpack s) of
-    Nothing -> Left (InvalidURI s)
-    Just uri -> Right (MkURI (normalizeURI uri))
+  let parse text = URI.parseURI URI.laxURIParserOptions (Text.Encoding.encodeUtf8 text)
+      liftedParse text = liftEither (Bifunctor.first (: []) (parse text))
+      tryOriginal = liftedParse s
+      tryTranslated = liftedParse (translate s)
+   in case runExcept (tryOriginal <|> tryTranslated) of
+        Left [] -> error "Impossible: both URI parsing attempts failed but no errors recorded"
+        Left (err : _) -> Left (InvalidURI err)
+        Right uri -> Right (MkURI (normalizeURI uri))
 
 instance ToJSON URI where
-  toJSON (MkURI uri) = toJSON (show uri)
+  toJSON (MkURI uri) = toJSON (Text.Encoding.decodeUtf8 (URI.serializeURIRef' uri))
 
 instance FromJSON URI where
   parseJSON = Aeson.withText "URI" $ \t ->
@@ -170,7 +188,7 @@ mkEntity uri createdAt maybeName labels =
 empty :: Entity
 empty =
   MkEntity
-    { uri = MkURI URI.nullURI
+    { uri = nullURI
     , createdAt = epoch
     , updatedAt = []
     , names = Set.empty

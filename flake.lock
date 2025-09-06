@@ -71,7 +71,8 @@
         "commonmark-initial-src": "commonmark-initial-src",
         "dwergaz-src": "dwergaz-src",
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "uri-bytestring-src": "uri-bytestring-src"
       }
     },
     "systems": {
@@ -86,6 +87,23 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "uri-bytestring-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1744302868,
+        "narHash": "sha256-U/IATDnWGAYUvBK07xCHzbYUg82oYK+4PbNvtSz5S4E=",
+        "owner": "Soostone",
+        "repo": "uri-bytestring",
+        "rev": "f2f3b5e0897bb18d4e884b1cb0ac20ccefd6618f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Soostone",
+        "ref": "0.4.0.1",
+        "repo": "uri-bytestring",
         "type": "github"
       }
     }

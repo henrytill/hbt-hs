@@ -11,6 +11,10 @@
       url = "github:henrytill/dwergaz";
       flake = false;
     };
+    uri-bytestring-src = {
+      url = "github:Soostone/uri-bytestring/0.4.0.1";
+      flake = false;
+    };
   };
 
   nixConfig = {
@@ -27,6 +31,7 @@
       flake-utils,
       commonmark-initial-src,
       dwergaz-src,
+      uri-bytestring-src,
       ...
     }:
     let
@@ -38,6 +43,7 @@
               overrides = hfinal: hprev: {
                 commonmark-initial = hfinal.callCabal2nix "commonmark-initial" commonmark-initial-src { };
                 dwergaz = hfinal.callCabal2nix "dwergaz" dwergaz-src { };
+                uri-bytestring = hfinal.callCabal2nix "uri-bytestring" uri-bytestring-src { };
                 hbt = hfinal.callCabal2nix "hbt" (builtins.path {
                   path = ./.;
                   name = "hbt-src";
