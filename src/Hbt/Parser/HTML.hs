@@ -16,11 +16,10 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Collection.Entity (Entity (..), Time)
 import Hbt.Collection.Entity qualified as Entity
-import Hbt.Parser.Common
+import Hbt.Parser.Common (IsNull (..), ParserMonad, drop1, runParserMonad, pattern Null)
 import Lens.Family2
 import Lens.Family2.State.Strict
-import Text.HTML.TagSoup (Attribute, Tag (..))
-import Text.HTML.TagSoup qualified as TagSoup
+import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
 
 data Error
   = EntityInvalidURI Text
@@ -28,20 +27,23 @@ data Error
   | ParseError String
   deriving (Show, Eq)
 
-pattern OpenH3 :: [Attribute Text] -> Tag Text
-pattern OpenH3 attrs <- TagOpen (Text.toLower -> "h3") attrs
+isTagName :: Text -> Text -> Bool
+isTagName expected actual = Text.toLower expected == Text.toLower actual
 
-pattern OpenDT :: [Attribute Text] -> Tag Text
-pattern OpenDT attrs <- TagOpen (Text.toLower -> "dt") attrs
+pattern OpenH3 :: [Attr] -> Token
+pattern OpenH3 attrs <- TagOpen (isTagName "h3" -> True) attrs
 
-pattern OpenA :: [Attribute Text] -> Tag Text
-pattern OpenA attrs <- TagOpen (Text.toLower -> "a") attrs
+pattern OpenDT :: [Attr] -> Token
+pattern OpenDT attrs <- TagOpen (isTagName "dt" -> True) attrs
 
-pattern OpenDD :: [Attribute Text] -> Tag Text
-pattern OpenDD attrs <- TagOpen (Text.toLower -> "dd") attrs
+pattern OpenA :: [Attr] -> Token
+pattern OpenA attrs <- TagOpen (isTagName "a" -> True) attrs
 
-pattern CloseDL :: Tag Text
-pattern CloseDL <- TagClose (Text.toLower -> "dl")
+pattern OpenDD :: [Attr] -> Token
+pattern OpenDD attrs <- TagOpen (isTagName "dd" -> True) attrs
+
+pattern CloseDL :: Token
+pattern CloseDL <- TagClose (isTagName "dl" -> True)
 
 data WaitingFor
   = FolderName
@@ -54,7 +56,7 @@ data ParseState = MkParseState
   { collection :: Collection
   , maybeDescription :: Maybe Text
   , maybeExtended :: Maybe Text
-  , attributes :: [Attribute Text]
+  , attributes :: [Attr]
   , folderStack :: [Text]
   , waitingFor :: WaitingFor
   }
@@ -80,7 +82,7 @@ maybeDescription f s = (\d -> s {maybeDescription = d}) <$> f s.maybeDescription
 maybeExtended :: Lens' ParseState (Maybe Text)
 maybeExtended f s = (\e -> s {maybeExtended = e}) <$> f s.maybeExtended
 
-attributes :: Lens' ParseState [Attribute Text]
+attributes :: Lens' ParseState [Attr]
 attributes f s = (\as -> s {attributes = as}) <$> f s.attributes
 
 folderStack :: Lens' ParseState [Text]
@@ -102,26 +104,27 @@ parseTimestamp str =
     Right (timestamp, Null) -> Just (Entity.MkTime (fromInteger timestamp))
     Right {} -> Nothing
 
-accumulateEntityAttr :: Entity -> Attribute Text -> Entity
-accumulateEntityAttr entity attr =
-  case attr of
-    Href value -> case Entity.mkURI value of
+accumulateEntityAttr :: Entity -> Attr -> Entity
+accumulateEntityAttr entity (Attr name value) =
+  case Text.toLower name of
+    "href" -> case Entity.mkURI value of
       Left _ -> entity
       Right uri -> entity {uri}
-    AddDate value -> entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)}
-    LastModified value -> entity {updatedAt = Maybe.maybeToList (parseTimestamp value)}
-    LastVisit value -> entity {lastVisitedAt = parseTimestamp value}
-    Tags values ->
-      let newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") values))
-          toRead = entity.toRead || "toread" `elem` values
+    "add_date" -> entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)}
+    "last_modified" -> entity {updatedAt = Maybe.maybeToList (parseTimestamp value)}
+    "last_visit" -> entity {lastVisitedAt = parseTimestamp value}
+    "tags" ->
+      let tagList = Text.splitOn "," value
+          newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") tagList))
+          toRead = entity.toRead || "toread" `elem` tagList
           labels = Set.union entity.labels newLabels
        in entity {labels, toRead}
-    Private One -> entity {shared = False}
-    ToRead One -> entity {toRead = True}
-    Feed STrue -> entity {isFeed = True}
+    "private" -> entity {shared = value /= "1"}
+    "toread" -> entity {toRead = value == "1"}
+    "feed" -> entity {isFeed = value == "true"}
     _ -> entity
 
-createEntity :: [Attribute Text] -> [Text] -> Maybe Text -> Maybe Text -> Either Error Entity
+createEntity :: [Attr] -> [Text] -> Maybe Text -> Maybe Text -> Either Error Entity
 createEntity attrs folders name ext = do
   let startEntity = Entity.empty {shared = True} -- Default to shared in HTML context
       accumulated = foldl' accumulateEntityAttr startEntity attrs
@@ -142,7 +145,7 @@ addPending = do
   maybeDescription .= Nothing
   maybeExtended .= Nothing
 
-handle :: Tag Text -> NetscapeM ()
+handle :: Token -> NetscapeM ()
 handle (OpenH3 _) =
   waitingFor .= FolderName
 handle (OpenDT _) = do
@@ -154,7 +157,7 @@ handle (OpenA attrs) = do
 handle (OpenDD _) = do
   hasAttrs <- uses attributes (not . null)
   when hasAttrs $ waitingFor .= ExtendedDescription
-handle (TagText str) =
+handle (ContentText str) =
   use waitingFor >>= \w ->
     case w of
       FolderName -> do
@@ -175,11 +178,11 @@ handle CloseDL = do
   folderStack %= drop1
 handle _ = pure ()
 
-process :: [Tag Text] -> NetscapeM Collection
-process tags = forM_ tags handle >> use collection
+process :: [Token] -> NetscapeM Collection
+process tokens = forM_ tokens handle >> use collection
 
 parse :: Text -> Either Error Collection
 parse input = do
-  let tags = TagSoup.parseTags input
-  (ret, _) <- runNetscapeM (process tags) empty
+  let tokens = parseTokens input
+  (ret, _) <- runNetscapeM (process tokens) empty
   pure ret
