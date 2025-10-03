@@ -20,16 +20,16 @@ import System.Directory (listDirectory)
 import System.FilePath (takeBaseName, (</>))
 import Text.Microstache (Template, compileMustacheFile)
 
-baseDir :: String
-baseDir = "test/data"
+baseDir :: FilePath
+baseDir = "test" </> "data"
 
-htmlDir :: String
+htmlDir :: FilePath
 htmlDir = baseDir </> "html"
 
-markdownDir :: String
+markdownDir :: FilePath
 markdownDir = baseDir </> "markdown"
 
-pinboardDir :: String
+pinboardDir :: FilePath
 pinboardDir = baseDir </> "pinboard"
 
 readText :: FilePath -> IO Text
@@ -37,7 +37,7 @@ readText path = do
   bytes <- BS.readFile path
   pure (Text.Encoding.decodeUtf8With Text.Error.lenientDecode bytes)
 
-discover :: String -> String -> IO [String]
+discover :: FilePath -> String -> IO [String]
 discover dir suffix = do
   allFiles <- listDirectory dir
   let inputFiles = [f | f <- allFiles, suffix `isSuffixOf` f]
