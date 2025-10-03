@@ -144,7 +144,13 @@ createEntity attrs folders name ext = do
 
 addPending :: NetscapeM ()
 addPending = do
-  entity <- Except.liftEither =<< createEntity <$> use attributes <*> use folderStack <*> use maybeDescription <*> use maybeExtended
+  let entityOrError =
+        createEntity
+          <$> use attributes
+          <*> use folderStack
+          <*> use maybeDescription
+          <*> use maybeExtended
+  entity <- Except.liftEither =<< entityOrError
   collection %= snd . Collection.upsert entity
   attributes .= []
   maybeDescription .= Nothing
