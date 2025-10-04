@@ -1,5 +1,3 @@
-{-# LANGUAGE GADTs #-}
-
 module TestData
   ( HtmlParserTestCase (..)
   , MarkdownParserTestCase (..)
