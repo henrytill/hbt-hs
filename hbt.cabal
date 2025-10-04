@@ -1,10 +1,12 @@
 cabal-version:      3.0
 name:               hbt
 version:            0.1.0.0
-license:            Unlicense
-license-file:       UNLICENSE
-maintainer:         henrytill@gmail.com
+license:            ISC
+license-file:       LICENSE
 author:             Henry Till
+maintainer:         henrytill@gmail.com
+homepage:           https://github.com/henrytill/hbt-hs
+copyright:          Copyright (c) 2025, Henry Till
 tested-with:        ghc ==9.10.2
 synopsis:           Heterogeneous Bookmark Transformation
 category:           Web
