@@ -6,15 +6,15 @@ module Hbt.Parser.Markdown where
 import Commonmark qualified
 import Commonmark.Initial (Block, Blocks, Inline, pattern MkBlock, pattern MkInline)
 import Commonmark.Initial qualified as Initial
+import Control.Exception (Exception, throwIO)
 import Control.Monad (forM_, when)
-import Control.Monad.Except (MonadError)
-import Control.Monad.Except qualified as Except
-import Data.Bifunctor qualified as Bifunctor
+import Control.Monad.Catch (MonadThrow (..))
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text.Lazy qualified as LazyText
 import Data.Text.Lazy.Builder (Builder)
 import Data.Text.Lazy.Builder qualified as Builder
+import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection, Id)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity, Label (..), Name (..), Time, URI)
@@ -22,22 +22,13 @@ import Hbt.Entity qualified as Entity
 import Hbt.Parser.Common (IsNull (..), ParserMonad, drop1, runParserMonad)
 import Lens.Family2
 import Lens.Family2.State.Strict
-import URI.ByteString (URIParseError)
 
 data Error
-  = EntityInvalidURI URIParseError
-  | EntityInvalidTime Text
-  | CollectionMissingEntities [Id]
-  | NoSaveableEntity
+  = NoSaveableEntity
   | ParseError Commonmark.ParseError
   deriving (Show, Eq)
 
-fromEntityError :: Entity.Error -> Error
-fromEntityError (Entity.InvalidURI s) = EntityInvalidURI s
-fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
-
-fromCollectionError :: Collection.Error -> Error
-fromCollectionError (Collection.MissingEntities ids) = CollectionMissingEntities ids
+instance Exception Error
 
 data ParseState = MkParseState
   { collection :: Collection
@@ -86,27 +77,25 @@ maybeParent f s = (\p -> s {maybeParent = p}) <$> f s.maybeParent
 parents :: Lens' ParseState [Id]
 parents f s = (\p -> s {parents = p}) <$> f s.parents
 
-newtype MarkdownM a = MkMarkdownM (ParserMonad ParseState Error a)
-  deriving (Functor, Applicative, Monad, MonadState ParseState, MonadError Error)
+newtype MarkdownM a = MkMarkdownM (ParserMonad ParseState a)
+  deriving (Functor, Applicative, Monad, MonadState ParseState, MonadThrow)
 
-runMarkdownM :: MarkdownM a -> ParseState -> Either Error (a, ParseState)
+runMarkdownM :: MarkdownM a -> ParseState -> IO (a, ParseState)
 runMarkdownM (MkMarkdownM m) = runParserMonad m
 
-liftEitherWith :: (a -> Error) -> Either a b -> MarkdownM b
-liftEitherWith f ma = Except.liftEither (Bifunctor.first f ma)
+liftEither :: (Exception e) => Either e b -> MarkdownM b
+liftEither = either throwM pure
 
 saveEntity :: MarkdownM ()
 saveEntity = do
   st0 <- use id
-  entity <- maybe (Except.throwError NoSaveableEntity) pure (toEntity st0)
+  entity <- maybe (throwM NoSaveableEntity) pure (toEntity st0)
   coll0 <- use collection
   let (entityId, coll1) = Collection.upsert entity coll0
   collection .= coll1
   parentStack <- use parents
   forM_ (take 1 parentStack) $ \pid -> do
-    coll2 <- use collection
-    coll3 <- liftEitherWith fromCollectionError (Collection.addEdges entityId pid coll2)
-    collection .= coll3
+    collection %= Collection.addEdges entityId pid
   maybeParent .= Just entityId
   maybeURI .= Nothing
   maybeName .= Nothing
@@ -131,7 +120,7 @@ textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input)
 
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
 extractLink dest _title desc = do
-  uri <- liftEitherWith fromEntityError (Entity.mkURI dest)
+  uri <- liftEither (Entity.mkURI dest)
   maybeURI .= Just uri
   let linkText = textFromInlines desc
   when (not (isNull linkText) && linkText /= dest) $
@@ -151,7 +140,7 @@ handleBlock (MkBlock _ b) =
       processInlines inlines
     Initial.Heading 1 inlines -> do
       let headingText = textFromInlines inlines
-      time <- liftEitherWith fromEntityError (Entity.mkTime headingText)
+      time <- liftEither (Entity.mkTime headingText)
       maybeTime .= Just time
       maybeParent .= Nothing
       labels .= []
@@ -176,8 +165,8 @@ processBlocks blocks = do
 parseBlocks :: String -> Text -> Either Commonmark.ParseError Blocks
 parseBlocks = Commonmark.commonmark
 
-parse :: String -> Text -> Either Error Collection
+parse :: (HasCallStack) => String -> Text -> IO Collection
 parse parseName input = do
-  blocks <- Bifunctor.first ParseError (parseBlocks parseName input)
+  blocks <- either (throwIO . ParseError) pure (parseBlocks parseName input)
   (ret, _) <- runMarkdownM (processBlocks blocks) empty
   pure ret

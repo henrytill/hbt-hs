@@ -12,15 +12,16 @@ module Hbt.Parser.Pinboard.Common
   )
 where
 
+import Control.Exception (throwIO)
 import Data.Aeson (FromJSON (..))
 import Data.Aeson qualified as Aeson
-import Data.Bifunctor qualified as Bifunctor
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Time.Clock.POSIX qualified as POSIX
 import Data.Time.Format qualified as Format
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import Hbt.Entity (Entity, Extended (..), Label (..), Name (..), Time (..))
 import Hbt.Entity qualified as Entity
 import Hbt.Parser.Common (IsNull (..), pattern Null)
@@ -74,19 +75,19 @@ parseTagString :: Text -> [Text]
 parseTagString Null = []
 parseTagString str = filter (not . isNull) (map Text.strip (Text.splitOn " " str))
 
-parseTime :: (Entity.Error -> e) -> Text -> Either e Time
-parseTime fromEntityErr s =
+parseTime :: (HasCallStack) => Text -> IO Time
+parseTime s =
   case Format.parseTimeM @Maybe True Format.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (Text.unpack s) of
-    Nothing -> Left (fromEntityErr (Entity.InvalidTime s))
-    Just utcTime -> Right (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
+    Nothing -> throwIO (Entity.InvalidTime s)
+    Just utcTime -> pure (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
 
 parseTags :: [Text] -> [Label]
 parseTags tagList = map (MkLabel . Text.strip) (filter (not . isNull) tagList)
 
-postToEntity :: (Entity.Error -> e) -> PinboardPost -> Either e Entity
-postToEntity fromEntityErr post = do
-  uri <- Bifunctor.first fromEntityErr (Entity.mkURI post.href)
-  createdAt <- parseTime fromEntityErr post.time
+postToEntity :: (HasCallStack) => PinboardPost -> IO Entity
+postToEntity post = do
+  uri <- either throwIO pure (Entity.mkURI post.href)
+  createdAt <- parseTime post.time
   let updatedAt = []
       name = case post.description of
         Null -> Nothing

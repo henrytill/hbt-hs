@@ -166,10 +166,7 @@ detectInputFormat :: FilePath -> Maybe InputFormat
 detectInputFormat file = detectFromExtension (FilePath.takeExtension file)
 
 parseFile :: InputFormat -> FilePath -> Text -> IO Collection
-parseFile fmt file content = do
-  case parseWith fmt content of
-    Left err -> Exit.die ("Error parsing " ++ file ++ ": " ++ show err)
-    Right collection -> pure collection
+parseFile fmt _file content = parseWith fmt content
 
 applyMappings :: Maybe FilePath -> Collection -> IO Collection
 applyMappings Nothing collection = pure collection
@@ -191,11 +188,7 @@ printCollection file opts collection
   | otherwise =
       case opts.outputFormat of
         Nothing -> Exit.die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
-        Just fmt -> do
-          result <- formatWith fmt collection
-          case result of
-            Left err -> Exit.die ("Error formatting: " ++ show err)
-            Right output -> writeOutput opts.outputFile output
+        Just fmt -> formatWith fmt collection >>= writeOutput opts.outputFile
 
 processFile :: Options -> FilePath -> IO ()
 processFile opts file = do

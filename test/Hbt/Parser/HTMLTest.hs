@@ -5,20 +5,23 @@ import Data.Yaml qualified as Yaml
 import Hbt.Parser.HTML qualified as HTML
 import Test.Dwergaz
 import TestData (HtmlParserTestCase (..))
-import TestUtilities (addContext, testResults)
+import TestUtilities (testIO, testResults)
 
 name :: String
 name = "Hbt.Parser.HTML"
 
-run :: HtmlParserTestCase -> Test
-run testCase =
-  either assertFailure id $
-    assertEqual testCase.testName
-      <$> addContext "YAML decode failed" (Yaml.decodeEither' (Text.Encoding.encodeUtf8 testCase.expectedYaml))
-      <*> addContext "Parse failed" (HTML.parse testCase.inputHtml)
+run :: HtmlParserTestCase -> IO Test
+run testCase = testIO testCase.testName $ do
+  expected <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expectedYaml)
+  actual <- HTML.parse testCase.inputHtml
+  pure $ assertEqual testCase.testName expected actual
 
-allTests :: [HtmlParserTestCase] -> Test
-allTests testData = group name (map run testData)
+allTests :: [HtmlParserTestCase] -> IO Test
+allTests testData = do
+  tests <- traverse run testData
+  pure $ group name tests
 
-results :: [HtmlParserTestCase] -> (String, Bool)
-results testData = testResults name (allTests testData)
+results :: [HtmlParserTestCase] -> IO (String, Bool)
+results testData = do
+  test <- allTests testData
+  pure $ testResults name test

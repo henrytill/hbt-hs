@@ -17,14 +17,15 @@ handleResults (output, passed) = putStr output >> pure passed
 main :: IO ()
 main = do
   testData <- loadAllTestData
-  let testSuites =
-        [ CollectionTest.results
-        , HTMLFormatterTest.results testData.htmlFormatterTests
-        , HTMLTest.results testData.htmlParserTests
-        , MarkdownTest.results testData.markdownTests
-        , PinboardJSONTest.results testData.pinboardJsonTests
-        , PinboardXMLTest.results testData.pinboardXmlTests
-        ]
+  testSuites <-
+    sequence
+      [ pure CollectionTest.results
+      , HTMLFormatterTest.results testData.htmlFormatterTests
+      , HTMLTest.results testData.htmlParserTests
+      , MarkdownTest.results testData.markdownTests
+      , PinboardJSONTest.results testData.pinboardJsonTests
+      , PinboardXMLTest.results testData.pinboardXmlTests
+      ]
   results <- traverse handleResults testSuites
   let allPassed = and results
   printf "Summary: %s\n" (if allPassed then "All tests passed!" else "Some tests failed.")

@@ -11,17 +11,13 @@ module Hbt
   , parseWith
   , formatWith
   , toString
-  , SomeParseError (..)
-  , SomeFormatError
   )
 where
 
-import Control.Exception (SomeException)
-import Control.Exception qualified as Exception
-import Data.Bifunctor qualified as Bifunctor
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import Data.Yaml.Pretty qualified as YamlPretty
+import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Formatter.HTML qualified as HTMLFormatter
@@ -63,28 +59,18 @@ toString Markdown = "markdown"
 toString HTML = "html"
 toString YAML = "yaml"
 
-data SomeParseError = forall e. (Show e) => SomeParseError e
-
-instance Show SomeParseError where
-  show (SomeParseError e) = show e
-
-parseWith :: Format From -> Text -> Either SomeParseError Collection
-parseWith JSON input = Bifunctor.first SomeParseError (PinboardJSON.parse input)
-parseWith XML input = Bifunctor.first SomeParseError (PinboardXML.parse input)
-parseWith Markdown input = Bifunctor.first SomeParseError (Markdown.parse "content" input)
-parseWith HTML input = Bifunctor.first SomeParseError (HTMLParser.parse input)
-
-type SomeFormatError = SomeException
-
-withFormatError :: IO Text -> IO (Either SomeFormatError Text)
-withFormatError action = Exception.handle (pure . Left) (fmap Right action)
+parseWith :: (HasCallStack) => Format From -> Text -> IO Collection
+parseWith JSON = PinboardJSON.parse
+parseWith XML = PinboardXML.parse
+parseWith Markdown = Markdown.parse "content"
+parseWith HTML = HTMLParser.parse
 
 mustacheFile :: String
 mustacheFile = "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
 
-formatWith :: Format To -> Collection -> IO (Either SomeFormatError Text)
+formatWith :: (HasCallStack) => Format To -> Collection -> IO Text
 formatWith YAML collection =
-  pure (Right (Text.decodeUtf8 (YamlPretty.encodePretty Collection.yamlConfig collection)))
-formatWith HTML collection = withFormatError $ do
+  pure (Text.decodeUtf8 (YamlPretty.encodePretty Collection.yamlConfig collection))
+formatWith HTML collection = do
   template <- Microstache.compileMustacheFile mustacheFile
   pure (HTMLFormatter.format template collection)

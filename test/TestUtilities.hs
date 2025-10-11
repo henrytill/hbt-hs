@@ -1,15 +1,19 @@
 module TestUtilities
-  ( addContext
+  ( testIO
   , testResults
   )
 where
 
-import Data.Bifunctor (first)
+import Control.Exception (SomeException, try)
 import Test.Dwergaz
 
--- | Add contextual information to error messages
-addContext :: (Show e) => String -> Either e a -> Either String a
-addContext context = first (\e -> showString context (showString ": " (shows e mempty)))
+-- | Run an IO action that produces a Test, catching any exceptions as test failures
+testIO :: String -> IO Test -> IO Test
+testIO testName action = do
+  result <- try action
+  pure $ case result of
+    Left (e :: SomeException) -> assertFailure (testName ++ ": " ++ show e)
+    Right test -> test
 
 -- | Generate standardized test results with output and pass/fail status
 testResults :: String -> Test -> (String, Bool)

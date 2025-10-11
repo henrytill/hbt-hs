@@ -5,17 +5,20 @@ import Data.Yaml qualified as Yaml
 import Hbt.Parser.Pinboard.XML qualified as PinboardXML
 import Test.Dwergaz
 import TestData (PinboardParserTestCase (..))
-import TestUtilities (addContext, testResults)
+import TestUtilities (testIO, testResults)
 
-runPinboardXMLTestCase :: PinboardParserTestCase -> Test
-runPinboardXMLTestCase testCase =
-  either assertFailure id $
-    assertEqual testCase.testName
-      <$> addContext "YAML decode failed" (Yaml.decodeEither' (Text.Encoding.encodeUtf8 testCase.expectedYaml))
-      <*> addContext "Parse failed" (PinboardXML.parse testCase.inputText)
+runPinboardXMLTestCase :: PinboardParserTestCase -> IO Test
+runPinboardXMLTestCase testCase = testIO testCase.testName $ do
+  expected <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expectedYaml)
+  actual <- PinboardXML.parse testCase.inputText
+  pure $ assertEqual testCase.testName expected actual
 
-allTests :: [PinboardParserTestCase] -> Test
-allTests testData = group "Hbt.Parser.Pinboard.XML tests" (map runPinboardXMLTestCase testData)
+allTests :: [PinboardParserTestCase] -> IO Test
+allTests testData = do
+  tests <- traverse runPinboardXMLTestCase testData
+  pure $ group "Hbt.Parser.Pinboard.XML tests" tests
 
-results :: [PinboardParserTestCase] -> (String, Bool)
-results testData = testResults "Hbt.Parser.Pinboard.XML" (allTests testData)
+results :: [PinboardParserTestCase] -> IO (String, Bool)
+results testData = do
+  test <- allTests testData
+  pure $ testResults "Hbt.Parser.Pinboard.XML" test

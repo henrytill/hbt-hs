@@ -4,20 +4,22 @@ import Hbt.Formatter.HTML qualified as HTML
 import Hbt.Parser.HTML qualified as HTMLParser
 import Test.Dwergaz
 import TestData (HtmlFormatterTestCase (..))
-import TestUtilities (addContext, testResults)
+import TestUtilities (testIO, testResults)
 
 name :: String
 name = "Hbt.Formatter.HTML"
 
-run :: HtmlFormatterTestCase -> Test
-run testCase =
-  let parsedOrFailed = HTMLParser.parse testCase.inputHtml
-      formattedOrFailed = fmap (HTML.format testCase.template) (addContext "HTML parse failed" parsedOrFailed)
-      assertExpected = assertEqual testCase.testName testCase.expectedHtml
-   in either assertFailure assertExpected formattedOrFailed
+run :: HtmlFormatterTestCase -> IO Test
+run testCase = testIO testCase.testName $ do
+  parsed <- HTMLParser.parse testCase.inputHtml
+  pure $ assertEqual testCase.testName testCase.expectedHtml (HTML.format testCase.template parsed)
 
-allTests :: [HtmlFormatterTestCase] -> Test
-allTests testData = group name (map run testData)
+allTests :: [HtmlFormatterTestCase] -> IO Test
+allTests testData = do
+  tests <- traverse run testData
+  pure $ group name tests
 
-results :: [HtmlFormatterTestCase] -> (String, Bool)
-results testData = testResults name (allTests testData)
+results :: [HtmlFormatterTestCase] -> IO (String, Bool)
+results testData = do
+  test <- allTests testData
+  pure $ testResults name test

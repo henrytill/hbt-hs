@@ -1,31 +1,25 @@
 module Hbt.Parser.Pinboard.JSON where
 
+import Control.Exception (Exception, throwIO)
 import Data.Aeson qualified as Aeson
-import Data.Bifunctor qualified as Bifunctor
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
+import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity qualified as Entity
 import Hbt.Parser.Pinboard.Common (PinboardPost, postToEntity)
-import URI.ByteString (URIParseError)
 
-data Error
-  = EntityInvalidURI URIParseError
-  | EntityInvalidTime Text
-  | ParseError String
+newtype Error = ParseError String
   deriving (Show, Eq)
 
-fromEntityError :: Entity.Error -> Error
-fromEntityError (Entity.InvalidURI s) = EntityInvalidURI s
-fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
+instance Exception Error
 
-postsToCollection :: [PinboardPost] -> Either Error Collection
+postsToCollection :: [PinboardPost] -> IO Collection
 postsToCollection posts = do
-  entities <- traverse (postToEntity fromEntityError) (reverse posts)
+  entities <- traverse postToEntity (reverse posts)
   pure (Collection.fromEntities entities)
 
-parse :: Text -> Either Error Collection
+parse :: (HasCallStack) => Text -> IO Collection
 parse input = do
-  posts <- Bifunctor.first ParseError (Aeson.eitherDecodeStrict (Text.encodeUtf8 input))
+  posts <- either (throwIO . ParseError) pure (Aeson.eitherDecodeStrict (Text.encodeUtf8 input))
   postsToCollection posts

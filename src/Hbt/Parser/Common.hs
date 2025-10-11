@@ -141,9 +141,9 @@ matchAttrTagList (attrKey, attrValue) =
     "tags" -> Just (parseTagStringWith "," attrValue)
     _ -> Nothing
 
-type ParserMonad s e = StateT s (Either e)
+type ParserMonad s = StateT s IO
 
-runParserMonad :: ParserMonad s e a -> s -> Either e (a, s)
+runParserMonad :: ParserMonad s a -> s -> IO (a, s)
 runParserMonad = State.runStateT
 
 drop1 :: [a] -> [a]

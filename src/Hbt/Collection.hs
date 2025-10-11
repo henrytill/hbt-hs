@@ -24,6 +24,7 @@ module Hbt.Collection
   )
 where
 
+import Control.Exception (Exception, throw)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.List (elemIndex)
 import Data.Map.Strict (Map)
@@ -32,6 +33,7 @@ import Data.Maybe qualified as Maybe
 import Data.Vector (Vector, elem, (!), (//))
 import Data.Vector qualified as Vector
 import Data.Yaml.Pretty qualified as YamlPretty
+import GHC.Stack (HasCallStack)
 import Hbt.Collection.Id (Id (..))
 import Hbt.Collection.Serialized (SerializedCollection (..), SerializedNode (..))
 import Hbt.Entity (Entity (..), URI)
@@ -40,6 +42,8 @@ import Prelude hiding (elem, id, length, null)
 
 newtype Error = MissingEntities [Id]
   deriving (Show, Eq)
+
+instance Exception Error
 
 type Edges = Vector Id
 
@@ -98,22 +102,22 @@ upsert entity collection =
 fromEntities :: [Entity] -> Collection
 fromEntities = foldl' (\coll entity -> snd (upsert entity coll)) empty
 
-addEdge :: Id -> Id -> Collection -> Either Error Collection
+addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdge from to collection =
   let validFrom = from.value < Vector.length collection.nodes
       validTo = to.value < Vector.length collection.nodes
    in case (validFrom, validTo) of
-        (False, False) -> Left (MissingEntities [from, to])
-        (False, True) -> Left (MissingEntities [from])
-        (True, False) -> Left (MissingEntities [to])
+        (False, False) -> throw (MissingEntities [from, to])
+        (False, True) -> throw (MissingEntities [from])
+        (True, False) -> throw (MissingEntities [to])
         (True, True) ->
           let fromEdges = edgesAt from collection
               newFromEdges = if to `elem` fromEdges then fromEdges else Vector.snoc fromEdges to
               edges = collection.edges // [(from.value, newFromEdges)]
-           in Right (collection {Hbt.Collection.edges = edges}) -- lame. are we allowing duplicate records fields or not GHC?
+           in collection {Hbt.Collection.edges = edges} -- lame. are we allowing duplicate records fields or not GHC?
 
-addEdges :: Id -> Id -> Collection -> Either Error Collection
-addEdges from to collection = addEdge from to collection >>= addEdge to from
+addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
+addEdges from to collection = addEdge from to (addEdge to from collection)
 
 mkSerializedNode :: Collection -> Id -> Entity -> SerializedNode
 mkSerializedNode collection id entity =

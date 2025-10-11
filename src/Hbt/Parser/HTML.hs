@@ -4,14 +4,15 @@
 
 module Hbt.Parser.HTML where
 
+import Control.Exception (Exception)
 import Control.Monad (foldM, forM_, when)
-import Control.Monad.Except (MonadError)
-import Control.Monad.Except qualified as Except
+import Control.Monad.Catch (MonadThrow (..))
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Read qualified as Read
+import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity (..), Time)
@@ -20,17 +21,11 @@ import Hbt.Parser.Common (IsNull (..), ParserMonad, drop1, runParserMonad, patte
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
-import URI.ByteString (URIParseError)
 
-data Error
-  = EntityInvalidURI URIParseError
-  | EntityInvalidTime Text
-  | ParseError String
+newtype Error = ParseError String
   deriving (Show, Eq)
 
-fromEntityError :: Entity.Error -> Error
-fromEntityError (Entity.InvalidURI s) = EntityInvalidURI s
-fromEntityError (Entity.InvalidTime s) = EntityInvalidTime s
+instance Exception Error
 
 isTagName :: Text -> Text -> Bool
 isTagName expected actual = Text.toLower expected == Text.toLower actual
@@ -96,10 +91,10 @@ folderStack f s = (\fs -> s {folderStack = fs}) <$> f s.folderStack
 waitingFor :: Lens' ParseState WaitingFor
 waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
 
-newtype NetscapeM a = MkNetscapeM (ParserMonad ParseState Error a)
-  deriving (Functor, Applicative, Monad, MonadState ParseState, MonadError Error)
+newtype NetscapeM a = MkNetscapeM (ParserMonad ParseState a)
+  deriving (Functor, Applicative, Monad, MonadState ParseState, MonadThrow)
 
-runNetscapeM :: NetscapeM a -> ParseState -> Either Error (a, ParseState)
+runNetscapeM :: NetscapeM a -> ParseState -> IO (a, ParseState)
 runNetscapeM (MkNetscapeM m) = runParserMonad m
 
 parseTimestamp :: Text -> Maybe Time
@@ -109,28 +104,32 @@ parseTimestamp str =
     Right (timestamp, Null) -> Just (Entity.MkTime (fromInteger timestamp))
     Right {} -> Nothing
 
-accumulateEntityAttr :: Entity -> Attr -> Either Error Entity
+accumulateEntityAttr :: Entity -> Attr -> NetscapeM Entity
 accumulateEntityAttr entity (Attr name value) =
   case Text.toLower name of
-    "href" -> case Entity.mkURI value of
-      Left err -> Left (fromEntityError err)
-      Right uri -> Right entity {uri}
-    "add_date" -> Right entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)}
-    "last_modified" -> Right entity {updatedAt = Maybe.maybeToList (parseTimestamp value)}
-    "last_visit" -> Right entity {lastVisitedAt = parseTimestamp value}
+    "href" -> do
+      uri <- either (throwM) pure (Entity.mkURI value)
+      pure (entity {uri})
+    "add_date" -> pure (entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)})
+    "last_modified" -> pure (entity {updatedAt = Maybe.maybeToList (parseTimestamp value)})
+    "last_visit" -> pure (entity {lastVisitedAt = parseTimestamp value})
     "tags" ->
       let tagList = Text.splitOn "," value
           newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") tagList))
           toRead = entity.toRead || "toread" `elem` tagList
           labels = Set.union entity.labels newLabels
-       in Right entity {labels, toRead}
-    "private" -> Right entity {shared = value /= "1"}
-    "toread" -> Right entity {toRead = value == "1"}
-    "feed" -> Right entity {isFeed = value == "true"}
-    _ -> Right entity
+       in pure (entity {labels, toRead})
+    "private" -> pure (entity {shared = value /= "1"})
+    "toread" -> pure (entity {toRead = value == "1"})
+    "feed" -> pure (entity {isFeed = value == "true"})
+    _ -> pure entity
 
-createEntity :: [Attr] -> [Text] -> Maybe Text -> Maybe Text -> Either Error Entity
-createEntity attrs folders name ext = do
+createEntity :: NetscapeM Entity
+createEntity = do
+  attrs <- use attributes
+  folders <- use folderStack
+  name <- use maybeDescription
+  ext <- use maybeExtended
   let startEntity = Entity.empty {shared = True} -- Default to shared in HTML context
   accumulated <- foldM accumulateEntityAttr startEntity attrs
   let names = maybe Set.empty (Set.singleton . Entity.MkName) name
@@ -139,18 +138,12 @@ createEntity attrs folders name ext = do
       extended = fmap Entity.MkExtended ext
       finalEntity = accumulated {names, labels = allLabels, extended}
    in if isNull finalEntity.uri
-        then Left (ParseError "missing required attribute: href")
+        then throwM (ParseError "missing required attribute: href")
         else pure finalEntity
 
 addPending :: NetscapeM ()
 addPending = do
-  let entityOrError =
-        createEntity
-          <$> use attributes
-          <*> use folderStack
-          <*> use maybeDescription
-          <*> use maybeExtended
-  entity <- Except.liftEither =<< entityOrError
+  entity <- createEntity
   collection %= snd . Collection.upsert entity
   attributes .= []
   maybeDescription .= Nothing
@@ -192,7 +185,7 @@ handle _ = pure ()
 process :: [Token] -> NetscapeM Collection
 process tokens = forM_ tokens handle >> use collection
 
-parse :: Text -> Either Error Collection
+parse :: (HasCallStack) => Text -> IO Collection
 parse input = do
   let tokens = parseTokens input
   (ret, _) <- runNetscapeM (process tokens) empty

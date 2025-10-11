@@ -22,12 +22,6 @@ fromEither = either (error . show) id
 safeURI :: Text -> URI
 safeURI s = fromEither (Entity.mkURI s)
 
-safeAddEdge :: Id -> Id -> Collection -> Collection
-safeAddEdge from to collection = fromEither (addEdge from to collection)
-
-safeAddEdges :: Id -> Id -> Collection -> Collection
-safeAddEdges from to collection = fromEither (addEdges from to collection)
-
 emptyEntityTests :: Test
 emptyEntityTests =
   let entity = Entity.empty
@@ -219,14 +213,14 @@ edgeTests =
       (id1, collection1) = insert entity1 empty
       (id2, collection2) = insert entity2 collection1
 
-      collectionWithEdge = safeAddEdge id1 id2 collection2
+      collectionWithEdge = addEdge id1 id2 collection2
       edgesFromId1 = edgesAt id1 collectionWithEdge
       edgesFromId2 = edgesAt id2 collectionWithEdge
 
-      collectionWithDuplicateEdge = safeAddEdge id1 id2 collectionWithEdge
+      collectionWithDuplicateEdge = addEdge id1 id2 collectionWithEdge
       edgesFromId1AfterDuplicate = edgesAt id1 collectionWithDuplicateEdge
 
-      collectionWithBidirectionalEdges = safeAddEdges id1 id2 collection2
+      collectionWithBidirectionalEdges = addEdges id1 id2 collection2
       bidirectionalEdgesFromId1 = edgesAt id1 collectionWithBidirectionalEdges
       bidirectionalEdgesFromId2 = edgesAt id2 collectionWithBidirectionalEdges
    in group

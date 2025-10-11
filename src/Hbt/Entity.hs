@@ -20,6 +20,7 @@ module Hbt.Entity
 where
 
 import Control.Applicative ((<|>))
+import Control.Exception (Exception)
 import Control.Monad.Except (liftEither, runExcept)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
@@ -42,6 +43,8 @@ data Error
   = InvalidURI URIParseError
   | InvalidTime Text
   deriving (Show, Eq)
+
+instance Exception Error
 
 newtype URI = MkURI {unURI :: URI.URIRef URI.Absolute}
   deriving (Show, Eq, Ord)
