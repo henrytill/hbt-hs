@@ -101,4 +101,16 @@ postToEntity post = do
       toRead = maybe False toBool post.toread
       isFeed = False
       lastVisitedAt = Nothing
-  pure Entity.MkEntity {uri, createdAt, updatedAt, names, labels, shared, toRead, isFeed, extended, lastVisitedAt}
+  pure
+    Entity.MkEntity
+      { uri
+      , createdAt
+      , updatedAt
+      , names
+      , labels
+      , shared
+      , toRead
+      , isFeed
+      , extended
+      , lastVisitedAt
+      }

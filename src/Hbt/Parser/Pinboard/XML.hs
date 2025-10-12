@@ -51,8 +51,8 @@ newtype PinboardM a = MkPinboardM (ParserMonad ParseState a)
 runPinboardM :: PinboardM a -> ParseState -> IO (a, ParseState)
 runPinboardM (MkPinboardM m) = runParserMonad m
 
-accumulatePostAttr :: PinboardPost -> Attribute -> PinboardPost
-accumulatePostAttr post attr =
+accumulatePost :: PinboardPost -> Attribute -> PinboardPost
+accumulatePost post attr =
   case attr of
     Href href -> post {href}
     Description description -> post {description}
@@ -65,7 +65,7 @@ accumulatePostAttr post attr =
 
 createPostFromAttrs :: [Attribute] -> PinboardM PinboardPost
 createPostFromAttrs attrs = do
-  let accumulated = foldl' accumulatePostAttr emptyPinboardPost attrs
+  let accumulated = foldl' accumulatePost emptyPinboardPost attrs
   if isNull accumulated.href
     then throwM (ParseError "missing required attribute: href")
     else pure accumulated

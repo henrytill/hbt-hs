@@ -104,8 +104,8 @@ parseTimestamp str =
     Right (timestamp, Null) -> Just (Entity.MkTime (fromInteger timestamp))
     Right {} -> Nothing
 
-accumulateEntityAttr :: Entity -> Attr -> NetscapeM Entity
-accumulateEntityAttr entity (Attr name value) =
+accumulateEntity :: Entity -> Attr -> NetscapeM Entity
+accumulateEntity entity (Attr name value) =
   case Text.toLower name of
     "href" -> do
       uri <- either (throwM) pure (Entity.mkURI value)
@@ -130,8 +130,8 @@ createEntity = do
   folders <- use folderStack
   name <- use maybeDescription
   ext <- use maybeExtended
-  let startEntity = Entity.empty {shared = True} -- Default to shared in HTML context
-  accumulated <- foldM accumulateEntityAttr startEntity attrs
+  let startEntity = Entity.empty {shared = True}
+  accumulated <- foldM accumulateEntity startEntity attrs
   let names = maybe Set.empty (Set.singleton . Entity.MkName) name
       folderLabels = Set.fromList (map Entity.MkLabel (reverse folders))
       allLabels = Set.unions [accumulated.labels, folderLabels]
