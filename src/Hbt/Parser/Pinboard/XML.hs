@@ -45,11 +45,11 @@ collection f s = (\c -> s {collection = c}) <$> f s.collection
 entities :: Lens' ParseState [Entity]
 entities f s = (\e -> s {entities = e}) <$> f s.entities
 
-newtype PinboardM a = MkPinboardM (ParserMonad ParseState a)
+newtype PinboardM a = MkPinboardM (StateIO ParseState a)
   deriving (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
 
 runPinboardM :: PinboardM a -> ParseState -> IO (a, ParseState)
-runPinboardM (MkPinboardM m) = runParserMonad m
+runPinboardM (MkPinboardM m) = runStateIO m
 
 accumulatePost :: PinboardPost -> Attribute -> PinboardPost
 accumulatePost post attr =

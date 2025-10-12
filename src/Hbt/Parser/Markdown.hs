@@ -19,7 +19,7 @@ import Hbt.Collection (Collection, Id)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity, Label (..), Name (..), Time, URI)
 import Hbt.Entity qualified as Entity
-import Hbt.Parser.Common (IsNull (..), ParserMonad, drop1, runParserMonad)
+import Hbt.Parser.Common (IsNull (..), StateIO, drop1, runStateIO)
 import Lens.Family2
 import Lens.Family2.State.Strict
 
@@ -77,11 +77,11 @@ maybeParent f s = (\p -> s {maybeParent = p}) <$> f s.maybeParent
 parents :: Lens' ParseState [Id]
 parents f s = (\p -> s {parents = p}) <$> f s.parents
 
-newtype MarkdownM a = MkMarkdownM (ParserMonad ParseState a)
+newtype MarkdownM a = MkMarkdownM (StateIO ParseState a)
   deriving (Functor, Applicative, Monad, MonadState ParseState, MonadThrow)
 
 runMarkdownM :: MarkdownM a -> ParseState -> IO (a, ParseState)
-runMarkdownM (MkMarkdownM m) = runParserMonad m
+runMarkdownM (MkMarkdownM m) = runStateIO m
 
 liftEither :: (Exception e) => Either e b -> MarkdownM b
 liftEither = either throwM pure

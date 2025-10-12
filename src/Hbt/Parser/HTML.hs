@@ -17,7 +17,7 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity (..), Time)
 import Hbt.Entity qualified as Entity
-import Hbt.Parser.Common (IsNull (..), ParserMonad, drop1, runParserMonad, pattern Null)
+import Hbt.Parser.Common (IsNull (..), StateIO, drop1, runStateIO, pattern Null)
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
@@ -91,11 +91,11 @@ folderStack f s = (\fs -> s {folderStack = fs}) <$> f s.folderStack
 waitingFor :: Lens' ParseState WaitingFor
 waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
 
-newtype NetscapeM a = MkNetscapeM (ParserMonad ParseState a)
+newtype NetscapeM a = MkNetscapeM (StateIO ParseState a)
   deriving (Functor, Applicative, Monad, MonadState ParseState, MonadThrow)
 
 runNetscapeM :: NetscapeM a -> ParseState -> IO (a, ParseState)
-runNetscapeM (MkNetscapeM m) = runParserMonad m
+runNetscapeM (MkNetscapeM m) = runStateIO m
 
 parseTimestamp :: Text -> Maybe Time
 parseTimestamp str =

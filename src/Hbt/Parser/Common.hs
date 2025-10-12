@@ -33,9 +33,9 @@ module Hbt.Parser.Common
   , matchAttr
   , matchAttrTagList
 
-    -- * Parser monad
-  , ParserMonad
-  , runParserMonad
+    -- * StateIO
+  , StateIO
+  , runStateIO
 
     -- * Misc
   , drop1
@@ -141,10 +141,10 @@ matchAttrTagList (attrKey, attrValue) =
     "tags" -> Just (parseTagStringWith "," attrValue)
     _ -> Nothing
 
-type ParserMonad s = StateT s IO
+type StateIO s = StateT s IO
 
-runParserMonad :: ParserMonad s a -> s -> IO (a, s)
-runParserMonad = State.runStateT
+runStateIO :: StateIO s a -> s -> IO (a, s)
+runStateIO = State.runStateT
 
 drop1 :: [a] -> [a]
 drop1 [] = []
