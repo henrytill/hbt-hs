@@ -11,14 +11,14 @@ runPinboardXMLTestCase :: PinboardParserTestCase -> IO Test
 runPinboardXMLTestCase testCase = testIO testCase.testName $ do
   expected <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expectedYaml)
   actual <- PinboardXML.parse testCase.inputText
-  pure $ assertEqual testCase.testName expected actual
+  pure (assertEqual testCase.testName expected actual)
 
 allTests :: [PinboardParserTestCase] -> IO Test
 allTests testData = do
   tests <- traverse runPinboardXMLTestCase testData
-  pure $ group "Hbt.Parser.Pinboard.XML tests" tests
+  pure (group "Hbt.Parser.Pinboard.XML tests" tests)
 
 results :: [PinboardParserTestCase] -> IO (String, Bool)
 results testData = do
   test <- allTests testData
-  pure $ testResults "Hbt.Parser.Pinboard.XML" test
+  pure (testResults "Hbt.Parser.Pinboard.XML" test)

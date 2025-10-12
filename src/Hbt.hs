@@ -78,5 +78,5 @@ formatWith YAML collection =
   pure (Text.decodeUtf8 (YamlPretty.encodePretty Collection.yamlConfig collection))
 formatWith HTML collection = do
   let templateText = LazyText.fromStrict (Text.decodeUtf8 templateBytes)
-  template <- either (fail . show) pure $ Microstache.compileMustacheText "netscape_bookmarks" templateText
+  template <- either (fail . show) pure (Microstache.compileMustacheText "netscape_bookmarks" templateText)
   pure (HTMLFormatter.format template collection)

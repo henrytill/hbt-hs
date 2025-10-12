@@ -11,14 +11,14 @@ runPinboardJSONTestCase :: PinboardParserTestCase -> IO Test
 runPinboardJSONTestCase testCase = testIO testCase.testName $ do
   expected <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expectedYaml)
   actual <- PinboardJSON.parse testCase.inputText
-  pure $ assertEqual testCase.testName expected actual
+  pure (assertEqual testCase.testName expected actual)
 
 allTests :: [PinboardParserTestCase] -> IO Test
 allTests testData = do
   tests <- traverse runPinboardJSONTestCase testData
-  pure $ group "Hbt.Parser.Pinboard.JSON tests" tests
+  pure (group "Hbt.Parser.Pinboard.JSON tests" tests)
 
 results :: [PinboardParserTestCase] -> IO (String, Bool)
 results testData = do
   test <- allTests testData
-  pure $ testResults "Hbt.Parser.Pinboard.JSON" test
+  pure (testResults "Hbt.Parser.Pinboard.JSON" test)

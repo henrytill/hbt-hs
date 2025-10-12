@@ -14,14 +14,14 @@ run :: HtmlParserTestCase -> IO Test
 run testCase = testIO testCase.testName $ do
   expected <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expectedYaml)
   actual <- HTML.parse testCase.inputHtml
-  pure $ assertEqual testCase.testName expected actual
+  pure (assertEqual testCase.testName expected actual)
 
 allTests :: [HtmlParserTestCase] -> IO Test
 allTests testData = do
   tests <- traverse run testData
-  pure $ group name tests
+  pure (group name tests)
 
 results :: [HtmlParserTestCase] -> IO (String, Bool)
 results testData = do
   test <- allTests testData
-  pure $ testResults name test
+  pure (testResults name test)

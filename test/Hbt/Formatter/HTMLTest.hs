@@ -12,14 +12,14 @@ name = "Hbt.Formatter.HTML"
 run :: HtmlFormatterTestCase -> IO Test
 run testCase = testIO testCase.testName $ do
   parsed <- HTMLParser.parse testCase.inputHtml
-  pure $ assertEqual testCase.testName testCase.expectedHtml (HTML.format testCase.template parsed)
+  pure (assertEqual testCase.testName testCase.expectedHtml (HTML.format testCase.template parsed))
 
 allTests :: [HtmlFormatterTestCase] -> IO Test
 allTests testData = do
   tests <- traverse run testData
-  pure $ group name tests
+  pure (group name tests)
 
 results :: [HtmlFormatterTestCase] -> IO (String, Bool)
 results testData = do
   test <- allTests testData
-  pure $ testResults name test
+  pure (testResults name test)
