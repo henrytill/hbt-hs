@@ -1,4 +1,6 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeData #-}
 
 module Hbt
@@ -14,8 +16,11 @@ module Hbt
   )
 where
 
+import Data.ByteString (ByteString)
+import Data.FileEmbed qualified as FileEmbed
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
+import Data.Text.Lazy qualified as LazyText
 import Data.Yaml.Pretty qualified as YamlPretty
 import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
@@ -65,12 +70,13 @@ parseWith XML = PinboardXML.parse
 parseWith Markdown = Markdown.parse "content"
 parseWith HTML = HTMLParser.parse
 
-mustacheFile :: String
-mustacheFile = "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
+templateBytes :: ByteString
+templateBytes = $(FileEmbed.embedFileRelative "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache")
 
 formatWith :: (HasCallStack) => Format To -> Collection -> IO Text
 formatWith YAML collection =
   pure (Text.decodeUtf8 (YamlPretty.encodePretty Collection.yamlConfig collection))
 formatWith HTML collection = do
-  template <- Microstache.compileMustacheFile mustacheFile
+  let templateText = LazyText.fromStrict (Text.decodeUtf8 templateBytes)
+  template <- either (fail . show) pure $ Microstache.compileMustacheText "netscape_bookmarks" templateText
   pure (HTMLFormatter.format template collection)
