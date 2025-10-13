@@ -1,165 +1,157 @@
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeData #-}
+
 module TestData
-  ( HtmlParserTestCase (..)
-  , MarkdownParserTestCase (..)
-  , PinboardParserTestCase (..)
-  , HtmlFormatterTestCase (..)
-  , AllTestData (..)
-  , loadAllTestData
+  ( TestCase (..)
+  , discoverInput
+  , discoverOutput
+  , testParser
+  , testFormatter
+  , parserTests
+  , formatterTests
   )
 where
 
+import Control.Monad (foldM)
 import Data.ByteString qualified as BS
-import Data.List (isSuffixOf, partition, sort)
+import Data.List (groupBy, sort)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Text.Encoding.Error qualified as Text.Error
-import Hbt (Format (..), InputFormat, toString)
+import Data.Yaml qualified as Yaml
+import Hbt (Flow (..), Format (..), formatWith, parseWith)
 import System.Directory (listDirectory)
 import System.FilePath (takeBaseName, (</>))
-import Text.Microstache (Template, compileMustacheFile)
+import Test.Dwergaz
+import TestUtilities (testIO)
+
+data TestCase (f :: Flow) = MkTestCase
+  { name :: String
+  , format :: Format f
+  , input :: Text
+  , expected :: Text
+  }
+  deriving (Show)
+
+instance Eq (TestCase f) where
+  MkTestCase {name = a} == MkTestCase {name = b} = a == b
+
+instance Ord (TestCase f) where
+  compare (MkTestCase {name = a}) (MkTestCase {name = b}) = compare a b
+
+type TestMap f = Map FilePath (TestCase f)
 
 baseDir :: FilePath
 baseDir = "test" </> "data"
 
-htmlDir :: FilePath
-htmlDir = baseDir </> "html"
+inputDir :: Format From -> Maybe FilePath
+inputDir JSON = Just (baseDir </> "pinboard" </> "json")
+inputDir XML = Just (baseDir </> "pinboard" </> "xml")
+inputDir Markdown = Just (baseDir </> "markdown")
+inputDir HTML = Just (baseDir </> "html")
 
-markdownDir :: FilePath
-markdownDir = baseDir </> "markdown"
+outputDir :: Format To -> Maybe FilePath
+outputDir HTML = Just (baseDir </> "html")
+outputDir YAML = Nothing
 
-pinboardDir :: FilePath
-pinboardDir = baseDir </> "pinboard"
+formatExt :: Format f -> String
+formatExt JSON = "json"
+formatExt XML = "xml"
+formatExt Markdown = "md"
+formatExt HTML = "html"
+formatExt YAML = "yaml"
 
 readText :: FilePath -> IO Text
 readText path = do
   bytes <- BS.readFile path
   pure (Text.Encoding.decodeUtf8With Text.Error.lenientDecode bytes)
 
-discover :: FilePath -> String -> IO [String]
-discover dir suffix = do
-  allFiles <- listDirectory dir
-  let inputFiles = [f | f <- allFiles, suffix `isSuffixOf` f]
-      testNames = map (takeBaseName . takeBaseName) inputFiles
-  pure (sort testNames)
+splitExt :: String -> [String]
+splitExt s = filter (/= ".") (groupBy (\a b -> a /= '.' && b /= '.') s)
 
-data HtmlParserTestCase = MkHtmlParserTestCase
-  { testName :: String
-  , inputHtml :: Text
-  , expectedYaml :: Text
-  }
-  deriving (Show, Eq)
+processFile :: Format From -> FilePath -> TestMap From -> FilePath -> IO (TestMap From)
+processFile format dir acc file = do
+  let name = takeBaseName (takeBaseName file)
+      ext = drop 1 (snd (span (/= '.') file))
+      fullPath = dir </> file
+  case splitExt ext of
+    ["expected", "yaml"] -> do
+      expected <- readText fullPath
+      let updater maybeCase = case maybeCase of
+            Nothing -> Just (MkTestCase {name, format, input = Text.empty, expected})
+            Just tc -> Just (tc {expected})
+      pure (Map.alter updater name acc)
+    ["input", e] | e == formatExt format -> do
+      input <- readText fullPath
+      let updater maybeCase = case maybeCase of
+            Nothing -> Just (MkTestCase {name, format, input, expected = Text.empty})
+            Just tc -> Just (tc {input})
+      pure (Map.alter updater name acc)
+    _ -> pure acc
 
-data MarkdownParserTestCase = MkMarkdownParserTestCase
-  { testName :: String
-  , inputMarkdown :: Text
-  , expectedYaml :: Text
-  }
-  deriving (Show, Eq)
+processOutputFile :: Format To -> FilePath -> TestMap To -> FilePath -> IO (TestMap To)
+processOutputFile format dir acc file = do
+  let name = takeBaseName (takeBaseName file)
+      ext = drop 1 (snd (span (/= '.') file))
+      fullPath = dir </> file
+  case splitExt ext of
+    ["expected", e] | e == formatExt format -> do
+      expected <- readText fullPath
+      let updater maybeCase = case maybeCase of
+            Nothing -> Just (MkTestCase {name, format, input = Text.empty, expected})
+            Just tc -> Just (tc {expected})
+      pure (Map.alter updater name acc)
+    ["input", _] -> do
+      input <- readText fullPath
+      let updater maybeCase = case maybeCase of
+            Nothing -> Just (MkTestCase {name, format, input, expected = Text.empty})
+            Just tc -> Just (tc {input})
+      pure (Map.alter updater name acc)
+    _ -> pure acc
 
-data PinboardParserTestCase = MkPinboardParserTestCase
-  { testName :: String
-  , inputText :: Text
-  , expectedYaml :: Text
-  , format :: InputFormat
-  }
-  deriving (Show, Eq)
+discoverInput :: Format From -> IO [TestCase From]
+discoverInput format =
+  case inputDir format of
+    Nothing -> pure []
+    Just dir -> do
+      allFiles <- listDirectory dir
+      testMap <- foldM (processFile format dir) Map.empty allFiles
+      let tests = map snd (Map.toList testMap)
+      pure (sort tests)
 
-data HtmlFormatterTestCase = MkHtmlFormatterTestCase
-  { testName :: String
-  , inputHtml :: Text
-  , expectedHtml :: Text
-  , template :: Template
-  }
+discoverOutput :: Format To -> IO [TestCase To]
+discoverOutput format =
+  case outputDir format of
+    Nothing -> pure []
+    Just dir -> do
+      allFiles <- listDirectory dir
+      testMap <- foldM (processOutputFile format dir) Map.empty allFiles
+      let tests = map snd (Map.toList testMap)
+      pure (sort tests)
 
-data AllTestData = MkAllTestData
-  { htmlParserTests :: [HtmlParserTestCase]
-  , markdownTests :: [MarkdownParserTestCase]
-  , pinboardJsonTests :: [PinboardParserTestCase]
-  , pinboardXmlTests :: [PinboardParserTestCase]
-  , htmlFormatterTests :: [HtmlFormatterTestCase]
-  }
+testParser :: TestCase From -> IO Test
+testParser testCase = testIO testCase.name $ do
+  expected <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expected)
+  actual <- parseWith testCase.format testCase.input
+  pure (assertEqual testCase.name expected actual)
 
-discoverHtml :: IO [String]
-discoverHtml = discover htmlDir ".input.html"
+testFormatter :: Format From -> TestCase To -> IO Test
+testFormatter inputFormat testCase = testIO testCase.name $ do
+  parsed <- parseWith inputFormat testCase.input
+  formatted <- formatWith testCase.format parsed
+  actualReparsed <- parseWith inputFormat formatted
+  expectedReparsed <- parseWith inputFormat testCase.expected
+  pure (assertEqual testCase.name expectedReparsed actualReparsed)
 
-loadHtml :: String -> IO HtmlParserTestCase
-loadHtml testName = do
-  let inputFile = htmlDir </> (testName ++ ".input.html")
-      expectedFile = htmlDir </> (testName ++ ".expected.yaml")
-  inputHtml <- readText inputFile
-  expectedYaml <- readText expectedFile
-  pure MkHtmlParserTestCase {testName, inputHtml, expectedYaml}
+parserTests :: String -> [TestCase From] -> IO Test
+parserTests groupName testCases = do
+  tests <- traverse testParser testCases
+  pure (group groupName tests)
 
-loadAllHtml :: IO [HtmlParserTestCase]
-loadAllHtml = do
-  testCaseNames <- discoverHtml
-  mapM loadHtml testCaseNames
-
-discoverMarkdown :: IO [String]
-discoverMarkdown = discover markdownDir ".input.md"
-
-loadMarkdown :: String -> IO MarkdownParserTestCase
-loadMarkdown testName = do
-  let inputFile = markdownDir </> (testName ++ ".input.md")
-      expectedFile = markdownDir </> (testName ++ ".expected.yaml")
-  inputMarkdown <- readText inputFile
-  expectedYaml <- readText expectedFile
-  pure MkMarkdownParserTestCase {testName, inputMarkdown, expectedYaml}
-
-loadAllMarkdown :: IO [MarkdownParserTestCase]
-loadAllMarkdown = do
-  testCaseNames <- discoverMarkdown
-  mapM loadMarkdown testCaseNames
-
-discoverPinboard :: IO [(String, InputFormat)] -- (name, format)
-discoverPinboard = do
-  allFiles <- listDirectory pinboardDir
-  let jsonFiles = [f | f <- allFiles, ".input.json" `isSuffixOf` f]
-      xmlFiles = [f | f <- allFiles, ".input.xml" `isSuffixOf` f]
-      jsonNames = map (\f -> (takeBaseName (takeBaseName f), JSON)) jsonFiles
-      xmlNames = map (\f -> (takeBaseName (takeBaseName f), XML)) xmlFiles
-  pure (sort (jsonNames ++ xmlNames))
-
-loadPinboard :: String -> InputFormat -> IO PinboardParserTestCase
-loadPinboard name format = do
-  let formatStr = toString format
-      testName = name ++ "_" ++ formatStr
-      inputFile = pinboardDir </> (name ++ ".input." ++ formatStr)
-      expectedFile = pinboardDir </> (name ++ ".expected.yaml")
-  inputText <- readText inputFile
-  expectedYaml <- readText expectedFile
-  pure MkPinboardParserTestCase {testName, inputText, expectedYaml, format}
-
-loadAllPinboard :: IO [PinboardParserTestCase]
-loadAllPinboard = do
-  testCaseNames <- discoverPinboard
-  mapM (uncurry loadPinboard) testCaseNames
-
-discoverHtmlFormatter :: IO [String]
-discoverHtmlFormatter = discover htmlDir ".input.html"
-
-loadHtmlFormatter :: String -> IO HtmlFormatterTestCase
-loadHtmlFormatter testName = do
-  let inputFile = htmlDir </> (testName ++ ".input.html")
-      expectedFile = htmlDir </> (testName ++ ".expected.html")
-  inputHtml <- readText inputFile
-  expectedHtml <- readText expectedFile
-  template <- compileMustacheFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache"
-  pure MkHtmlFormatterTestCase {testName, inputHtml, expectedHtml, template}
-
-loadAllHtmlFormatter :: IO [HtmlFormatterTestCase]
-loadAllHtmlFormatter = do
-  testCaseNames <- discoverHtmlFormatter
-  mapM loadHtmlFormatter testCaseNames
-
-loadAllTestData :: IO AllTestData
-loadAllTestData = do
-  allPinboardTests <- loadAllPinboard
-  let isJson tc = tc.format == JSON
-      (pinboardJsonTests, pinboardXmlTests) = partition isJson allPinboardTests
-  MkAllTestData
-    <$> loadAllHtml
-    <*> loadAllMarkdown
-    <*> pure pinboardJsonTests
-    <*> pure pinboardXmlTests
-    <*> loadAllHtmlFormatter
+formatterTests :: String -> Format From -> [TestCase To] -> IO Test
+formatterTests groupName inputFormat testCases = do
+  tests <- traverse (testFormatter inputFormat) testCases
+  pure (group groupName tests)

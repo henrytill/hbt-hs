@@ -1,14 +1,11 @@
 module Main (main) where
 
 import Control.Monad (unless)
+import Hbt (Format (..))
 import Hbt.CollectionTest qualified as CollectionTest
-import Hbt.Formatter.HTMLTest qualified as HTMLFormatterTest
-import Hbt.Parser.HTMLTest qualified as HTMLTest
-import Hbt.Parser.MarkdownTest qualified as MarkdownTest
-import Hbt.Parser.Pinboard.JSONTest qualified as PinboardJSONTest
-import Hbt.Parser.Pinboard.XMLTest qualified as PinboardXMLTest
 import System.Exit (exitFailure)
-import TestData (AllTestData (..), loadAllTestData)
+import TestData (discoverInput, discoverOutput, formatterTests, parserTests)
+import TestUtilities (testResults)
 import Text.Printf (printf)
 
 handleResults :: (String, Bool) -> IO Bool
@@ -16,17 +13,23 @@ handleResults (output, passed) = putStr output >> pure passed
 
 main :: IO ()
 main = do
-  testData <- loadAllTestData
+  htmlParserCases <- discoverInput HTML
+  htmlFormatterCases <- discoverOutput HTML
+  markdownParserCases <- discoverInput Markdown
+  jsonParserCases <- discoverInput JSON
+  xmlParserCases <- discoverInput XML
   testSuites <-
     sequence
       [ pure CollectionTest.results
-      , HTMLFormatterTest.results testData.htmlFormatterTests
-      , HTMLTest.results testData.htmlParserTests
-      , MarkdownTest.results testData.markdownTests
-      , PinboardJSONTest.results testData.pinboardJsonTests
-      , PinboardXMLTest.results testData.pinboardXmlTests
+      , testResults "Hbt.Parser.HTML" <$> parserTests "HTML Parser" htmlParserCases
+      , testResults "Hbt.Formatter.HTML" <$> formatterTests "HTML Formatter" HTML htmlFormatterCases
+      , testResults "Hbt.Parser.Markdown" <$> parserTests "Markdown Parser" markdownParserCases
+      , testResults "Hbt.Parser.Pinboard.JSON" <$> parserTests "Pinboard JSON Parser" jsonParserCases
+      , testResults "Hbt.Parser.Pinboard.XML" <$> parserTests "Pinboard XML Parser" xmlParserCases
       ]
+
   results <- traverse handleResults testSuites
   let allPassed = and results
+
   printf "Summary: %s\n" (if allPassed then "All tests passed!" else "Some tests failed.")
   unless allPassed exitFailure

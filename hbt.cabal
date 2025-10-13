@@ -20,9 +20,10 @@ extra-source-files:
     test/data/markdown/*.yaml
     test/data/html/*.html
     test/data/html/*.yaml
-    test/data/pinboard/*.json
-    test/data/pinboard/*.xml
-    test/data/pinboard/*.yaml
+    test/data/pinboard/json/*.json
+    test/data/pinboard/json/*.yaml
+    test/data/pinboard/xml/*.xml
+    test/data/pinboard/xml/*.yaml
 
 common exts
     default-extensions:
@@ -94,11 +95,6 @@ test-suite hbt-test
     hs-source-dirs:   test
     other-modules:
         Hbt.CollectionTest
-        Hbt.Formatter.HTMLTest
-        Hbt.Parser.HTMLTest
-        Hbt.Parser.MarkdownTest
-        Hbt.Parser.Pinboard.JSONTest
-        Hbt.Parser.Pinboard.XMLTest
         TestData
         TestUtilities
 
@@ -111,7 +107,6 @@ test-suite hbt-test
         directory >=1.3.8.5 && <1.4,
         dwergaz ^>=0.3.1.0,
         filepath ^>=1.5.2.0,
-        microstache ^>=1.0.3,
         text ^>=2.1.1,
         vector ^>=0.13.2.0,
         yaml ^>=0.11.11.2,
