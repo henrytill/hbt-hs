@@ -16,4 +16,9 @@ jobs:
           submodules: true
       - uses: DeterminateSystems/nix-installer-action@main
       - uses: DeterminateSystems/magic-nix-cache-action@main
-      - run: nix build -L --accept-flake-config
+      - run: nix build -L --accept-flake-config .#hbt -o result-hbt-hs
+      - run: nix build -L --accept-flake-config .#hbt-static -o result-hbt-hs-static
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hbt-x86_64-unknown-linux-musl
+          path: result-hbt-hs-static/bin/hbt
