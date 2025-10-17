@@ -119,6 +119,16 @@
         packages.hbt = pkgs.haskell.packages.${ghcName}.hbt;
         packages.hbt-static = pkgsMusl.haskell.packages.${ghcName}.hbt;
         packages.default = self.packages.${system}.hbt;
+        devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
+          packages = hpkgs: [ hpkgs.hbt ];
+          nativeBuildInputs = with pkgs; [
+            cabal-install
+            haskell.packages.${ghcName}.fourmolu
+            haskell.packages.${ghcName}.ghc-tags
+            haskell.packages.${ghcName}.hlint
+            haskell.packages.${ghcName}.weeder
+          ];
+        };
       }
     );
 }
