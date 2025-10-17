@@ -1,4 +1,4 @@
-module Hbt.Collection.Serialized where
+module Hbt.Collection.Repr where
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Vector (Vector)
@@ -6,24 +6,24 @@ import GHC.Generics (Generic)
 import Hbt.Collection.Id (Id)
 import Hbt.Entity (Entity)
 
-data SerializedNode = MkSerializedNode
+data NodeRepr = MkNodeRepr
   { id :: Id
   , entity :: Entity
   , edges :: Vector Id
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SerializedNode
+instance ToJSON NodeRepr
 
-instance FromJSON SerializedNode
+instance FromJSON NodeRepr
 
-data SerializedCollection = MkSerializedCollection
+data CollectionRepr = MkCollectionRepr
   { version :: String
   , length :: Int
-  , value :: Vector SerializedNode
+  , value :: Vector NodeRepr
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON SerializedCollection
+instance ToJSON CollectionRepr
 
-instance FromJSON SerializedCollection
+instance FromJSON CollectionRepr

@@ -18,8 +18,8 @@ module Hbt.Collection
   , upsert
   , addEdge
   , addEdges
-  , toSerialized
-  , fromSerialized
+  , toRepr
+  , fromRepr
   , yamlConfig
   )
 where
@@ -35,7 +35,7 @@ import Data.Vector qualified as Vector
 import Data.Yaml.Pretty qualified as YamlPretty
 import GHC.Stack (HasCallStack)
 import Hbt.Collection.Id (Id (..))
-import Hbt.Collection.Serialized (SerializedCollection (..), SerializedNode (..))
+import Hbt.Collection.Repr (CollectionRepr (..), NodeRepr (..))
 import Hbt.Entity (Entity (..), URI)
 import Hbt.Entity qualified as Entity
 import Prelude hiding (elem, id, length, null)
@@ -119,20 +119,20 @@ addEdge from to collection =
 addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdges from to collection = addEdge from to (addEdge to from collection)
 
-mkSerializedNode :: Collection -> Id -> Entity -> SerializedNode
-mkSerializedNode collection id entity =
+mkNodeRepr :: Collection -> Id -> Entity -> NodeRepr
+mkNodeRepr collection id entity =
   let edges = edgesAt id collection
-   in MkSerializedNode {id, entity, edges}
+   in MkNodeRepr {id, entity, edges}
 
-toSerialized :: Collection -> SerializedCollection
-toSerialized collection =
+toRepr :: Collection -> CollectionRepr
+toRepr collection =
   let version = "0.1.0"
       length = Vector.length collection.nodes
-      value = Vector.imap (mkSerializedNode collection . MkId) collection.nodes
-   in MkSerializedCollection {version, length, value}
+      value = Vector.imap (mkNodeRepr collection . MkId) collection.nodes
+   in MkCollectionRepr {version, length, value}
 
-fromSerialized :: SerializedCollection -> Collection
-fromSerialized serialized =
+fromRepr :: CollectionRepr -> Collection
+fromRepr serialized =
   let entities = Vector.map (.entity) serialized.value
       nodes = entities
       edges = Vector.map (.edges) serialized.value
@@ -140,10 +140,10 @@ fromSerialized serialized =
    in MkCollection {nodes, edges, uris}
 
 instance ToJSON Collection where
-  toJSON collection = toJSON (toSerialized collection)
+  toJSON collection = toJSON (toRepr collection)
 
 instance FromJSON Collection where
-  parseJSON json = fmap fromSerialized (parseJSON json)
+  parseJSON json = fmap fromRepr (parseJSON json)
 
 -- | YAML configuration that preserves field order as expected by tests
 yamlConfig :: YamlPretty.Config
