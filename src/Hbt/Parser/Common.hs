@@ -71,6 +71,31 @@ pattern Null <- (isNull -> True)
 
 type Attribute = (ByteString, ByteString)
 
+toLower :: ByteString -> ByteString
+-- toLower bs = Char8.map Char.toLower bs
+toLower bs = bs
+
+matchAttr :: ByteString -> Attribute -> Maybe Text
+matchAttr key (attrKey, attrValue)
+  | toLower attrKey == toLower key
+  , not (isNull attrValue) =
+      Just (Text.decodeUtf8 attrValue)
+  | otherwise = Nothing
+
+parseTagStringWith :: ByteString -> ByteString -> [Text]
+parseTagStringWith separator value
+  | isNull value = []
+  | otherwise = filter (not . isNull) (map (Text.decodeUtf8 . Char8.strip) (Char8.split (Char8.head separator) value))
+
+-- (Pinboard) XML format uses "tag" with space-separated values: tag="web programming haskell"
+-- HTML format uses "tags" with comma-separated values: TAGS="web,programming,haskell"
+matchAttrTagList :: Attribute -> Maybe [Text]
+matchAttrTagList (attrKey, attrValue) =
+  case toLower attrKey of
+    "tag" -> Just (parseTagStringWith " " attrValue)
+    "tags" -> Just (parseTagStringWith "," attrValue)
+    _ -> Nothing
+
 pattern Href :: Text -> Attribute
 pattern Href value <- (matchAttr "href" -> Just value)
 
@@ -115,31 +140,6 @@ pattern STrue = "true"
 
 pattern Yes :: Text
 pattern Yes = "yes"
-
-toLower :: ByteString -> ByteString
--- toLower bs = Char8.map Char.toLower bs
-toLower bs = bs
-
-matchAttr :: ByteString -> Attribute -> Maybe Text
-matchAttr key (attrKey, attrValue)
-  | toLower attrKey == toLower key
-  , not (isNull attrValue) =
-      Just (Text.decodeUtf8 attrValue)
-  | otherwise = Nothing
-
-parseTagStringWith :: ByteString -> ByteString -> [Text]
-parseTagStringWith separator value
-  | isNull value = []
-  | otherwise = filter (not . isNull) (map (Text.decodeUtf8 . Char8.strip) (Char8.split (Char8.head separator) value))
-
--- (Pinboard) XML format uses "tag" with space-separated values: tag="web programming haskell"
--- HTML format uses "tags" with comma-separated values: TAGS="web,programming,haskell"
-matchAttrTagList :: Attribute -> Maybe [Text]
-matchAttrTagList (attrKey, attrValue) =
-  case toLower attrKey of
-    "tag" -> Just (parseTagStringWith " " attrValue)
-    "tags" -> Just (parseTagStringWith "," attrValue)
-    _ -> Nothing
 
 type StateIO s = StateT s IO
 
