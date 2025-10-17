@@ -37,10 +37,10 @@ data TestCase (f :: Flow) = MkTestCase
   deriving (Show)
 
 instance Eq (TestCase f) where
-  MkTestCase {name = a} == MkTestCase {name = b} = a == b
+  a == b = a.name == b.name
 
 instance Ord (TestCase f) where
-  compare (MkTestCase {name = a}) (MkTestCase {name = b}) = compare a b
+  compare a b = compare a.name b.name
 
 type TestMap f = Map FilePath (TestCase f)
 
