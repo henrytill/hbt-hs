@@ -11,6 +11,7 @@
     - OverloadedStrings
     - PatternSynonyms
     - RequiredTypeArguments
+    - TemplateHaskell
     - TypeData
     - ViewPatterns
 

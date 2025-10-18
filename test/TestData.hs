@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeData #-}
 
 module TestData
   ( TestCase (..)
@@ -24,7 +23,7 @@ import Data.Text.Encoding.Error qualified as Text.Error
 import Data.Yaml qualified as Yaml
 import Hbt (Flow (..), Format (..), formatWith, parseWith)
 import System.Directory (listDirectory)
-import System.FilePath (takeBaseName, (</>))
+import System.FilePath (splitExtensions, (</>))
 import Test.Dwergaz
 import TestUtilities (testIO)
 
@@ -69,13 +68,15 @@ readText path = do
   bytes <- BS.readFile path
   pure (Text.Encoding.decodeUtf8With Text.Error.lenientDecode bytes)
 
+split :: FilePath -> (String, String)
+split path = fmap (drop 1) (splitExtensions path)
+
 splitExt :: String -> [String]
 splitExt s = filter (/= ".") (groupBy (\a b -> a /= '.' && b /= '.') s)
 
 processFile :: Format From -> FilePath -> TestMap From -> FilePath -> IO (TestMap From)
 processFile format dir acc file = do
-  let name = takeBaseName (takeBaseName file)
-      ext = drop 1 (snd (span (/= '.') file))
+  let (name, ext) = split file
       fullPath = dir </> file
   case splitExt ext of
     ["expected", "yaml"] -> do
@@ -94,8 +95,7 @@ processFile format dir acc file = do
 
 processOutputFile :: Format To -> FilePath -> TestMap To -> FilePath -> IO (TestMap To)
 processOutputFile format dir acc file = do
-  let name = takeBaseName (takeBaseName file)
-      ext = drop 1 (snd (span (/= '.') file))
+  let (name, ext) = split file
       fullPath = dir </> file
   case splitExt ext of
     ["expected", e] | e == formatExt format -> do

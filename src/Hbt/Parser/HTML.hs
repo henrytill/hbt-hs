@@ -108,7 +108,7 @@ accumulateEntity :: Entity -> Attr -> NetscapeM Entity
 accumulateEntity entity (Attr name value) =
   case Text.toLower name of
     "href" -> do
-      uri <- either (throwM) pure (Entity.mkURI value)
+      uri <- either throwM pure (Entity.mkURI value)
       pure (entity {uri})
     "add_date" -> pure (entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)})
     "last_modified" -> pure (entity {updatedAt = Maybe.maybeToList (parseTimestamp value)})
