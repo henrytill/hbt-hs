@@ -121,6 +121,7 @@
         packages.default = self.packages.${system}.hbt;
         devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
           packages = hpkgs: [ hpkgs.hbt ];
+          withHoogle = true;
           nativeBuildInputs = with pkgs; [
             cabal-install
             haskell.packages.${ghcName}.fourmolu
