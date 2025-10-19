@@ -1,0 +1,54 @@
+cabal-version:      3.0
+name:               backlogged
+version:            0.1.0.0
+license:            ISC
+license-file:       LICENSE
+author:             Henry Till
+maintainer:         henrytill@gmail.com
+category:           Web
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall
+
+library
+    import:           warnings
+    default-language: GHC2021
+    hs-source-dirs:   src
+    exposed-modules:  Backlogged
+    other-modules:    Servant.API.ContentTypes.Ext
+    build-depends:    base >=4.16 && <5
+                    , aeson ^>=2.2.1
+                    , crypton-connection ^>= 0.4.5
+                    , data-default ^>=0.8.0.1
+                    , directory ^>=1.3.8
+                    , http-client ^>=0.7.14
+                    , http-client-tls ^>=0.3.6
+                    , http-media ^>=0.8.1
+                    , servant ^>=0.20
+                    , servant-client ^>=0.20
+                    , text ^>=2.1.3
+                    , time ^>=1.12.2
+                    , tls ^>=2.1.11
+
+
+executable backlogged
+    import:           warnings
+    default-language: GHC2021
+    hs-source-dirs:   exe
+    main-is:          Main.hs
+    build-depends:
+        base >=4.16 && <5,
+        backlogged
+
+
+test-suite backlogged-test
+    import:           warnings
+    default-language: GHC2021
+    hs-source-dirs:   test
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    build-depends:
+        base >=4.16 && <5,
+        backlogged
