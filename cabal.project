@@ -1,1 +1,2 @@
-packages: ./hbt.cabal
+packages:
+  hbt/hbt.cabal

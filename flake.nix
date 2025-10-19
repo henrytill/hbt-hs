@@ -52,7 +52,7 @@
                 hbt =
                   let
                     hbt_ = hfinal.callCabal2nix "hbt" (builtins.path {
-                      path = ./.;
+                      path = ./hbt;
                       name = "hbt-src";
                     }) { };
                   in
