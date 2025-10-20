@@ -60,9 +60,9 @@ newtype UpdateTime = MkUpdateTime {unUpdateTime :: UTCTime}
   deriving (Eq, Show, Generic)
 
 updateTimeOptions :: Options
-updateTimeOptions = Aeson.defaultOptions {Aeson.fieldLabelModifier = remapField mappings}
-  where
-    mappings = [("unUpdateTime", "update_time")]
+updateTimeOptions =
+  let mappings = [("unUpdateTime", "update_time")]
+   in Aeson.defaultOptions {Aeson.fieldLabelModifier = remapField mappings}
 
 instance ToJSON UpdateTime where
   toJSON = Aeson.genericToJSON updateTimeOptions
@@ -96,7 +96,7 @@ instance ToJSON ConfigVersion where
   toJSON = toJSON . unConfigVersion
 
 instance FromJSON ConfigVersion where
-  parseJSON = fmap MkConfigVersion . parseJSON
+  parseJSON v = fmap MkConfigVersion (parseJSON v)
 
 newtype ApiToken = MkApiToken {unApiToken :: Text}
   deriving (Eq, Show)
@@ -105,7 +105,7 @@ instance ToJSON ApiToken where
   toJSON = toJSON . unApiToken
 
 instance FromJSON ApiToken where
-  parseJSON = fmap MkApiToken . parseJSON
+  parseJSON v = fmap MkApiToken (parseJSON v)
 
 instance ToHttpApiData ApiToken where
   toQueryParam (MkApiToken t) = t
@@ -117,12 +117,12 @@ data Config = MkConfig
   deriving (Eq, Show, Generic)
 
 configOptions :: Options
-configOptions = Aeson.defaultOptions {Aeson.fieldLabelModifier = remapField mappings}
-  where
-    mappings =
-      [ ("configVersion", "version")
-      , ("configApiToken", "apiToken")
-      ]
+configOptions =
+  let mappings =
+        [ ("configVersion", "version")
+        , ("configApiToken", "apiToken")
+        ]
+   in Aeson.defaultOptions {Aeson.fieldLabelModifier = remapField mappings}
 
 instance ToJSON Config where
   toJSON = Aeson.genericToJSON configOptions
@@ -136,14 +136,14 @@ readConfig path = do
   Aeson.throwDecodeStrictText configText
 
 managerSettings :: ManagerSettings
-managerSettings = TLS.mkManagerSettings tlsSettings Nothing
-  where
-    supportedExtendedMainSecret :: EMSMode
-    supportedExtendedMainSecret = AllowEMS
-    settingClientSupported :: Supported
-    settingClientSupported = def {supportedExtendedMainSecret}
-    tlsSettings :: TLSSettings
-    tlsSettings = def {settingClientSupported}
+managerSettings =
+  let supportedExtendedMainSecret :: EMSMode
+      supportedExtendedMainSecret = AllowEMS
+      settingClientSupported :: Supported
+      settingClientSupported = def {supportedExtendedMainSecret}
+      tlsSettings :: TLSSettings
+      tlsSettings = def {settingClientSupported}
+   in TLS.mkManagerSettings tlsSettings Nothing
 
 runClient :: ApiToken -> IO ()
 runClient apiToken = do
@@ -152,18 +152,18 @@ runClient apiToken = do
       env = mkClientEnv manager $ BaseUrl Https "api.pinboard.in" 443 "v1"
   result <- runClientM m env
   case result of
-    Left err -> error $ show err
-    Right response -> putStrLn $ "updated: " ++ show response
+    Left err -> error (show err)
+    Right response -> putStrLn ("updated: " ++ show response)
 
 someFunc :: IO ()
 someFunc = do
   configDir <- Directory.getXdgDirectory XdgConfig "backlogged"
   let configFile = configDir ++ "/backlogged.json"
-  putStrLn $ "config: " ++ configFile
+  putStrLn ("config: " ++ configFile)
   configExists <- Directory.doesFileExist configFile
   if configExists
     then do
       config <- readConfig configFile
-      putStrLn $ "parsed: " ++ show config
-      runClient $ configApiToken config
+      putStrLn ("parsed: " ++ show config)
+      runClient (configApiToken config)
     else error "config file does not exist"
