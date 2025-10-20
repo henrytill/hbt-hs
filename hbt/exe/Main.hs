@@ -166,7 +166,7 @@ detectInputFormat :: FilePath -> Maybe InputFormat
 detectInputFormat file = detectFromExtension (FilePath.takeExtension file)
 
 parseFile :: InputFormat -> FilePath -> Text -> IO Collection
-parseFile fmt _file content = parseWith fmt content
+parseFile fmt _file = parseWith fmt
 
 applyMappings :: Maybe FilePath -> Collection -> IO Collection
 applyMappings Nothing collection = pure collection
