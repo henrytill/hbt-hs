@@ -15,7 +15,7 @@ import Network.Connection (TLSSettings (..))
 import Network.HTTP.Client (ManagerSettings)
 import Network.HTTP.Client qualified as Client
 import Network.HTTP.Client.TLS qualified as TLS
-import Network.TLS (EMSMode (AllowEMS), Supported (..))
+import Network.TLS (ClientParams (..), EMSMode (AllowEMS), Supported (..))
 import Servant.API hiding (JSON)
 import Servant.API.ContentTypes.Ext
 import Servant.Client
@@ -141,8 +141,9 @@ managerSettings =
       supportedExtendedMainSecret = AllowEMS
       settingClientSupported :: Supported
       settingClientSupported = def {supportedExtendedMainSecret}
-      tlsSettings :: TLSSettings
-      tlsSettings = def {settingClientSupported}
+      tlsSettings = case def of
+        settings@(TLSSettingsSimple {}) -> settings {settingClientSupported}
+        TLSSettings params -> TLSSettings (params {clientSupported = settingClientSupported})
    in TLS.mkManagerSettings tlsSettings Nothing
 
 runClient :: ApiToken -> IO ()
