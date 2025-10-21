@@ -154,6 +154,7 @@
           withHoogle = true;
           nativeBuildInputs = with pkgs; [
             cabal-install
+            ghcid
             haskell.packages.${ghcName}.fourmolu
             haskell.packages.${ghcName}.ghc-tags
             haskell.packages.${ghcName}.hlint
