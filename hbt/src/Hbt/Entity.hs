@@ -50,7 +50,7 @@ newtype URI = MkURI {unURI :: URI.URIRef URI.Absolute}
   deriving (Show, Eq, Ord)
 
 nullURI :: URI
-nullURI = MkURI (URI.URI (URI.Scheme mempty) Nothing mempty (URI.Query []) Nothing)
+nullURI = MkURI (URI.URI (URI.Scheme mempty) Nothing mempty (URI.Query mempty) Nothing)
 
 translate :: Text -> Text
 translate uriText =
