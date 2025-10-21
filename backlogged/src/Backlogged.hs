@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Backlogged where
 
@@ -137,11 +138,8 @@ readConfig path = do
 
 managerSettings :: ManagerSettings
 managerSettings =
-  let supportedExtendedMainSecret :: EMSMode
-      supportedExtendedMainSecret = AllowEMS
-      settingClientSupported :: Supported
-      settingClientSupported = def {supportedExtendedMainSecret}
-      tlsSettings = case def of
+  let settingClientSupported = (def @Supported) {supportedExtendedMainSecret = AllowEMS}
+      tlsSettings = case def @TLSSettings of
         settings@(TLSSettingsSimple {}) -> settings {settingClientSupported}
         TLSSettings params -> TLSSettings (params {clientSupported = settingClientSupported})
    in TLS.mkManagerSettings tlsSettings Nothing
@@ -150,7 +148,7 @@ runClient :: ApiToken -> IO ()
 runClient apiToken = do
   manager <- Client.newManager managerSettings
   let m = update (Just JSON) (Just apiToken)
-      env = mkClientEnv manager $ BaseUrl Https "api.pinboard.in" 443 "v1"
+      env = mkClientEnv manager (BaseUrl Https "api.pinboard.in" 443 "v1")
   result <- runClientM m env
   case result of
     Left err -> error (show err)
