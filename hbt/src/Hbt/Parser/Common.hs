@@ -82,18 +82,18 @@ matchAttr key (attrKey, attrValue)
       Just (Text.decodeUtf8 attrValue)
   | otherwise = Nothing
 
-parseTagStringWith :: ByteString -> ByteString -> [Text]
+parseTagStringWith :: Char -> ByteString -> [Text]
 parseTagStringWith separator value
   | isNull value = []
-  | otherwise = filter (not . isNull) (map (Text.decodeUtf8 . Char8.strip) (Char8.split (Char8.head separator) value))
+  | otherwise = filter (not . isNull) (map (Text.decodeUtf8 . Char8.strip) (Char8.split separator value))
 
 -- (Pinboard) XML format uses "tag" with space-separated values: tag="web programming haskell"
 -- HTML format uses "tags" with comma-separated values: TAGS="web,programming,haskell"
 matchAttrTagList :: Attribute -> Maybe [Text]
 matchAttrTagList (attrKey, attrValue) =
   case toLower attrKey of
-    "tag" -> Just (parseTagStringWith " " attrValue)
-    "tags" -> Just (parseTagStringWith "," attrValue)
+    "tag" -> Just (parseTagStringWith ' ' attrValue)
+    "tags" -> Just (parseTagStringWith ',' attrValue)
     _ -> Nothing
 
 pattern Href :: Text -> Attribute
