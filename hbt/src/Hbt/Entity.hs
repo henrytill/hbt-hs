@@ -2,10 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Entity
-  ( Error (..)
-  , Time (..)
-  , mkTime
-  , Name (..)
+  ( Name (..)
   , Label (..)
   , Extended (..)
   , Entity (..)
@@ -16,44 +13,17 @@ module Hbt.Entity
   )
 where
 
-import Control.Exception (Exception)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
 import Data.Aeson qualified as Aeson
 import Data.List qualified as List
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
-import Data.Text qualified as Text
-import Data.Time.Clock.POSIX (POSIXTime)
-import Data.Time.Clock.POSIX qualified as POSIX
-import Data.Time.Format qualified as Format
+import Hbt.Entity.Time (Time)
+import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI (URI)
 import Hbt.Entity.URI qualified as URI
 import Prelude hiding (id)
-
-data Error
-  = InvalidTime Text
-  deriving (Show, Eq)
-
-instance Exception Error
-
-newtype Time = MkTime {unTime :: POSIXTime}
-  deriving (Show, Eq, Ord)
-
-instance ToJSON Time where
-  toJSON (MkTime posixTime) = toJSON @Integer (round posixTime)
-
-instance FromJSON Time where
-  parseJSON json = fmap (MkTime . fromInteger) (parseJSON json)
-
-epoch :: Time
-epoch = MkTime 0
-
-mkTime :: Text -> Either Error Time
-mkTime s =
-  case Format.parseTimeM @Maybe True Format.defaultTimeLocale "%B %e, %Y" (Text.unpack s) of
-    Nothing -> Left (InvalidTime s)
-    Just utcTime -> Right (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
 
 newtype Name = MkName {unName :: Text}
   deriving (Show, Eq, Ord)
@@ -144,7 +114,7 @@ empty :: Entity
 empty =
   MkEntity
     { uri = URI.empty
-    , createdAt = epoch
+    , createdAt = Time.epoch
     , updatedAt = []
     , names = Set.empty
     , labels = Set.empty

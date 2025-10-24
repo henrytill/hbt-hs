@@ -22,8 +22,9 @@ import Data.Time.Clock.POSIX qualified as POSIX
 import Data.Time.Format qualified as Format
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
-import Hbt.Entity (Entity, Error, Extended (..), Label (..), Name (..), Time (..))
+import Hbt.Entity (Entity, Extended (..), Label (..), Name (..))
 import Hbt.Entity qualified as Entity
+import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
 import Hbt.Parser.Common (IsEmpty (..), pattern Empty)
 
@@ -76,19 +77,13 @@ parseTagString :: Text -> [Text]
 parseTagString Empty = []
 parseTagString str = filter (not . isEmpty) (map Text.strip (Text.splitOn " " str))
 
-parseTime :: (HasCallStack) => Text -> Either Error Time
-parseTime s =
-  case Format.parseTimeM @Maybe True Format.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (Text.unpack s) of
-    Nothing -> Left (Entity.InvalidTime s)
-    Just utcTime -> pure (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
-
 parseTags :: [Text] -> [Label]
 parseTags tagList = map (MkLabel . Text.strip) (filter (not . isEmpty) tagList)
 
 postToEntity :: (HasCallStack) => PinboardPost -> IO Entity
 postToEntity post = do
   uri <- either throwIO pure (URI.parse post.href)
-  createdAt <- either throwIO pure (parseTime post.time)
+  createdAt <- either throwIO pure (Time.parseRFC3339 post.time)
   let updatedAt = []
       name = case post.description of
         Empty -> Nothing

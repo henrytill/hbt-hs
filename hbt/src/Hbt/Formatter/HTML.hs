@@ -18,7 +18,9 @@ import Data.Vector qualified as Vector
 import GHC.Generics (Generic)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity (Entity (..), Extended (..), Label (..), Name (..), Time (..))
+import Hbt.Entity (Entity (..), Extended (..), Label (..), Name (..))
+import Hbt.Entity.Time (Time)
+import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
 import Text.Microstache (Template)
 import Text.Microstache qualified as Microstache
@@ -39,9 +41,6 @@ data TemplateEntity = MkTemplateEntity
 
 instance ToJSON TemplateEntity
 
-formatTime :: Time -> Text
-formatTime (MkTime posixTime) = Text.pack (show @Integer (round posixTime))
-
 getFirstName :: Text -> Set Name -> Text
 getFirstName def names
   | Set.null names = def
@@ -57,14 +56,14 @@ toTemplateEntity entity =
       tagsText = Text.intercalate "," tagsList
    in MkTemplateEntity
         { uri = uriText
-        , createdAt = formatTime entity.createdAt
+        , createdAt = Time.toText entity.createdAt
         , title = getFirstName uriText entity.names
-        , lastModified = fmap formatTime (getLastModified entity)
+        , lastModified = fmap Time.toText (getLastModified entity)
         , tags = if null tagsList then Nothing else Just tagsText
         , shared = entity.shared
         , toRead = entity.toRead
         , isFeed = entity.isFeed
-        , lastVisit = fmap formatTime entity.lastVisitedAt
+        , lastVisit = fmap Time.toText entity.lastVisitedAt
         , description = fmap (.unExtended) entity.extended
         }
 

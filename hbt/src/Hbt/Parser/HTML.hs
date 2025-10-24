@@ -11,14 +11,14 @@ import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Read qualified as Read
 import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity (Entity (..), Time)
+import Hbt.Entity (Entity (..))
 import Hbt.Entity qualified as Entity
+import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
-import Hbt.Parser.Common (IsEmpty (isEmpty), StateIO, drop1, runStateIO, pattern Empty)
+import Hbt.Parser.Common (IsEmpty (isEmpty), StateIO, drop1, runStateIO)
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
@@ -98,22 +98,15 @@ newtype NetscapeM a = MkNetscapeM (StateIO ParseState a)
 runNetscapeM :: NetscapeM a -> ParseState -> IO (a, ParseState)
 runNetscapeM (MkNetscapeM m) = runStateIO m
 
-parseTimestamp :: Text -> Maybe Time
-parseTimestamp str =
-  case Read.decimal str of
-    Left {} -> Nothing
-    Right (timestamp, Empty) -> Just (Entity.MkTime (fromInteger timestamp))
-    Right {} -> Nothing
-
 accumulateEntity :: Entity -> Attr -> NetscapeM Entity
 accumulateEntity entity (Attr name value) =
   case Text.toLower name of
     "href" -> do
       uri <- either throwM pure (URI.parse value)
       pure (entity {uri})
-    "add_date" -> pure (entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)})
-    "last_modified" -> pure (entity {updatedAt = Maybe.maybeToList (parseTimestamp value)})
-    "last_visit" -> pure (entity {lastVisitedAt = parseTimestamp value})
+    "add_date" -> pure (entity {createdAt = Maybe.fromMaybe Time.epoch (Time.parseTimestamp value)})
+    "last_modified" -> pure (entity {updatedAt = Maybe.maybeToList (Time.parseTimestamp value)})
+    "last_visit" -> pure (entity {lastVisitedAt = Time.parseTimestamp value})
     "tags" ->
       let tagList = Text.splitOn "," value
           newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") tagList))

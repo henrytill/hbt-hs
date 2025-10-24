@@ -38,6 +38,7 @@ library
         Hbt
         Hbt.Collection
         Hbt.Entity
+        Hbt.Entity.Time
         Hbt.Entity.URI
         Hbt.Formatter.HTML
         Hbt.Parser

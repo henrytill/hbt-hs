@@ -17,8 +17,10 @@ import Data.Text.Lazy.Builder qualified as Builder
 import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection, Id)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity (Entity, Label (..), Name (..), Time)
+import Hbt.Entity (Entity, Label (..), Name (..))
 import Hbt.Entity qualified as Entity
+import Hbt.Entity.Time (Time)
+import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI (URI)
 import Hbt.Entity.URI qualified as URI
 import Hbt.Parser.Common (IsEmpty (isEmpty), StateIO, drop1, runStateIO)
@@ -142,7 +144,7 @@ handleBlock (MkBlock _ b) =
       processInlines inlines
     Initial.Heading 1 inlines -> do
       let headingText = textFromInlines inlines
-      time <- liftEither (Entity.mkTime headingText)
+      time <- liftEither (Time.parse headingText)
       maybeTime .= Just time
       maybeParent .= Nothing
       labels .= []
