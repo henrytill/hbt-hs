@@ -19,7 +19,7 @@ import Hbt.Collection (Collection, Id)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity, Label (..), Name (..), Time, URI)
 import Hbt.Entity qualified as Entity
-import Hbt.Parser.Common (IsNull (..), StateIO, drop1, runStateIO)
+import Hbt.Parser.Common (IsEmpty (..), StateIO, drop1, runStateIO)
 import Lens.Family2
 import Lens.Family2.State.Strict
 
@@ -123,7 +123,7 @@ extractLink dest _title desc = do
   uri <- liftEither (Entity.mkURI dest)
   maybeURI .= Just uri
   let linkText = textFromInlines desc
-  when (not (isNull linkText) && linkText /= dest) $
+  when (not (isEmpty linkText) && linkText /= dest) $
     maybeName .= Just (MkName linkText)
 
 handleInline :: Inline a -> MarkdownM ()

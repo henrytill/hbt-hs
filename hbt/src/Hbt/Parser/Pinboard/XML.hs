@@ -66,7 +66,7 @@ accumulatePost post attr =
 createPostFromAttrs :: [Attribute] -> PinboardM PinboardPost
 createPostFromAttrs attrs = do
   let accumulated = foldl' accumulatePost emptyPinboardPost attrs
-  if isNull accumulated.href
+  if isEmpty accumulated.href
     then throwM (ParseError "missing required attribute: href")
     else pure accumulated
 
@@ -95,7 +95,7 @@ processNode rootNode = do
 
 parse :: (HasCallStack) => Text -> IO Collection
 parse input
-  | isNull (Text.strip input) = pure Collection.empty
+  | isEmpty (Text.strip input) = pure Collection.empty
   | otherwise = do
       let inputBS = Text.encodeUtf8 input
       rootNode <- either (throwIO . XenoError) pure (Xeno.parse inputBS)

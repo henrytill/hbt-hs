@@ -3,9 +3,9 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Hbt.Parser.Common
-  ( -- * IsNull type class and Null pattern
-    IsNull (..)
-  , pattern Null
+  ( -- * IsEmpty type class and Empty pattern
+    IsEmpty (..)
+  , pattern Empty
 
     -- * Attribute
   , Attribute
@@ -52,22 +52,22 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Hbt.Entity (URI (..), nullURI)
 
-class IsNull s where
-  isNull :: s -> Bool
+class IsEmpty s where
+  isEmpty :: s -> Bool
 
-instance IsNull Text where
-  isNull = Text.null
+instance IsEmpty Text where
+  isEmpty = Text.null
 
-instance IsNull ByteString where
-  isNull = ByteString.null
+instance IsEmpty ByteString where
+  isEmpty = ByteString.null
 
-instance IsNull URI where
-  isNull uri = uri == nullURI
+instance IsEmpty URI where
+  isEmpty uri = uri == nullURI
 
-pattern Null :: (IsNull s, Monoid s) => s
-pattern Null <- (isNull -> True)
+pattern Empty :: (IsEmpty s, Monoid s) => s
+pattern Empty <- (isEmpty -> True)
   where
-    Null = mempty
+    Empty = mempty
 
 type Attribute = (ByteString, ByteString)
 
@@ -78,14 +78,14 @@ toLower bs = bs
 matchAttr :: ByteString -> Attribute -> Maybe Text
 matchAttr key (attrKey, attrValue)
   | toLower attrKey == toLower key
-  , not (isNull attrValue) =
+  , not (isEmpty attrValue) =
       Just (Text.decodeUtf8 attrValue)
   | otherwise = Nothing
 
 parseTagStringWith :: Char -> ByteString -> [Text]
 parseTagStringWith separator value
-  | isNull value = []
-  | otherwise = filter (not . isNull) (map (Text.decodeUtf8 . Char8.strip) (Char8.split separator value))
+  | isEmpty value = []
+  | otherwise = filter (not . isEmpty) (map (Text.decodeUtf8 . Char8.strip) (Char8.split separator value))
 
 -- (Pinboard) XML format uses "tag" with space-separated values: tag="web programming haskell"
 -- HTML format uses "tags" with comma-separated values: TAGS="web,programming,haskell"

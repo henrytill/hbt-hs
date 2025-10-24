@@ -17,7 +17,7 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity (..), Time)
 import Hbt.Entity qualified as Entity
-import Hbt.Parser.Common (IsNull (..), StateIO, drop1, runStateIO, pattern Null)
+import Hbt.Parser.Common (IsEmpty (..), StateIO, drop1, runStateIO, pattern Empty)
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
@@ -101,7 +101,7 @@ parseTimestamp :: Text -> Maybe Time
 parseTimestamp str =
   case Read.decimal str of
     Left {} -> Nothing
-    Right (timestamp, Null) -> Just (Entity.MkTime (fromInteger timestamp))
+    Right (timestamp, Empty) -> Just (Entity.MkTime (fromInteger timestamp))
     Right {} -> Nothing
 
 accumulateEntity :: Entity -> Attr -> NetscapeM Entity
@@ -137,7 +137,7 @@ createEntity = do
       allLabels = Set.unions [accumulated.labels, folderLabels]
       extended = fmap Entity.MkExtended ext
       finalEntity = accumulated {names, labels = allLabels, extended}
-   in if isNull finalEntity.uri
+   in if isEmpty finalEntity.uri
         then throwM (ParseError "missing required attribute: href")
         else pure finalEntity
 

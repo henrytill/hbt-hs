@@ -24,7 +24,7 @@ import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Hbt.Entity (Entity, Error, Extended (..), Label (..), Name (..), Time (..))
 import Hbt.Entity qualified as Entity
-import Hbt.Parser.Common (IsNull (..), pattern Null)
+import Hbt.Parser.Common (IsEmpty (..), pattern Empty)
 
 newtype PinboardBool = MkPinboardBool Text
   deriving (Show, Eq)
@@ -62,18 +62,18 @@ epochTimeText = Text.pack (Format.formatTime Format.defaultTimeLocale "%Y-%m-%dT
 emptyPinboardPost :: PinboardPost
 emptyPinboardPost =
   MkPinboardPost
-    { href = Null
-    , description = Null
-    , extended = Null
+    { href = Empty
+    , description = Empty
+    , extended = Empty
     , time = epochTimeText
-    , tags = Null
+    , tags = Empty
     , shared = PinboardFalse
     , toread = Nothing
     }
 
 parseTagString :: Text -> [Text]
-parseTagString Null = []
-parseTagString str = filter (not . isNull) (map Text.strip (Text.splitOn " " str))
+parseTagString Empty = []
+parseTagString str = filter (not . isEmpty) (map Text.strip (Text.splitOn " " str))
 
 parseTime :: (HasCallStack) => Text -> Either Error Time
 parseTime s =
@@ -82,7 +82,7 @@ parseTime s =
     Just utcTime -> pure (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
 
 parseTags :: [Text] -> [Label]
-parseTags tagList = map (MkLabel . Text.strip) (filter (not . isNull) tagList)
+parseTags tagList = map (MkLabel . Text.strip) (filter (not . isEmpty) tagList)
 
 postToEntity :: (HasCallStack) => PinboardPost -> IO Entity
 postToEntity post = do
@@ -90,12 +90,12 @@ postToEntity post = do
   createdAt <- either throwIO pure (parseTime post.time)
   let updatedAt = []
       name = case post.description of
-        Null -> Nothing
+        Empty -> Nothing
         desc -> Just (MkName desc)
       names = maybe Set.empty Set.singleton name
       labels = Set.fromList (parseTags (parseTagString post.tags))
       extended = case post.extended of
-        Null -> Nothing
+        Empty -> Nothing
         ext -> Just (MkExtended ext)
       shared = toBool post.shared
       toRead = maybe False toBool post.toread
