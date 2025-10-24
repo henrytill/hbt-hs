@@ -36,8 +36,9 @@ import Data.Yaml.Pretty qualified as YamlPretty
 import GHC.Stack (HasCallStack)
 import Hbt.Collection.Id (Id (..))
 import Hbt.Collection.Repr (CollectionRepr (..), NodeRepr (..))
-import Hbt.Entity (Entity (..), URI)
+import Hbt.Entity (Entity (..))
 import Hbt.Entity qualified as Entity
+import Hbt.Entity.URI (URI)
 import Prelude hiding (elem, id, length, null)
 
 newtype Error = MissingEntities [Id]

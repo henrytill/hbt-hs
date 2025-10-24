@@ -13,16 +13,15 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text.Encoding
 import Data.Text.Lazy qualified as LazyText
 import Data.Vector qualified as Vector
 import GHC.Generics (Generic)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity (Entity (..), Extended (..), Label (..), Name (..), Time (..), URI (..))
+import Hbt.Entity (Entity (..), Extended (..), Label (..), Name (..), Time (..))
+import Hbt.Entity.URI qualified as URI
 import Text.Microstache (Template)
 import Text.Microstache qualified as Microstache
-import URI.ByteString qualified as URI
 
 data TemplateEntity = MkTemplateEntity
   { uri :: Text
@@ -53,8 +52,7 @@ getLastModified entity = Maybe.listToMaybe entity.updatedAt
 
 toTemplateEntity :: Entity -> TemplateEntity
 toTemplateEntity entity =
-  let uriVal = entity.uri.unURI
-      uriText = Text.Encoding.decodeUtf8 (URI.serializeURIRef' uriVal)
+  let uriText = URI.toText entity.uri
       tagsList = List.sort (map (.unLabel) (Set.toList entity.labels))
       tagsText = Text.intercalate "," tagsList
    in MkTemplateEntity

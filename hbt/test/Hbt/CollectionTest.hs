@@ -7,8 +7,10 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Vector qualified as Vector
 import Hbt.Collection
-import Hbt.Entity (Entity (..), Label (..), Name (..), Time (..), URI, nullURI)
+import Hbt.Entity (Entity (..), Label (..), Name (..), Time (..))
 import Hbt.Entity qualified as Entity
+import Hbt.Entity.URI (URI)
+import Hbt.Entity.URI qualified as URI
 import Test.Dwergaz
 import TestUtilities (testResults)
 import Prelude hiding (length, null)
@@ -20,14 +22,14 @@ fromEither :: (Show e) => Either e a -> a
 fromEither = either (error . show) id
 
 safeURI :: Text -> URI
-safeURI s = fromEither (Entity.mkURI s)
+safeURI s = fromEither (URI.parse s)
 
 emptyEntityTests :: Test
 emptyEntityTests =
   let entity = Entity.empty
    in group
         "Entity operations on empty entity"
-        [ assertEqual "emptyEntity has null URI" nullURI entity.uri
+        [ assertEqual "emptyEntity has null URI" URI.empty entity.uri
         , assertEqual "emptyEntity has empty creation time" (mkTime 0) entity.createdAt
         , assertEqual "emptyEntity has empty update history" [] entity.updatedAt
         , assertEqual "emptyEntity has empty names" Set.empty entity.names

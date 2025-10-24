@@ -50,7 +50,8 @@ import Data.ByteString.Char8 qualified as Char8
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
-import Hbt.Entity (URI (..), nullURI)
+import Hbt.Entity.URI (URI)
+import Hbt.Entity.URI qualified as URI
 
 class IsEmpty s where
   isEmpty :: s -> Bool
@@ -65,8 +66,8 @@ instance IsEmpty ByteString where
   empty = ByteString.empty
 
 instance IsEmpty URI where
-  isEmpty uri = uri == nullURI
-  empty = nullURI
+  isEmpty = URI.null
+  empty = URI.empty
 
 pattern Empty :: (IsEmpty s) => s
 pattern Empty <- (isEmpty -> True)

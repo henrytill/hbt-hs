@@ -17,6 +17,7 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity (..), Time)
 import Hbt.Entity qualified as Entity
+import Hbt.Entity.URI qualified as URI
 import Hbt.Parser.Common (IsEmpty (isEmpty), StateIO, drop1, runStateIO, pattern Empty)
 import Lens.Family2
 import Lens.Family2.State.Strict
@@ -108,7 +109,7 @@ accumulateEntity :: Entity -> Attr -> NetscapeM Entity
 accumulateEntity entity (Attr name value) =
   case Text.toLower name of
     "href" -> do
-      uri <- either throwM pure (Entity.mkURI value)
+      uri <- either throwM pure (URI.parse value)
       pure (entity {uri})
     "add_date" -> pure (entity {createdAt = Maybe.fromMaybe (Entity.MkTime 0) (parseTimestamp value)})
     "last_modified" -> pure (entity {updatedAt = Maybe.maybeToList (parseTimestamp value)})

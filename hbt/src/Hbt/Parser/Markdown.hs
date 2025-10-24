@@ -17,8 +17,10 @@ import Data.Text.Lazy.Builder qualified as Builder
 import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection, Id)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity (Entity, Label (..), Name (..), Time, URI)
+import Hbt.Entity (Entity, Label (..), Name (..), Time)
 import Hbt.Entity qualified as Entity
+import Hbt.Entity.URI (URI)
+import Hbt.Entity.URI qualified as URI
 import Hbt.Parser.Common (IsEmpty (isEmpty), StateIO, drop1, runStateIO)
 import Lens.Family2
 import Lens.Family2.State.Strict
@@ -120,7 +122,7 @@ textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input)
 
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
 extractLink dest _title desc = do
-  uri <- liftEither (Entity.mkURI dest)
+  uri <- liftEither (URI.parse dest)
   maybeURI .= Just uri
   let linkText = textFromInlines desc
   when (not (isEmpty linkText) && linkText /= dest) $

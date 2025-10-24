@@ -24,6 +24,7 @@ import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Hbt.Entity (Entity, Error, Extended (..), Label (..), Name (..), Time (..))
 import Hbt.Entity qualified as Entity
+import Hbt.Entity.URI qualified as URI
 import Hbt.Parser.Common (IsEmpty (..), pattern Empty)
 
 newtype PinboardBool = MkPinboardBool Text
@@ -86,7 +87,7 @@ parseTags tagList = map (MkLabel . Text.strip) (filter (not . isEmpty) tagList)
 
 postToEntity :: (HasCallStack) => PinboardPost -> IO Entity
 postToEntity post = do
-  uri <- either throwIO pure (Entity.mkURI post.href)
+  uri <- either throwIO pure (URI.parse post.href)
   createdAt <- either throwIO pure (parseTime post.time)
   let updatedAt = []
       name = case post.description of
