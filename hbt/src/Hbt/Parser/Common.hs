@@ -54,20 +54,24 @@ import Hbt.Entity (URI (..), nullURI)
 
 class IsEmpty s where
   isEmpty :: s -> Bool
+  empty :: s
 
 instance IsEmpty Text where
   isEmpty = Text.null
+  empty = Text.empty
 
 instance IsEmpty ByteString where
   isEmpty = ByteString.null
+  empty = ByteString.empty
 
 instance IsEmpty URI where
   isEmpty uri = uri == nullURI
+  empty = nullURI
 
-pattern Empty :: (IsEmpty s, Monoid s) => s
+pattern Empty :: (IsEmpty s) => s
 pattern Empty <- (isEmpty -> True)
   where
-    Empty = mempty
+    Empty = empty
 
 type Attribute = (ByteString, ByteString)
 

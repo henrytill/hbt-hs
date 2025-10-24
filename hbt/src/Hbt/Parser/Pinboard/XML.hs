@@ -12,7 +12,7 @@ import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity)
-import Hbt.Parser.Common
+import Hbt.Parser.Common hiding (empty)
 import Hbt.Parser.Pinboard.Common
 import Lens.Family2
 import Lens.Family2.State.Strict

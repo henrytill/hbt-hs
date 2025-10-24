@@ -19,7 +19,7 @@ import Hbt.Collection (Collection, Id)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity, Label (..), Name (..), Time, URI)
 import Hbt.Entity qualified as Entity
-import Hbt.Parser.Common (IsEmpty (..), StateIO, drop1, runStateIO)
+import Hbt.Parser.Common (IsEmpty (isEmpty), StateIO, drop1, runStateIO)
 import Lens.Family2
 import Lens.Family2.State.Strict
 

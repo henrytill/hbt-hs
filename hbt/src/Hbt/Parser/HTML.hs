@@ -17,7 +17,7 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity (..), Time)
 import Hbt.Entity qualified as Entity
-import Hbt.Parser.Common (IsEmpty (..), StateIO, drop1, runStateIO, pattern Empty)
+import Hbt.Parser.Common (IsEmpty (isEmpty), StateIO, drop1, runStateIO, pattern Empty)
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
