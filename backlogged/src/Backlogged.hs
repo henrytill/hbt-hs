@@ -94,7 +94,7 @@ newtype ConfigVersion = MkConfigVersion {unConfigVersion :: Int}
   deriving (Eq, Ord, Show)
 
 instance ToJSON ConfigVersion where
-  toJSON = toJSON . unConfigVersion
+  toJSON (MkConfigVersion v) = toJSON v
 
 instance FromJSON ConfigVersion where
   parseJSON v = fmap MkConfigVersion (parseJSON v)
@@ -103,7 +103,7 @@ newtype ApiToken = MkApiToken {unApiToken :: Text}
   deriving (Eq, Show)
 
 instance ToJSON ApiToken where
-  toJSON = toJSON . unApiToken
+  toJSON (MkApiToken t) = toJSON t
 
 instance FromJSON ApiToken where
   parseJSON v = fmap MkApiToken (parseJSON v)
@@ -112,24 +112,14 @@ instance ToHttpApiData ApiToken where
   toQueryParam (MkApiToken t) = t
 
 data Config = MkConfig
-  { configVersion :: ConfigVersion
-  , configApiToken :: ApiToken
+  { version :: ConfigVersion
+  , apiToken :: ApiToken
   }
   deriving (Eq, Show, Generic)
 
-configOptions :: Options
-configOptions =
-  let mappings =
-        [ ("configVersion", "version")
-        , ("configApiToken", "apiToken")
-        ]
-   in Aeson.defaultOptions {Aeson.fieldLabelModifier = remapField mappings}
+instance ToJSON Config
 
-instance ToJSON Config where
-  toJSON = Aeson.genericToJSON configOptions
-
-instance FromJSON Config where
-  parseJSON = Aeson.genericParseJSON configOptions
+instance FromJSON Config
 
 readConfig :: FilePath -> IO Config
 readConfig path = do
@@ -164,5 +154,5 @@ someFunc = do
     then do
       config <- readConfig configFile
       putStrLn ("parsed: " ++ show config)
-      runClient (configApiToken config)
+      runClient config.apiToken
     else error "config file does not exist"

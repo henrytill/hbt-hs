@@ -12,8 +12,15 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options: -Wall
 
+common exts
+    default-extensions:
+        DuplicateRecordFields
+        NoFieldSelectors
+        OverloadedRecordDot
+        StrictData
+
 library
-    import:           warnings
+    import:           warnings, exts
     default-language: GHC2021
     hs-source-dirs:   src
     exposed-modules:  Backlogged
@@ -34,7 +41,7 @@ library
 
 
 executable backlogged
-    import:           warnings
+    import:           warnings, exts
     default-language: GHC2021
     hs-source-dirs:   exe
     main-is:          Main.hs
@@ -44,7 +51,7 @@ executable backlogged
 
 
 test-suite backlogged-test
-    import:           warnings
+    import:           warnings, exts
     default-language: GHC2021
     hs-source-dirs:   test
     type:             exitcode-stdio-1.0
