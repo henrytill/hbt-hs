@@ -191,15 +191,14 @@ printCollection file opts collection
       let allLabels = foldMap (.labels) (Vector.toList (Collection.allEntities collection))
       let tagsOutput = Text.unlines (map (.unLabel) (Set.toAscList allLabels))
       writeOutput opts.outputFile tagsOutput
-  | otherwise = do
-      let detectedFormat = opts.outputFile >>= detectOutputFormat
-      case opts.outputFormat <|> detectedFormat of
-        Nothing -> Exit.die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
-        Just fmt -> formatWith fmt collection >>= writeOutput opts.outputFile
+  | Just fmt <- opts.outputFormat =
+      formatWith fmt collection >>= writeOutput opts.outputFile
+  | otherwise =
+      error "printCollection: outputFormat should be validated in main"
 
 processFile :: Options -> FilePath -> IO ()
 processFile opts file = do
-  inputFmt <- maybe (Exit.die ("Error: no parser for file: " ++ file)) pure (opts.inputFormat <|> detectInputFormat file)
+  let inputFmt = Maybe.fromMaybe (error "processFile: inputFormat should be validated in main") opts.inputFormat
   Text.readFile file >>= parseFile inputFmt file >>= applyMappings opts.mappingsFile >>= printCollection file opts
 
 main :: IO ()
@@ -216,12 +215,15 @@ main = do
       printUsage
       Exit.die "Error: input file required"
     [file] ->
-      let detectedFormat = opts.outputFile >>= detectOutputFormat
-          hasOutputFormat = Maybe.isJust opts.outputFormat || Maybe.isJust detectedFormat
+      let inputFormat = opts.inputFormat <|> detectInputFormat file
+          outputFormat = opts.outputFormat <|> (opts.outputFile >>= detectOutputFormat)
+          opts' = opts {inputFormat, outputFormat}
           hasAnalysisFlag = opts.showInfo || opts.listTags
-       in if hasOutputFormat || hasAnalysisFlag
-            then processFile opts file
-            else Exit.die "Error: Must specify an output format (-t), output file with known extension (-o), or analysis flag (--info, --list-tags)"
+       in case (inputFormat, outputFormat) of
+            (Nothing, _) -> Exit.die ("Error: no parser for file: " ++ file)
+            (Just _, Just _) -> processFile opts' file
+            (Just _, Nothing) | hasAnalysisFlag -> processFile opts' file
+            (Just _, Nothing) -> Exit.die "Error: Must specify an output format (-t), output file with known extension (-o), or analysis flag (--info, --list-tags)"
     (_ : _ : _) -> do
       printUsage
       Exit.die "Error: exactly one input file required"
