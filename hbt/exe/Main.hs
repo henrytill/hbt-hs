@@ -13,7 +13,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
-import Hbt (Flow (..), Format (..), InputFormat, OutputFormat, allInputFormats, allOutputFormats, formatWith, parseWith, toString)
+import Hbt (Flow (..), Format (..), allInputFormats, allOutputFormats, formatWith, parseWith, toString)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity (..), Label (..))
@@ -28,8 +28,8 @@ class HasFormat (f :: Flow) s where
   format :: Lens' s (Maybe (Format f))
 
 data Options = MkOptions
-  { inputFormat :: Maybe InputFormat
-  , outputFormat :: Maybe OutputFormat
+  { inputFormat :: Maybe (Format From)
+  , outputFormat :: Maybe (Format To)
   , outputFile :: Maybe FilePath
   , showInfo :: Bool
   , listTags :: Bool
@@ -165,13 +165,13 @@ parseOptions argv =
       printUsage
       Exit.exitFailure
 
-detectInputFormat :: FilePath -> Maybe InputFormat
+detectInputFormat :: FilePath -> Maybe (Format From)
 detectInputFormat file = detectFromExtension (FilePath.takeExtension file)
 
-detectOutputFormat :: FilePath -> Maybe OutputFormat
+detectOutputFormat :: FilePath -> Maybe (Format To)
 detectOutputFormat file = detectFromExtension (FilePath.takeExtension file)
 
-parseFile :: InputFormat -> FilePath -> Text -> IO Collection
+parseFile :: Format From -> FilePath -> Text -> IO Collection
 parseFile fmt _file = parseWith fmt
 
 applyMappings :: Maybe FilePath -> Collection -> IO Collection

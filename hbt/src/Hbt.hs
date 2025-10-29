@@ -6,8 +6,6 @@
 module Hbt
   ( Flow (..)
   , Format (..)
-  , InputFormat
-  , OutputFormat
   , allInputFormats
   , allOutputFormats
   , parseWith
@@ -47,14 +45,10 @@ deriving instance Eq (Format f)
 
 deriving instance Ord (Format f)
 
-type InputFormat = Format From
-
-type OutputFormat = Format To
-
-allInputFormats :: [InputFormat]
+allInputFormats :: [Format From]
 allInputFormats = [JSON, XML, Markdown, HTML]
 
-allOutputFormats :: [OutputFormat]
+allOutputFormats :: [Format To]
 allOutputFormats = [HTML, YAML]
 
 toString :: Format f -> String
