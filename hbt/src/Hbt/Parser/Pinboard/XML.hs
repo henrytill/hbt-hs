@@ -78,21 +78,21 @@ createPostFromAttrs attrs = do
     then throwM (ParseError "missing required attribute: href")
     else pure accumulated
 
+handleContent :: Xeno.Content -> PinboardM ()
+handleContent (Xeno.Element node) = handleNode node
+handleContent _ = pure () -- Ignore text and CDATA
+
 handleNode :: Xeno.Node -> PinboardM ()
 handleNode node = do
   let nodeName = Text.decodeUtf8 (Xeno.name node)
   case nodeName of
     "post" -> do
-      let attrs = Xeno.attributes node -- Now directly ByteString attributes
+      let attrs = Xeno.attributes node
       post <- createPostFromAttrs attrs
       result <- liftIO (postToEntity post)
       entities %= (result :)
     _ -> pure ()
   mapM_ handleContent (Xeno.contents node)
-
-handleContent :: Xeno.Content -> PinboardM ()
-handleContent (Xeno.Element node) = handleNode node
-handleContent _ = pure () -- Ignore text and CDATA
 
 processNode :: Xeno.Node -> PinboardM Collection
 processNode rootNode = do
