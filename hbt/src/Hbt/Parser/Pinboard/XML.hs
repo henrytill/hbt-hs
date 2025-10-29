@@ -5,6 +5,9 @@ module Hbt.Parser.Pinboard.XML where
 import Control.Exception (Exception, throwIO)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
+import Data.ByteString (ByteString)
+import Data.ByteString.Char8 qualified as Char8
+import Data.Char qualified as Char
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -12,7 +15,7 @@ import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity)
-import Hbt.Parser.Common hiding (empty)
+import Hbt.Parser.Common (IsEmpty (isEmpty), StateIO, runStateIO)
 import Hbt.Parser.Pinboard.Common
 import Lens.Family2
 import Lens.Family2.State.Strict
@@ -51,19 +54,24 @@ newtype PinboardM a = MkPinboardM (StateIO ParseState a)
 runPinboardM :: PinboardM a -> ParseState -> IO (a, ParseState)
 runPinboardM (MkPinboardM m) = runStateIO m
 
-accumulatePost :: PinboardPost -> Attribute -> PinboardPost
-accumulatePost post attr =
-  case attr of
-    Href href -> post {href}
-    Description description -> post {description}
-    Extended extended -> post {extended}
-    Time time -> post {time}
-    Tags values -> post {tags = Text.unwords values}
-    Shared Yes -> post {shared = PinboardTrue}
-    ToRead Yes -> post {toread = Just PinboardTrue}
-    _ -> post
+toLower :: ByteString -> ByteString
+toLower = Char8.map Char.toLower
 
-createPostFromAttrs :: [Attribute] -> PinboardM PinboardPost
+accumulatePost :: PinboardPost -> (ByteString, ByteString) -> PinboardPost
+accumulatePost post (attrKey, attrValue) =
+  let key = toLower attrKey
+      value = Text.decodeUtf8 attrValue
+   in case key of
+        "href" -> post {href = value}
+        "description" -> post {description = value}
+        "extended" -> post {extended = value}
+        "time" -> post {time = value}
+        "tag" -> post {tags = value}
+        "shared" | value == "yes" -> post {shared = PinboardTrue}
+        "toread" | value == "yes" -> post {toread = Just PinboardTrue}
+        _ -> post
+
+createPostFromAttrs :: [(ByteString, ByteString)] -> PinboardM PinboardPost
 createPostFromAttrs attrs = do
   let accumulated = foldl' accumulatePost emptyPinboardPost attrs
   if isEmpty accumulated.href

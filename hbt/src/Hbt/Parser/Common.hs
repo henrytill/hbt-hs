@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -6,32 +5,6 @@ module Hbt.Parser.Common
   ( -- * IsEmpty type class and Empty pattern
     IsEmpty (..)
   , pattern Empty
-
-    -- * Attribute
-  , Attribute
-
-    -- * Attribute patterns
-  , pattern Href
-  , pattern Description
-  , pattern Extended
-  , pattern Time
-  , pattern AddDate
-  , pattern LastModified
-  , pattern LastVisit
-  , pattern Tags
-  , pattern Private
-  , pattern Shared
-  , pattern ToRead
-  , pattern Feed
-
-    -- * Value patterns
-  , pattern One
-  , pattern STrue
-  , pattern Yes
-
-    -- * Helper functions
-  , matchAttr
-  , matchAttrTagList
 
     -- * StateIO
   , StateIO
@@ -46,10 +19,8 @@ import Control.Monad.State.Strict (StateT)
 import Control.Monad.State.Strict qualified as State
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as ByteString
-import Data.ByteString.Char8 qualified as Char8
 import Data.Text (Text)
 import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
 import Hbt.Entity.URI (URI)
 import Hbt.Entity.URI qualified as URI
 
@@ -73,78 +44,6 @@ pattern Empty :: (IsEmpty s) => s
 pattern Empty <- (isEmpty -> True)
   where
     Empty = empty
-
-type Attribute = (ByteString, ByteString)
-
-toLower :: ByteString -> ByteString
--- toLower bs = Char8.map Char.toLower bs
-toLower bs = bs
-
-matchAttr :: ByteString -> Attribute -> Maybe Text
-matchAttr key (attrKey, attrValue)
-  | toLower attrKey == toLower key
-  , not (isEmpty attrValue) =
-      Just (Text.decodeUtf8 attrValue)
-  | otherwise = Nothing
-
-parseTagStringWith :: Char -> ByteString -> [Text]
-parseTagStringWith separator value
-  | isEmpty value = []
-  | otherwise = filter (not . isEmpty) (map (Text.decodeUtf8 . Char8.strip) (Char8.split separator value))
-
--- (Pinboard) XML format uses "tag" with space-separated values: tag="web programming haskell"
--- HTML format uses "tags" with comma-separated values: TAGS="web,programming,haskell"
-matchAttrTagList :: Attribute -> Maybe [Text]
-matchAttrTagList (attrKey, attrValue) =
-  case toLower attrKey of
-    "tag" -> Just (parseTagStringWith ' ' attrValue)
-    "tags" -> Just (parseTagStringWith ',' attrValue)
-    _ -> Nothing
-
-pattern Href :: Text -> Attribute
-pattern Href value <- (matchAttr "href" -> Just value)
-
-pattern Description :: Text -> Attribute
-pattern Description value <- (matchAttr "description" -> Just value)
-
-pattern Extended :: Text -> Attribute
-pattern Extended value <- (matchAttr "extended" -> Just value)
-
-pattern Time :: Text -> Attribute
-pattern Time value <- (matchAttr "time" -> Just value)
-
-pattern AddDate :: Text -> Attribute
-pattern AddDate value <- (matchAttr "add_date" -> Just value)
-
-pattern LastModified :: Text -> Attribute
-pattern LastModified value <- (matchAttr "last_modified" -> Just value)
-
-pattern LastVisit :: Text -> Attribute
-pattern LastVisit value <- (matchAttr "last_visit" -> Just value)
-
-pattern Private :: Text -> Attribute
-pattern Private value <- (matchAttr "private" -> Just value)
-
-pattern Shared :: Text -> Attribute
-pattern Shared value <- (matchAttr "shared" -> Just value)
-
-pattern ToRead :: Text -> Attribute
-pattern ToRead value <- (matchAttr "toread" -> Just value)
-
-pattern Feed :: Text -> Attribute
-pattern Feed value <- (matchAttr "feed" -> Just value)
-
-pattern Tags :: [Text] -> Attribute
-pattern Tags values <- (matchAttrTagList -> Just values)
-
-pattern One :: Text
-pattern One = "1"
-
-pattern STrue :: Text
-pattern STrue = "true"
-
-pattern Yes :: Text
-pattern Yes = "yes"
 
 type StateIO s = StateT s IO
 

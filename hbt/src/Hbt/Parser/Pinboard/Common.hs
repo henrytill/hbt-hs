@@ -15,6 +15,7 @@ where
 import Control.Exception (throwIO)
 import Data.Aeson (FromJSON (..))
 import Data.Aeson qualified as Aeson
+import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -73,12 +74,13 @@ emptyPinboardPost =
     , toread = Nothing
     }
 
-parseTagString :: Text -> [Text]
-parseTagString Empty = []
-parseTagString str = filter (not . isEmpty) (map Text.strip (Text.splitOn " " str))
-
-parseTags :: [Text] -> [Label]
-parseTags tagList = map (MkLabel . Text.strip) (filter (not . isEmpty) tagList)
+parseTags :: Text -> [Label]
+parseTags Empty = []
+parseTags str =
+  let toLabel t =
+        let stripped = Text.strip t
+         in if isEmpty stripped then Nothing else Just (MkLabel stripped)
+   in Maybe.mapMaybe toLabel (Text.words str)
 
 postToEntity :: (HasCallStack) => PinboardPost -> IO Entity
 postToEntity post = do
@@ -89,7 +91,7 @@ postToEntity post = do
         Empty -> Nothing
         desc -> Just (MkName desc)
       names = maybe Set.empty Set.singleton name
-      labels = Set.fromList (parseTags (parseTagString post.tags))
+      labels = Set.fromList (parseTags post.tags)
       extended = case post.extended of
         Empty -> Nothing
         ext -> Just (MkExtended ext)
