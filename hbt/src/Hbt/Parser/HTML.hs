@@ -105,9 +105,15 @@ accumulateEntity entity (Attr name value) =
     "href" -> do
       uri <- either throwIO pure (URI.parse value)
       pure (entity {uri})
-    "add_date" -> pure (entity {createdAt = Maybe.fromMaybe Time.epoch (Time.parseTimestamp value)})
-    "last_modified" -> pure (entity {updatedAt = Maybe.maybeToList (Time.parseTimestamp value)})
-    "last_visit" -> pure (entity {lastVisitedAt = Time.parseTimestamp value})
+    "add_date" ->
+      let createdAt = Maybe.fromMaybe Time.epoch (Time.parseTimestamp value)
+       in pure (entity {createdAt})
+    "last_modified" ->
+      let updatedAt = Maybe.maybeToList (Time.parseTimestamp value)
+       in pure (entity {updatedAt})
+    "last_visit" ->
+      let lastVisitedAt = Time.parseTimestamp value
+       in pure (entity {lastVisitedAt})
     "tags" ->
       let tagList = Text.splitOn "," value
           newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") tagList))

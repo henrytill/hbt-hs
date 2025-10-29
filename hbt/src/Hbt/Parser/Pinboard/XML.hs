@@ -105,7 +105,7 @@ parse :: (HasCallStack) => Text -> IO Collection
 parse input
   | Text.null (Text.strip input) = pure Collection.empty
   | otherwise = do
-      let inputBS = Text.encodeUtf8 input
-      rootNode <- either (throwIO . XenoError) pure (Xeno.parse inputBS)
+      let inputBytes = Text.encodeUtf8 input
+      rootNode <- either (throwIO . XenoError) pure (Xeno.parse inputBytes)
       (ret, _) <- runPinboardM (processNode rootNode) empty
       pure ret
