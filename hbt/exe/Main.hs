@@ -92,7 +92,10 @@ instance FormatFlow To where
   formatErrorFlow f = "Invalid output format: " ++ f
 
   detectFromExtension :: String -> Maybe (Format To)
-  detectFromExtension _ = Nothing -- Output formats can't be detected from files (yet)
+  detectFromExtension ".html" = Just HTML
+  detectFromExtension ".yaml" = Just YAML
+  detectFromExtension ".yml" = Just YAML
+  detectFromExtension _ = Nothing
 
 supportedFormats :: forall f -> (FormatFlow f) => [String]
 supportedFormats f = map toString (allConstructors @f)
@@ -165,6 +168,9 @@ parseOptions argv =
 detectInputFormat :: FilePath -> Maybe InputFormat
 detectInputFormat file = detectFromExtension (FilePath.takeExtension file)
 
+detectOutputFormat :: FilePath -> Maybe OutputFormat
+detectOutputFormat file = detectFromExtension (FilePath.takeExtension file)
+
 parseFile :: InputFormat -> FilePath -> Text -> IO Collection
 parseFile fmt _file = parseWith fmt
 
@@ -185,8 +191,9 @@ printCollection file opts collection
       let allLabels = foldMap (.labels) (Vector.toList (Collection.allEntities collection))
       let tagsOutput = Text.unlines (map (.unLabel) (Set.toAscList allLabels))
       writeOutput opts.outputFile tagsOutput
-  | otherwise =
-      case opts.outputFormat of
+  | otherwise = do
+      let detectedFormat = opts.outputFile >>= detectOutputFormat
+      case opts.outputFormat <|> detectedFormat of
         Nothing -> Exit.die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
         Just fmt -> formatWith fmt collection >>= writeOutput opts.outputFile
 
@@ -209,11 +216,12 @@ main = do
       printUsage
       Exit.die "Error: input file required"
     [file] ->
-      let hasOutputFormat = Maybe.isJust opts.outputFormat
+      let detectedFormat = opts.outputFile >>= detectOutputFormat
+          hasOutputFormat = Maybe.isJust opts.outputFormat || Maybe.isJust detectedFormat
           hasAnalysisFlag = opts.showInfo || opts.listTags
        in if hasOutputFormat || hasAnalysisFlag
             then processFile opts file
-            else Exit.die "Error: Must specify an output format (-t) or analysis flag (--info, --list-tags)"
+            else Exit.die "Error: Must specify an output format (-t), output file with known extension (-o), or analysis flag (--info, --list-tags)"
     (_ : _ : _) -> do
       printUsage
       Exit.die "Error: exactly one input file required"
