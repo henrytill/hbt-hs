@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RequiredTypeArguments #-}
 
@@ -7,7 +8,6 @@ import Control.Applicative ((<|>))
 import Control.Monad (when)
 import Data.List qualified as List
 import Data.Maybe qualified as Maybe
-import Data.Proxy (Proxy (..))
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -58,24 +58,24 @@ defaultOptions =
 
 class FormatFlow (f :: Flow) where
   -- | Get all format constructors for this flow direction
-  allConstructors :: Proxy f -> [Format f]
+  allConstructors :: [Format f]
 
   -- | Generate flow-specific error message for invalid format
-  formatErrorFlow :: Proxy f -> String -> String
+  formatErrorFlow :: String -> String
 
   -- | Detect format from file extension
   detectFromExtension :: String -> Maybe (Format f)
 
   -- | Parse format string to format type (derived)
   parseFormatFlow :: String -> Maybe (Format f)
-  parseFormatFlow s = List.find (\fmt -> toString fmt == s) (allConstructors (Proxy @f))
+  parseFormatFlow s = List.find (\fmt -> toString fmt == s) allConstructors
 
 instance FormatFlow From where
-  allConstructors :: Proxy From -> [Format From]
-  allConstructors _ = allInputFormats
+  allConstructors :: [Format From]
+  allConstructors = allInputFormats
 
-  formatErrorFlow :: Proxy From -> String -> String
-  formatErrorFlow _ f = "Invalid input format: " ++ f
+  formatErrorFlow :: String -> String
+  formatErrorFlow f = "Invalid input format: " ++ f
 
   detectFromExtension :: String -> Maybe (Format From)
   detectFromExtension ".html" = Just HTML
@@ -85,22 +85,22 @@ instance FormatFlow From where
   detectFromExtension _ = Nothing
 
 instance FormatFlow To where
-  allConstructors :: Proxy To -> [Format To]
-  allConstructors _ = allOutputFormats
+  allConstructors :: [Format To]
+  allConstructors = allOutputFormats
 
-  formatErrorFlow :: Proxy To -> String -> String
-  formatErrorFlow _ f = "Invalid output format: " ++ f
+  formatErrorFlow :: String -> String
+  formatErrorFlow f = "Invalid output format: " ++ f
 
   detectFromExtension :: String -> Maybe (Format To)
   detectFromExtension _ = Nothing -- Output formats can't be detected from files (yet)
 
 supportedFormats :: forall f -> (FormatFlow f) => [String]
-supportedFormats f = map toString (allConstructors (Proxy @f))
+supportedFormats f = map toString (allConstructors @f)
 
 setFormat :: forall f -> (FormatFlow f, HasFormat f s) => String -> s -> s
 setFormat f str opts =
   case parseFormatFlow @f str of
-    Nothing -> error (formatErrorFlow (Proxy @f) str)
+    Nothing -> error (formatErrorFlow @f str)
     Just fmt -> set format (Just fmt) opts
 
 generateFormatHelp :: forall f -> (FormatFlow f) => String -> String
