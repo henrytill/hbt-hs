@@ -13,7 +13,8 @@ where
 
 import Control.Monad (foldM)
 import Data.ByteString qualified as BS
-import Data.List (groupBy, sort)
+import Data.List (sort)
+import Data.List.Split qualified as Split
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Text (Text)
@@ -72,7 +73,7 @@ split :: FilePath -> (String, String)
 split path = fmap (drop 1) (splitExtensions path)
 
 splitExt :: String -> [String]
-splitExt s = filter (/= ".") (groupBy (\a b -> a /= '.' && b /= '.') s)
+splitExt s = filter (not . null) (Split.splitOn "." s)
 
 processFile :: Format From -> FilePath -> TestMap From -> FilePath -> IO (TestMap From)
 processFile format dir acc file = do
