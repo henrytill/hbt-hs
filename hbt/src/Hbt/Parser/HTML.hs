@@ -4,9 +4,10 @@
 
 module Hbt.Parser.HTML where
 
-import Control.Exception (Exception)
+import Control.Exception (Exception, throwIO)
 import Control.Monad (foldM, forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
+import Control.Monad.IO.Class (MonadIO (..))
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -93,16 +94,16 @@ waitingFor :: Lens' ParseState WaitingFor
 waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
 
 newtype NetscapeM a = MkNetscapeM (StateIO ParseState a)
-  deriving (Functor, Applicative, Monad, MonadState ParseState, MonadThrow)
+  deriving (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
 
 runNetscapeM :: NetscapeM a -> ParseState -> IO (a, ParseState)
 runNetscapeM (MkNetscapeM m) = runStateIO m
 
-accumulateEntity :: Entity -> Attr -> NetscapeM Entity
+accumulateEntity :: (HasCallStack) => Entity -> Attr -> IO Entity
 accumulateEntity entity (Attr name value) =
   case Text.toLower name of
     "href" -> do
-      uri <- either throwM pure (URI.parse value)
+      uri <- either throwIO pure (URI.parse value)
       pure (entity {uri})
     "add_date" -> pure (entity {createdAt = Maybe.fromMaybe Time.epoch (Time.parseTimestamp value)})
     "last_modified" -> pure (entity {updatedAt = Maybe.maybeToList (Time.parseTimestamp value)})
@@ -125,7 +126,7 @@ createEntity = do
   name <- use maybeDescription
   ext <- use maybeExtended
   let startEntity = Entity.empty {shared = True}
-  accumulated <- foldM accumulateEntity startEntity attrs
+  accumulated <- liftIO (foldM accumulateEntity startEntity attrs)
   let names = maybe Set.empty (Set.singleton . Entity.MkName) name
       folderLabels = Set.fromList (map Entity.MkLabel (reverse folders))
       allLabels = Set.unions [accumulated.labels, folderLabels]

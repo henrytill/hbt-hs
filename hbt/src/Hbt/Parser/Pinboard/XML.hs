@@ -71,11 +71,11 @@ accumulatePost post (attrKey, attrValue) =
         "toread" | value == "yes" -> post {toread = Just PinboardTrue}
         _ -> post
 
-createPostFromAttrs :: [(ByteString, ByteString)] -> PinboardM PinboardPost
+createPostFromAttrs :: (HasCallStack) => [(ByteString, ByteString)] -> IO PinboardPost
 createPostFromAttrs attrs = do
   let accumulated = foldl' accumulatePost emptyPinboardPost attrs
   if Text.null accumulated.href
-    then throwM (ParseError "missing required attribute: href")
+    then throwIO (ParseError "missing required attribute: href")
     else pure accumulated
 
 handleContent :: Xeno.Content -> PinboardM ()
@@ -88,7 +88,7 @@ handleNode node = do
   case nodeName of
     "post" -> do
       let attrs = Xeno.attributes node
-      post <- createPostFromAttrs attrs
+      post <- liftIO (createPostFromAttrs attrs)
       result <- liftIO (postToEntity post)
       entities %= (result :)
     _ -> pure ()
