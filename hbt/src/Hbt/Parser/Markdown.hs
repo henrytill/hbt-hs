@@ -59,7 +59,12 @@ empty =
     }
 
 toEntity :: ParseState -> Maybe Entity
-toEntity st = Entity.mkEntity <$> st.maybeURI <*> st.maybeTime <*> pure st.maybeName <*> pure (Set.fromList st.labels)
+toEntity st =
+  Entity.mkEntity
+    <$> st.maybeURI
+    <*> st.maybeTime
+    <*> pure st.maybeName
+    <*> pure (Set.fromList st.labels)
 
 collection :: Lens' ParseState Collection
 collection f s = (\c -> s {collection = c}) <$> f s.collection
