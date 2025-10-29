@@ -27,7 +27,6 @@ import Hbt.Entity (Entity, Extended (..), Label (..), Name (..))
 import Hbt.Entity qualified as Entity
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
-import Hbt.Parser.Common (IsEmpty (..), pattern Empty)
 
 newtype PinboardBool = MkPinboardBool Text
   deriving (Show, Eq)
@@ -65,22 +64,23 @@ epochTimeText = Text.pack (Format.formatTime Format.defaultTimeLocale "%Y-%m-%dT
 emptyPinboardPost :: PinboardPost
 emptyPinboardPost =
   MkPinboardPost
-    { href = Empty
-    , description = Empty
-    , extended = Empty
+    { href = Text.empty
+    , description = Text.empty
+    , extended = Text.empty
     , time = epochTimeText
-    , tags = Empty
+    , tags = Text.empty
     , shared = PinboardFalse
     , toread = Nothing
     }
 
 parseTags :: Text -> [Label]
-parseTags Empty = []
-parseTags str =
-  let toLabel t =
-        let stripped = Text.strip t
-         in if isEmpty stripped then Nothing else Just (MkLabel stripped)
-   in Maybe.mapMaybe toLabel (Text.words str)
+parseTags str
+  | Text.null str = []
+  | otherwise =
+      let toLabel t =
+            let stripped = Text.strip t
+             in if Text.null stripped then Nothing else Just (MkLabel stripped)
+       in Maybe.mapMaybe toLabel (Text.words str)
 
 postToEntity :: (HasCallStack) => PinboardPost -> IO Entity
 postToEntity post = do
@@ -88,12 +88,12 @@ postToEntity post = do
   createdAt <- either throwIO pure (Time.parseRFC3339 post.time)
   let updatedAt = []
       name = case post.description of
-        Empty -> Nothing
+        desc | Text.null desc -> Nothing
         desc -> Just (MkName desc)
       names = maybe Set.empty Set.singleton name
       labels = Set.fromList (parseTags post.tags)
       extended = case post.extended of
-        Empty -> Nothing
+        ext | Text.null ext -> Nothing
         ext -> Just (MkExtended ext)
       shared = toBool post.shared
       toRead = maybe False toBool post.toread

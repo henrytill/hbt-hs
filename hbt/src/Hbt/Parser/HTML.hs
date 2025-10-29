@@ -18,7 +18,7 @@ import Hbt.Entity (Entity (..))
 import Hbt.Entity qualified as Entity
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
-import Hbt.Parser.Common (IsEmpty (isEmpty), StateIO, drop1, runStateIO)
+import Hbt.Parser.Common (StateIO, drop1, runStateIO)
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
@@ -131,7 +131,7 @@ createEntity = do
       allLabels = Set.unions [accumulated.labels, folderLabels]
       extended = fmap Entity.MkExtended ext
       finalEntity = accumulated {names, labels = allLabels, extended}
-   in if isEmpty finalEntity.uri
+   in if URI.null finalEntity.uri
         then throwM (ParseError "missing required attribute: href")
         else pure finalEntity
 

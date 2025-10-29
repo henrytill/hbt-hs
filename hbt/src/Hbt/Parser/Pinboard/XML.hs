@@ -15,7 +15,7 @@ import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity)
-import Hbt.Parser.Common (IsEmpty (isEmpty), StateIO, runStateIO)
+import Hbt.Parser.Common (StateIO, runStateIO)
 import Hbt.Parser.Pinboard.Common
 import Lens.Family2
 import Lens.Family2.State.Strict
@@ -74,7 +74,7 @@ accumulatePost post (attrKey, attrValue) =
 createPostFromAttrs :: [(ByteString, ByteString)] -> PinboardM PinboardPost
 createPostFromAttrs attrs = do
   let accumulated = foldl' accumulatePost emptyPinboardPost attrs
-  if isEmpty accumulated.href
+  if Text.null accumulated.href
     then throwM (ParseError "missing required attribute: href")
     else pure accumulated
 
@@ -103,7 +103,7 @@ processNode rootNode = do
 
 parse :: (HasCallStack) => Text -> IO Collection
 parse input
-  | isEmpty (Text.strip input) = pure Collection.empty
+  | Text.null (Text.strip input) = pure Collection.empty
   | otherwise = do
       let inputBS = Text.encodeUtf8 input
       rootNode <- either (throwIO . XenoError) pure (Xeno.parse inputBS)

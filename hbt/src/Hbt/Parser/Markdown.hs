@@ -11,6 +11,7 @@ import Control.Monad (forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Data.Set qualified as Set
 import Data.Text (Text)
+import Data.Text qualified as Text
 import Data.Text.Lazy qualified as LazyText
 import Data.Text.Lazy.Builder (Builder)
 import Data.Text.Lazy.Builder qualified as Builder
@@ -23,7 +24,7 @@ import Hbt.Entity.Time (Time)
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI (URI)
 import Hbt.Entity.URI qualified as URI
-import Hbt.Parser.Common (IsEmpty (isEmpty), StateIO, drop1, runStateIO)
+import Hbt.Parser.Common (StateIO, drop1, runStateIO)
 import Lens.Family2
 import Lens.Family2.State.Strict
 
@@ -127,7 +128,7 @@ extractLink dest _title desc = do
   uri <- liftEither (URI.parse dest)
   maybeURI .= Just uri
   let linkText = textFromInlines desc
-  when (not (isEmpty linkText) && linkText /= dest) $
+  when (not (Text.null linkText) && linkText /= dest) $
     maybeName .= Just (MkName linkText)
 
 handleInline :: Inline a -> MarkdownM ()
