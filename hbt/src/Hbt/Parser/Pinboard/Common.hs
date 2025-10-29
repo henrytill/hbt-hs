@@ -73,14 +73,17 @@ emptyPinboardPost =
     , toread = Nothing
     }
 
+toLabel :: Text -> Maybe Label
+toLabel t =
+  let stripped = Text.strip t
+   in if Text.null stripped
+        then Nothing
+        else Just (MkLabel stripped)
+
 parseTags :: Text -> [Label]
 parseTags str
   | Text.null str = []
-  | otherwise =
-      let toLabel t =
-            let stripped = Text.strip t
-             in if Text.null stripped then Nothing else Just (MkLabel stripped)
-       in Maybe.mapMaybe toLabel (Text.words str)
+  | otherwise = Maybe.mapMaybe toLabel (Text.words str)
 
 postToEntity :: (HasCallStack) => PinboardPost -> IO Entity
 postToEntity post = do
