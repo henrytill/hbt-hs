@@ -159,6 +159,7 @@
             haskell.packages.${ghcName}.ghc-tags
             haskell.packages.${ghcName}.hlint
             haskell.packages.${ghcName}.weeder
+            yaml-language-server
           ];
         };
       }
