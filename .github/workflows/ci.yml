@@ -19,8 +19,8 @@ jobs:
         with:
           name: henrytill
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-      - run: nix build -L --accept-flake-config .#all -o result-all
-      - run: nix build -L --accept-flake-config .#all-static -o result-all-static
+      - run: nix build -L .#all -o result-all
+      - run: nix build -L .#all-static -o result-all-static
       - uses: actions/upload-artifact@v5
         with:
           name: hbt-x86_64-unknown-linux-musl
