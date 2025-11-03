@@ -64,6 +64,7 @@ library
         containers >=0.7 && <0.9,
         exceptions ^>=0.10.9,
         file-embed ^>=0.0.16,
+        hbt-pinboard-types,
         html-parse ^>=0.2.2.0,
         lens-family ^>=2.1.3,
         microstache ^>=1.0.3,

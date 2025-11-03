@@ -91,6 +91,10 @@
                 commonmark-initial = hfinal.callCabal2nix "commonmark-initial" commonmark-initial-src { };
                 dwergaz = hfinal.callCabal2nix "dwergaz" dwergaz-src { };
                 uri-bytestring = hfinal.callCabal2nix "uri-bytestring" uri-bytestring-src { };
+                hbt-pinboard-types = hfinal.callCabal2nix "hbt-pinboard-types" (builtins.path {
+                  path = ./pinboard-types;
+                  name = "hbt-pinboard-types-src";
+                }) { };
                 hbt = maybeStaticExecutable isStatic final prev (
                   hfinal.callCabal2nix "hbt" (builtins.path {
                     path = ./hbt;
