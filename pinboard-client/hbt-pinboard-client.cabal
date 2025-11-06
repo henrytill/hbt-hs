@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               backlogged
+name:               hbt-pinboard-client
 version:            0.1.0.0
 license:            ISC
 license-file:       LICENSE
@@ -23,7 +23,7 @@ library
     import:           warnings, exts
     default-language: GHC2021
     hs-source-dirs:   src
-    exposed-modules:  Backlogged
+    exposed-modules:  Pinboard.Client
     other-modules:    Servant.API.ContentTypes.Ext
     build-depends:    base >=4.16 && <5
                     , aeson ^>=2.2.1
@@ -40,17 +40,17 @@ library
                     , tls ^>=2.1.8
 
 
-executable backlogged
+executable pinboard-client
     import:           warnings, exts
     default-language: GHC2021
     hs-source-dirs:   exe
     main-is:          Main.hs
     build-depends:
         base >=4.16 && <5,
-        backlogged
+        hbt-pinboard-client
 
 
-test-suite backlogged-test
+test-suite hbt-pinboard-client-test
     import:           warnings, exts
     default-language: GHC2021
     hs-source-dirs:   test
@@ -58,4 +58,4 @@ test-suite backlogged-test
     main-is:          Main.hs
     build-depends:
         base >=4.16 && <5,
-        backlogged
+        hbt-pinboard-client

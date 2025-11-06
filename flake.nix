@@ -101,10 +101,10 @@
                     name = "hbt-src";
                   }) { }
                 );
-                backlogged = maybeStaticExecutable isStatic final prev (
-                  hfinal.callCabal2nix "backlogged" (builtins.path {
-                    path = ./backlogged;
-                    name = "backlogged-src";
+                hbt-pinboard-client = maybeStaticExecutable isStatic final prev (
+                  hfinal.callCabal2nix "hbt-pinboard-client" (builtins.path {
+                    path = ./pinboard-client;
+                    name = "hbt-pinboard-client-src";
                   }) { }
                 );
               };
@@ -123,14 +123,14 @@
         packages = rec {
           hbt = pkgs.haskell.packages.${ghcName}.hbt;
           hbt-static = pkgsMusl.haskell.packages.${ghcName}.hbt;
-          backlogged = pkgs.haskell.packages.${ghcName}.backlogged;
-          backlogged-static = pkgsMusl.haskell.packages.${ghcName}.backlogged;
+          hbt-pinboard-client = pkgs.haskell.packages.${ghcName}.hbt-pinboard-client;
+          hbt-pinboard-client-static = pkgsMusl.haskell.packages.${ghcName}.hbt-pinboard-client;
           all = pkgs.symlinkJoin {
             pname = "hbt-all";
             version = "0.1.0.0";
             paths = [
               hbt
-              backlogged
+              hbt-pinboard-client
             ];
           };
           all-static = pkgsMusl.symlinkJoin {
@@ -138,7 +138,7 @@
             version = "0.1.0.0";
             paths = [
               hbt-static
-              backlogged-static
+              hbt-pinboard-client-static
             ];
           };
           default = all;
@@ -146,7 +146,7 @@
         devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
           packages = hpkgs: [
             hpkgs.hbt
-            hpkgs.backlogged
+            hpkgs.hbt-pinboard-client
           ];
           withHoogle = true;
           nativeBuildInputs = with pkgs; [

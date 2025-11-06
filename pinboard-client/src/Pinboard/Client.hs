@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Backlogged where
+module Pinboard.Client where
 
 import Data.Aeson (FromJSON (..), Options, ToJSON (..))
 import Data.Aeson qualified as Aeson
@@ -146,8 +146,8 @@ runClient apiToken = do
 
 someFunc :: IO ()
 someFunc = do
-  configDir <- Directory.getXdgDirectory XdgConfig "backlogged"
-  let configFile = configDir ++ "/backlogged.json"
+  configDir <- Directory.getXdgDirectory XdgConfig "hbt"
+  let configFile = configDir ++ "/hbt.json"
   putStrLn ("config: " ++ configFile)
   configExists <- Directory.doesFileExist configFile
   if configExists

@@ -1,4 +1,4 @@
-# Revision history for backlogged
+# Revision history for hbt-pinboard-client
 
 ## 0.1.0.0 -- YYYY-mm-dd
 

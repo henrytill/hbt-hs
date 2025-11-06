@@ -27,5 +27,5 @@ jobs:
           path: result-all-static/bin/hbt
       - uses: actions/upload-artifact@v5
         with:
-          name: backlogged-x86_64-unknown-linux-musl
-          path: result-all-static/bin/backlogged
+          name: pinboard-client-x86_64-unknown-linux-musl
+          path: result-all-static/bin/pinboard-client
