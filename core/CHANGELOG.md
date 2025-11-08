@@ -1,4 +1,4 @@
-# Revision history for hbt
+# Revision history for hbt-core
 
 ## 0.1.0.0 -- YYYY-mm-dd
 

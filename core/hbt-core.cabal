@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               hbt
+name:               hbt-core
 version:            0.1.0.0
 license:            ISC
 license-file:       LICENSE
@@ -89,7 +89,7 @@ executable hbt
         lens-family ^>=2.1.3,
         text ^>=2.1.1,
         vector ^>=0.13.2.0,
-        hbt
+        hbt-core
 
 test-suite hbt-test
     import:           exts
@@ -114,4 +114,4 @@ test-suite hbt-test
         text ^>=2.1.1,
         vector ^>=0.13.2.0,
         yaml ^>=0.11.11.2,
-        hbt
+        hbt-core

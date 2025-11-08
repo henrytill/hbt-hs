@@ -95,10 +95,10 @@
                   path = ./pinboard-types;
                   name = "hbt-pinboard-types-src";
                 }) { };
-                hbt = maybeStaticExecutable isStatic final prev (
-                  hfinal.callCabal2nix "hbt" (builtins.path {
-                    path = ./hbt;
-                    name = "hbt-src";
+                hbt-core = maybeStaticExecutable isStatic final prev (
+                  hfinal.callCabal2nix "hbt-core" (builtins.path {
+                    path = ./core;
+                    name = "hbt-core-src";
                   }) { }
                 );
                 hbt-pinboard-client = maybeStaticExecutable isStatic final prev (
@@ -121,8 +121,8 @@
       in
       {
         packages = rec {
-          hbt = pkgs.haskell.packages.${ghcName}.hbt;
-          hbt-static = pkgsMusl.haskell.packages.${ghcName}.hbt;
+          hbt = pkgs.haskell.packages.${ghcName}.hbt-core;
+          hbt-static = pkgsMusl.haskell.packages.${ghcName}.hbt-core;
           hbt-pinboard-client = pkgs.haskell.packages.${ghcName}.hbt-pinboard-client;
           hbt-pinboard-client-static = pkgsMusl.haskell.packages.${ghcName}.hbt-pinboard-client;
           all = pkgs.symlinkJoin {
@@ -145,7 +145,7 @@
         };
         devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
           packages = hpkgs: [
-            hpkgs.hbt
+            hpkgs.hbt-core
             hpkgs.hbt-pinboard-client
           ];
           withHoogle = true;
