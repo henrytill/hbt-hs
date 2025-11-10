@@ -1,12 +1,9 @@
+{-# LANGUAGE DerivingStrategies #-}
+
 module Hbt.Collection.Id where
 
-import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON, ToJSON)
 
 newtype Id = MkId {value :: Int}
-  deriving (Show, Eq, Ord)
-
-instance ToJSON Id where
-  toJSON (MkId idValue) = toJSON idValue
-
-instance FromJSON Id where
-  parseJSON json = fmap MkId (parseJSON json)
+  deriving stock (Show, Eq, Ord)
+  deriving newtype (ToJSON, FromJSON)

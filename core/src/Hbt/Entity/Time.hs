@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingStrategies #-}
+
 module Hbt.Entity.Time
   ( Error
   , Time
@@ -26,7 +28,7 @@ data Error
 instance Exception Error
 
 newtype Time = MkTime {unTime :: POSIXTime}
-  deriving (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord)
 
 toText :: Time -> Text
 toText (MkTime posixTime) = Text.pack (show @Integer (round posixTime))

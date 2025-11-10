@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -26,31 +27,16 @@ import Hbt.Entity.URI qualified as URI
 import Prelude hiding (id)
 
 newtype Name = MkName {unName :: Text}
-  deriving (Show, Eq, Ord)
-
-instance ToJSON Name where
-  toJSON (MkName name) = toJSON name
-
-instance FromJSON Name where
-  parseJSON json = fmap MkName (parseJSON json)
+  deriving stock (Show, Eq, Ord)
+  deriving newtype (ToJSON, FromJSON)
 
 newtype Label = MkLabel {unLabel :: Text}
-  deriving (Show, Eq, Ord)
-
-instance ToJSON Label where
-  toJSON (MkLabel label) = toJSON label
-
-instance FromJSON Label where
-  parseJSON json = fmap MkLabel (parseJSON json)
+  deriving stock (Show, Eq, Ord)
+  deriving newtype (ToJSON, FromJSON)
 
 newtype Extended = MkExtended {unExtended :: Text}
-  deriving (Show, Eq, Ord)
-
-instance ToJSON Extended where
-  toJSON (MkExtended extended) = toJSON extended
-
-instance FromJSON Extended where
-  parseJSON json = fmap MkExtended (parseJSON json)
+  deriving stock (Show, Eq, Ord)
+  deriving newtype (ToJSON, FromJSON)
 
 data Entity = MkEntity
   { uri :: URI

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -58,7 +59,7 @@ remapField mappings field
   | otherwise = field
 
 newtype UpdateTime = MkUpdateTime {unUpdateTime :: UTCTime}
-  deriving (Eq, Show, Generic)
+  deriving stock (Eq, Show, Generic)
 
 updateTimeOptions :: Options
 updateTimeOptions =
@@ -79,7 +80,7 @@ instance ToJSON Bookmark
 instance FromJSON Bookmark
 
 newtype Tag = MkTag {unTag :: Text}
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 instance ToHttpApiData Tag where
   toQueryParam (MkTag t) = t
@@ -91,25 +92,12 @@ instance ToHttpApiData Format where
   toQueryParam JSON = "json"
 
 newtype ConfigVersion = MkConfigVersion {unConfigVersion :: Int}
-  deriving (Eq, Ord, Show)
-
-instance ToJSON ConfigVersion where
-  toJSON (MkConfigVersion v) = toJSON v
-
-instance FromJSON ConfigVersion where
-  parseJSON v = fmap MkConfigVersion (parseJSON v)
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (ToJSON, FromJSON)
 
 newtype ApiToken = MkApiToken {unApiToken :: Text}
-  deriving (Eq, Show)
-
-instance ToJSON ApiToken where
-  toJSON (MkApiToken t) = toJSON t
-
-instance FromJSON ApiToken where
-  parseJSON v = fmap MkApiToken (parseJSON v)
-
-instance ToHttpApiData ApiToken where
-  toQueryParam (MkApiToken t) = t
+  deriving stock (Eq, Show)
+  deriving newtype (ToJSON, FromJSON, ToHttpApiData)
 
 data Config = MkConfig
   { version :: ConfigVersion

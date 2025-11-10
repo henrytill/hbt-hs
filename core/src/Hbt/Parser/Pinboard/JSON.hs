@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingStrategies #-}
+
 module Hbt.Parser.Pinboard.JSON where
 
 import Control.Exception (Exception, throwIO)
@@ -11,7 +13,7 @@ import Hbt.Parser.Pinboard.Common (postToEntity)
 import Hbt.Pinboard (Post)
 
 newtype Error = ParseError String
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 instance Exception Error
 

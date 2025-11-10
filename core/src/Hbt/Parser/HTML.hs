@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -25,7 +26,7 @@ import Lens.Family2.State.Strict
 import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
 
 newtype Error = ParseError String
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 instance Exception Error
 
@@ -94,7 +95,7 @@ waitingFor :: Lens' ParseState WaitingFor
 waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
 
 newtype NetscapeM a = MkNetscapeM (StateIO ParseState a)
-  deriving (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
+  deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
 
 runNetscapeM :: NetscapeM a -> ParseState -> IO (a, ParseState)
 runNetscapeM (MkNetscapeM m) = runStateIO m

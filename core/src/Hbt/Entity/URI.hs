@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -32,7 +33,7 @@ data Error
 instance Exception Error
 
 newtype URI = MkURI {unURI :: URI.URIRef URI.Absolute}
-  deriving (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord)
 
 empty :: URI
 empty = MkURI (URI.URI (URI.Scheme mempty) Nothing mempty (URI.Query mempty) Nothing)

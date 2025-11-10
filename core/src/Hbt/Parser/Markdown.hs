@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 
@@ -88,7 +89,7 @@ parents :: Lens' ParseState [Id]
 parents f s = (\p -> s {parents = p}) <$> f s.parents
 
 newtype MarkdownM a = MkMarkdownM (StateIO ParseState a)
-  deriving (Functor, Applicative, Monad, MonadState ParseState, MonadThrow)
+  deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadThrow)
 
 runMarkdownM :: MarkdownM a -> ParseState -> IO (a, ParseState)
 runMarkdownM (MkMarkdownM m) = runStateIO m

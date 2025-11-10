@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
@@ -42,7 +43,7 @@ import Hbt.Entity.URI (URI)
 import Prelude hiding (elem, id, length, null)
 
 newtype Error = MissingEntities [Id]
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 instance Exception Error
 

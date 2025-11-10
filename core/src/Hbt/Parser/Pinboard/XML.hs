@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Parser.Pinboard.XML where
@@ -51,7 +52,7 @@ entities :: Lens' ParseState [Entity]
 entities f s = (\e -> s {entities = e}) <$> f s.entities
 
 newtype PinboardM a = MkPinboardM (StateIO ParseState a)
-  deriving (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
+  deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
 
 runPinboardM :: PinboardM a -> ParseState -> IO (a, ParseState)
 runPinboardM (MkPinboardM m) = runStateIO m
