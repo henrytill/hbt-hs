@@ -26,7 +26,7 @@ import URI.ByteString qualified as URI
 import Prelude hiding (null)
 
 data Error
-  = InvalidURI URIParseError
+  = InvalidURI URIParseError Text
   deriving (Show, Eq)
 
 instance Exception Error
@@ -63,7 +63,7 @@ parse s =
       tryTranslated = liftedParse (translate s)
    in case runExcept (tryOriginal <|> tryTranslated) of
         Left [] -> error "Impossible: both URI parsing attempts failed but no errors recorded"
-        Left (err : _) -> Left (InvalidURI err)
+        Left (err : _) -> Left (InvalidURI err s)
         Right uri -> Right (MkURI (normalizeURI uri))
 
 toText :: URI -> Text
