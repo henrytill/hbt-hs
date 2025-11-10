@@ -150,9 +150,9 @@ someFunc = do
   let configFile = configDir ++ "/hbt.json"
   putStrLn ("config: " ++ configFile)
   configExists <- Directory.doesFileExist configFile
-  if configExists
-    then do
+  if not configExists
+    then error "config file does not exist"
+    else do
       config <- readConfig configFile
       putStrLn ("parsed: " ++ show config)
       runClient config.apiToken
-    else error "config file does not exist"
