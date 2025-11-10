@@ -1,0 +1,33 @@
+cabal-version:      3.0
+name:               hbt-cli
+version:            0.1.0.0
+license:            ISC
+license-file:       LICENSE
+author:             Henry Till
+maintainer:         henrytill@gmail.com
+homepage:           https://github.com/henrytill/hbt-hs
+copyright:          Copyright (c) 2025, Henry Till
+tested-with:        ghc ==9.10.2
+synopsis:           Heterogeneous Bookmark Transformation
+category:           Web
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+
+executable hbt
+    main-is:          Main.hs
+    hs-source-dirs:   exe
+    default-language: GHC2021
+    default-extensions:
+        DuplicateRecordFields
+        NoFieldSelectors
+        OverloadedRecordDot
+        StrictData
+    ghc-options:      -Wall
+    build-depends:
+        base >=4.20.1 && <4.22,
+        containers >=0.7 && <0.9,
+        filepath ^>=1.5.2.0,
+        lens-family ^>=2.1.3,
+        text ^>=2.1.1,
+        vector ^>=0.13.2.0,
+        hbt-core

@@ -1,4 +1,5 @@
 packages:
+  cli/hbt-cli.cabal
   core/hbt-core.cabal
   pinboard-client/hbt-pinboard-client.cabal
   pinboard-types/hbt-pinboard-types.cabal
