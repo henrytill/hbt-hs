@@ -7,14 +7,15 @@ import Data.Text.Encoding qualified as Text
 import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Parser.Pinboard.Common (PinboardPost, postToEntity)
+import Hbt.Parser.Pinboard.Common (postToEntity)
+import Hbt.Pinboard (Post)
 
 newtype Error = ParseError String
   deriving (Show, Eq)
 
 instance Exception Error
 
-postsToCollection :: [PinboardPost] -> IO Collection
+postsToCollection :: [Post] -> IO Collection
 postsToCollection posts = do
   entities <- traverse postToEntity (reverse posts)
   pure (Collection.fromEntities entities)

@@ -1,11 +1,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 
 module Hbt.Parser.Pinboard.Common
-  ( PinboardBool
-  , pattern PinboardTrue
-  , pattern PinboardFalse
-  , PinboardPost (..)
-  , emptyPinboardPost
+  ( module Hbt.Pinboard
   , postToEntity
   )
 where
@@ -20,7 +16,8 @@ import Hbt.Entity (Entity, Extended (..), Label (..), Name (..))
 import Hbt.Entity qualified as Entity
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
-import Hbt.Pinboard
+import Hbt.Pinboard (Post (..))
+import Hbt.Pinboard qualified as Pinboard
 
 toLabel :: Text -> Maybe Label
 toLabel t =
@@ -34,7 +31,7 @@ parseTags str
   | Text.null str = []
   | otherwise = Maybe.mapMaybe toLabel (Text.words str)
 
-postToEntity :: (HasCallStack) => PinboardPost -> IO Entity
+postToEntity :: (HasCallStack) => Post -> IO Entity
 postToEntity post = do
   uri <- either throwIO pure (URI.parse post.href)
   createdAt <- either throwIO pure (Time.parseRFC3339 post.time)
@@ -47,8 +44,8 @@ postToEntity post = do
       extended = case post.extended of
         ext | Text.null ext -> Nothing
         ext -> Just (MkExtended ext)
-      shared = toBool post.shared
-      toRead = maybe False toBool post.toread
+      shared = Pinboard.toBool post.shared
+      toRead = maybe False Pinboard.toBool post.toread
       isFeed = False
       lastVisitedAt = Nothing
   pure

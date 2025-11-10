@@ -16,7 +16,9 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity)
 import Hbt.Parser.Common (StateIO, runStateIO)
-import Hbt.Parser.Pinboard.Common
+import Hbt.Parser.Pinboard.Common (postToEntity)
+import Hbt.Pinboard (Post (..))
+import Hbt.Pinboard qualified as Pinboard
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Xeno.DOM qualified as Xeno
@@ -57,7 +59,7 @@ runPinboardM (MkPinboardM m) = runStateIO m
 toLower :: ByteString -> ByteString
 toLower = Char8.map Char.toLower
 
-accumulatePost :: PinboardPost -> (ByteString, ByteString) -> PinboardPost
+accumulatePost :: Post -> (ByteString, ByteString) -> Post
 accumulatePost post (attrKey, attrValue) =
   let key = toLower attrKey
       value = Text.decodeUtf8 attrValue
@@ -67,13 +69,13 @@ accumulatePost post (attrKey, attrValue) =
         "extended" -> post {extended = value}
         "time" -> post {time = value}
         "tag" -> post {tags = value}
-        "shared" | value == "yes" -> post {shared = PinboardTrue}
-        "toread" | value == "yes" -> post {toread = Just PinboardTrue}
+        "shared" | value == "yes" -> post {shared = Pinboard.True}
+        "toread" | value == "yes" -> post {toread = Just Pinboard.True}
         _ -> post
 
-createPostFromAttrs :: (HasCallStack) => [(ByteString, ByteString)] -> IO PinboardPost
+createPostFromAttrs :: (HasCallStack) => [(ByteString, ByteString)] -> IO Post
 createPostFromAttrs attrs = do
-  let accumulated = foldl' accumulatePost emptyPinboardPost attrs
+  let accumulated = foldl' accumulatePost Pinboard.empty attrs
   if Text.null accumulated.href
     then throwIO (ParseError "missing required attribute: href")
     else pure accumulated

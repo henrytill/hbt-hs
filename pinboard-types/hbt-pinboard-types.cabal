@@ -26,7 +26,8 @@ common exts
 library
     import:           warnings, exts
     exposed-modules:  Hbt.Pinboard
-    -- other-modules:
+    other-modules:    Hbt.Pinboard.Bool
+                      Hbt.Pinboard.Post
     -- other-extensions:
     build-depends:    base ^>=4.20.2.0,
                       aeson ^>=2.2.3.0,
