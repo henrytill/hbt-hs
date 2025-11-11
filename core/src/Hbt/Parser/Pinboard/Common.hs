@@ -1,5 +1,3 @@
-{-# LANGUAGE PatternSynonyms #-}
-
 module Hbt.Parser.Pinboard.Common
   ( module Hbt.Pinboard
   , postToEntity

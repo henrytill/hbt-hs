@@ -1,20 +1,30 @@
-- arguments: [ -XDuplicateRecordFields, -XNoFieldSelectors, -XOverloadedRecordDot, -XStrictData ]
+- arguments:
+    [
+      -XDuplicateRecordFields,
+      -XNoFieldSelectors,
+      -XOverloadedRecordDot,
+      -XStrictData,
+    ]
 
-- group: {name: future, enabled: true}
-- group: {name: extra, enabled: true}
+- group: { name: future, enabled: true }
+- group: { name: extra, enabled: true }
 
 - extensions:
-  - default: false
-  - name:
-    - DataKinds
-    - DeriveGeneric
-    - GADTs
-    - OverloadedStrings
-    - PatternSynonyms
-    - RequiredTypeArguments
-    - TemplateHaskell
-    - TypeData
-    - ViewPatterns
+    - default: false
+    - name:
+        - AllowAmbiguousTypes
+        - DataKinds
+        - DeriveGeneric
+        - DerivingStrategies
+        - GADTs
+        - OverloadedStrings
+        - PatternSynonyms
+        - RequiredTypeArguments
+        - TemplateHaskell
+        - TypeApplications
+        - TypeData
+        - ViewPatterns
 
-- ignore: {name: "Use lambda-case"}
-- ignore: {name: "Use drop1"}
+- ignore: { name: "Use lambda-case" }
+- ignore: { name: "Use drop1" }
+- ignore: { name: "Use newtype instead of data" }
