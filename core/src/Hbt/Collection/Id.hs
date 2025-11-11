@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module Hbt.Collection.Id where
 
 import Data.Aeson (FromJSON, ToJSON)

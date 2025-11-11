@@ -16,7 +16,7 @@ extra-doc-files:    CHANGELOG.md
 executable hbt
     main-is:          Main.hs
     hs-source-dirs:   exe
-    default-language: GHC2021
+    default-language: GHC2024
     default-extensions:
         DuplicateRecordFields
         NoFieldSelectors

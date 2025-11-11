@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module Hbt.Parser.Pinboard.JSON where
 
 import Control.Exception (Exception, throwIO)

@@ -34,4 +34,4 @@ library
                       text ^>=2.1.1,
                       time >=1.12 && <1.15,
     hs-source-dirs:   src
-    default-language: GHC2021
+    default-language: GHC2024

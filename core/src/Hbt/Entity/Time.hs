@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module Hbt.Entity.Time
   ( Error
   , Time

@@ -21,7 +21,7 @@ common exts
 
 library
     import:           warnings, exts
-    default-language: GHC2021
+    default-language: GHC2024
     hs-source-dirs:   src
     exposed-modules:  Pinboard.Client
     other-modules:    Servant.API.ContentTypes.Ext
@@ -42,7 +42,7 @@ library
 
 executable pinboard-client
     import:           warnings, exts
-    default-language: GHC2021
+    default-language: GHC2024
     hs-source-dirs:   exe
     main-is:          Main.hs
     build-depends:
@@ -52,7 +52,7 @@ executable pinboard-client
 
 test-suite hbt-pinboard-client-test
     import:           warnings, exts
-    default-language: GHC2021
+    default-language: GHC2024
     hs-source-dirs:   test
     type:             exitcode-stdio-1.0
     main-is:          Main.hs

@@ -1,5 +1,6 @@
 - arguments:
     [
+      -XGHC2024,
       -XDuplicateRecordFields,
       -XNoFieldSelectors,
       -XOverloadedRecordDot,
@@ -13,15 +14,10 @@
     - default: false
     - name:
         - AllowAmbiguousTypes
-        - DataKinds
-        - DeriveGeneric
-        - DerivingStrategies
-        - GADTs
         - OverloadedStrings
         - PatternSynonyms
         - RequiredTypeArguments
         - TemplateHaskell
-        - TypeApplications
         - TypeData
         - ViewPatterns
 
