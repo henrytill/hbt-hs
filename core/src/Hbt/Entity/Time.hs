@@ -19,7 +19,7 @@ import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Time.Clock.POSIX qualified as POSIX
 import Data.Time.Format qualified as Format
 
-data Error
+newtype Error
   = InvalidTime Text
   deriving stock (Show, Eq)
 
