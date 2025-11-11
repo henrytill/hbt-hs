@@ -12,6 +12,7 @@ extra-doc-files:    CHANGELOG.md
 common warnings
     ghc-options:
         -Wall
+        -Wcompat
         -Wmissing-deriving-strategies
 
 common exts
