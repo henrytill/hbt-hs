@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
@@ -44,8 +45,7 @@ import Prelude hiding (elem, id, length, null)
 
 newtype Error = MissingEntities [Id]
   deriving stock (Show, Eq)
-
-instance Exception Error
+  deriving anyclass (Exception)
 
 type Edges = Vector Id
 

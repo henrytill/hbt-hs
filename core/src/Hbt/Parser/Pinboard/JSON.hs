@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+
 module Hbt.Parser.Pinboard.JSON (Error (..), parse) where
 
 import Control.Exception (Exception, throwIO)
@@ -12,8 +14,7 @@ import Hbt.Pinboard (Post)
 
 newtype Error = ParseError String
   deriving stock (Show, Eq)
-
-instance Exception Error
+  deriving anyclass (Exception)
 
 postsToCollection :: [Post] -> IO Collection
 postsToCollection posts = do

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -26,8 +27,7 @@ import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
 
 newtype Error = ParseError String
   deriving stock (Show, Eq)
-
-instance Exception Error
+  deriving anyclass (Exception)
 
 isTagName :: Text -> Text -> Bool
 isTagName expected actual = Text.toLower expected == Text.toLower actual

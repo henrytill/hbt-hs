@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Entity.URI
@@ -27,8 +28,7 @@ import Prelude hiding (null)
 data Error
   = InvalidURI URIParseError Text
   deriving stock (Show, Eq)
-
-instance Exception Error
+  deriving anyclass (Exception)
 
 newtype URI = MkURI {unURI :: URI.URIRef URI.Absolute}
   deriving stock (Show, Eq, Ord)

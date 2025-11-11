@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 
@@ -32,8 +33,7 @@ data Error
   = NoSaveableEntity
   | ParseError Commonmark.ParseError
   deriving stock (Show, Eq)
-
-instance Exception Error
+  deriving anyclass (Exception)
 
 data ParseState = MkParseState
   { collection :: Collection

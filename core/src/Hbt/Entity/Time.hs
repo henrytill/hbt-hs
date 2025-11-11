@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+
 module Hbt.Entity.Time
   ( Error
   , Time
@@ -22,8 +24,7 @@ import Data.Time.Format qualified as Format
 newtype Error
   = InvalidTime Text
   deriving stock (Show, Eq)
-
-instance Exception Error
+  deriving anyclass (Exception)
 
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving stock (Show, Eq, Ord)

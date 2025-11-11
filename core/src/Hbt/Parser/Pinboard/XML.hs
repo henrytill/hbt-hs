@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Parser.Pinboard.XML (Error (..), parse) where
@@ -28,8 +29,7 @@ data Error
   = ParseError String
   | XenoError XenoException
   deriving stock (Show)
-
-instance Exception Error
+  deriving anyclass (Exception)
 
 data ParseState = MkParseState
   { collection :: Collection
