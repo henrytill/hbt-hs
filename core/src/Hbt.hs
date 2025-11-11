@@ -66,7 +66,7 @@ parseWith HTML = HTMLParser.parse
 templateBytes :: ByteString
 templateBytes = $(FileEmbed.embedFileRelative "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache")
 
-formatWith :: (HasCallStack) => Format To -> Collection -> IO Text
+formatWith :: Format To -> Collection -> IO Text
 formatWith YAML collection =
   pure (Text.decodeUtf8 (YamlPretty.encodePretty Collection.yamlConfig collection))
 formatWith HTML collection = do

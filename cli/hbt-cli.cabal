@@ -20,6 +20,7 @@ common warnings
         -Wmissing-deriving-strategies
         -Wmissing-export-lists
         -Wmonomorphism-restriction
+        -Wredundant-constraints
 
 common exts
     default-extensions:

@@ -186,7 +186,7 @@ handle _ = pure ()
 process :: [Token] -> NetscapeM Collection
 process tokens = forM_ tokens handle >> use collection
 
-parse :: (HasCallStack) => Text -> IO Collection
+parse :: Text -> IO Collection
 parse input = do
   let tokens = parseTokens input
   (ret, _) <- runNetscapeM (process tokens) empty
