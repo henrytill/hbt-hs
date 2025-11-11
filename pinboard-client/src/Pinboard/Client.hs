@@ -4,6 +4,7 @@
 
 module Pinboard.Client (someFunc) where
 
+import Control.Exception (throwIO)
 import Data.Aeson (FromJSON (..), Options, ToJSON (..))
 import Data.Aeson qualified as Aeson
 import Data.Default (def)
@@ -22,6 +23,8 @@ import Servant.API.ContentTypes.Ext
 import Servant.Client
 import System.Directory (XdgDirectory (..))
 import System.Directory qualified as Directory
+import System.Exit qualified as Exit
+import System.FilePath ((</>))
 
 type PostsUpdate =
   "posts"
@@ -73,9 +76,7 @@ data Bookmark = MkBookmark
 
 newtype Tag = MkTag {unTag :: Text}
   deriving stock (Eq, Show)
-
-instance ToHttpApiData Tag where
-  toQueryParam (MkTag t) = t
+  deriving newtype (ToHttpApiData)
 
 data Format = JSON
   deriving stock (Eq, Show)
@@ -85,11 +86,11 @@ instance ToHttpApiData Format where
 
 newtype ConfigVersion = MkConfigVersion {unConfigVersion :: Int}
   deriving stock (Eq, Ord, Show)
-  deriving newtype (ToJSON, FromJSON)
+  deriving newtype (FromJSON, ToJSON)
 
 newtype ApiToken = MkApiToken {unApiToken :: Text}
   deriving stock (Eq, Show)
-  deriving newtype (ToJSON, FromJSON, ToHttpApiData)
+  deriving newtype (FromJSON, ToJSON, ToHttpApiData)
 
 data Config = MkConfig
   { version :: ConfigVersion
@@ -97,6 +98,16 @@ data Config = MkConfig
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
+
+findConfigFile :: IO (Maybe FilePath)
+findConfigFile = do
+  configDir <- Directory.getXdgDirectory XdgConfig "hbt"
+  let configFile = configDir </> "hbt.json"
+  configExists <- Directory.doesFileExist configFile
+  pure $
+    if configExists
+      then Just configFile
+      else Nothing
 
 readConfig :: FilePath -> IO Config
 readConfig path = do
@@ -115,21 +126,17 @@ runClient :: ApiToken -> IO ()
 runClient apiToken = do
   manager <- Client.newManager managerSettings
   let m = update (Just JSON) (Just apiToken)
-      env = mkClientEnv manager (BaseUrl Https "api.pinboard.in" 443 "v1")
+      env = mkClientEnv manager $ BaseUrl Https "api.pinboard.in" 443 "v1"
   result <- runClientM m env
-  case result of
-    Left err -> error (show err)
-    Right response -> putStrLn ("updated: " ++ show response)
+  response <- either throwIO pure result
+  putStrLn $ "updated: " <> show response
 
 someFunc :: IO ()
 someFunc = do
-  configDir <- Directory.getXdgDirectory XdgConfig "hbt"
-  let configFile = configDir ++ "/hbt.json"
-  putStrLn ("config: " ++ configFile)
-  configExists <- Directory.doesFileExist configFile
-  if not configExists
-    then error "config file does not exist"
-    else do
+  maybeConfigFile <- findConfigFile
+  case maybeConfigFile of
+    Nothing -> Exit.die "no config found"
+    Just configFile -> do
       config <- readConfig configFile
-      putStrLn ("parsed: " ++ show config)
+      putStrLn $ "config: " <> show config
       runClient config.apiToken
