@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+
 module Hbt.Collection.Repr
   ( NodeRepr (..)
   , CollectionRepr (..)
@@ -5,7 +7,6 @@ module Hbt.Collection.Repr
 where
 
 import Data.Aeson (FromJSON, ToJSON)
-import Data.Aeson qualified as Aeson
 import Data.Vector (Vector)
 import GHC.Generics (Generic)
 import Hbt.Collection.Id (Id)
@@ -17,12 +18,7 @@ data NodeRepr = MkNodeRepr
   , edges :: Vector Id
   }
   deriving stock (Show, Eq, Generic)
-
-instance ToJSON NodeRepr where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions
-
-instance FromJSON NodeRepr where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions
+  deriving anyclass (FromJSON, ToJSON)
 
 data CollectionRepr = MkCollectionRepr
   { version :: String
@@ -30,9 +26,4 @@ data CollectionRepr = MkCollectionRepr
   , value :: Vector NodeRepr
   }
   deriving stock (Show, Eq, Generic)
-
-instance ToJSON CollectionRepr where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions
-
-instance FromJSON CollectionRepr where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions
+  deriving anyclass (FromJSON, ToJSON)

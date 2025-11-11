@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
@@ -58,6 +59,7 @@ remapField mappings field
 
 newtype UpdateTime = MkUpdateTime {unUpdateTime :: UTCTime}
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 updateTimeOptions :: Options
 updateTimeOptions =
@@ -65,20 +67,9 @@ updateTimeOptions =
       mappings = [("unUpdateTime", "update_time")]
    in Aeson.defaultOptions {Aeson.fieldLabelModifier = remapField mappings}
 
-instance ToJSON UpdateTime where
-  toJSON = Aeson.genericToJSON updateTimeOptions
-
-instance FromJSON UpdateTime where
-  parseJSON = Aeson.genericParseJSON updateTimeOptions
-
 data Bookmark = MkBookmark
   deriving stock (Eq, Show, Generic)
-
-instance ToJSON Bookmark where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions
-
-instance FromJSON Bookmark where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions
+  deriving anyclass (FromJSON, ToJSON)
 
 newtype Tag = MkTag {unTag :: Text}
   deriving stock (Eq, Show)
@@ -105,12 +96,7 @@ data Config = MkConfig
   , apiToken :: ApiToken
   }
   deriving stock (Eq, Show, Generic)
-
-instance ToJSON Config where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions
-
-instance FromJSON Config where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions
+  deriving anyclass (FromJSON, ToJSON)
 
 readConfig :: FilePath -> IO Config
 readConfig path = do

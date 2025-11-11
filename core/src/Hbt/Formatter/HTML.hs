@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Formatter.HTML
@@ -38,9 +39,7 @@ data TemplateEntity = MkTemplateEntity
   , description :: Maybe Text
   }
   deriving stock (Generic)
-
-instance ToJSON TemplateEntity where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+  deriving anyclass (ToJSON)
 
 getFirstName :: Text -> Set Name -> Text
 getFirstName def names

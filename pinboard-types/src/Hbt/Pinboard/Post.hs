@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 
@@ -40,9 +41,7 @@ data Post = MkPost
   , toread :: Pinboard.Bool
   }
   deriving stock (Show, Eq, Generic)
-
-instance FromJSON Post where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions
+  deriving anyclass (FromJSON)
 
 epochTimeText :: Text
 epochTimeText = Text.pack (Format.formatTime Format.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (POSIX.posixSecondsToUTCTime 0))
