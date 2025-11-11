@@ -1,6 +1,7 @@
 module Hbt.Collection.Repr where
 
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson qualified as Aeson
 import Data.Vector (Vector)
 import GHC.Generics (Generic)
 import Hbt.Collection.Id (Id)
@@ -13,9 +14,11 @@ data NodeRepr = MkNodeRepr
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON NodeRepr
+instance ToJSON NodeRepr where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
 
-instance FromJSON NodeRepr
+instance FromJSON NodeRepr where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions
 
 data CollectionRepr = MkCollectionRepr
   { version :: String
@@ -24,6 +27,8 @@ data CollectionRepr = MkCollectionRepr
   }
   deriving (Show, Eq, Generic)
 
-instance ToJSON CollectionRepr
+instance ToJSON CollectionRepr where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
 
-instance FromJSON CollectionRepr
+instance FromJSON CollectionRepr where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions

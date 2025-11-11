@@ -72,9 +72,11 @@ instance FromJSON UpdateTime where
 data Bookmark = MkBookmark
   deriving (Eq, Show, Generic)
 
-instance ToJSON Bookmark
+instance ToJSON Bookmark where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
 
-instance FromJSON Bookmark
+instance FromJSON Bookmark where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions
 
 newtype Tag = MkTag {unTag :: Text}
   deriving stock (Eq, Show)
@@ -102,9 +104,11 @@ data Config = MkConfig
   }
   deriving (Eq, Show, Generic)
 
-instance ToJSON Config
+instance ToJSON Config where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
 
-instance FromJSON Config
+instance FromJSON Config where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions
 
 readConfig :: FilePath -> IO Config
 readConfig path = do

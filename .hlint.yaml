@@ -14,7 +14,6 @@
     - default: false
     - name:
         - AllowAmbiguousTypes
-        - DerivingVia
         - OverloadedStrings
         - PatternSynonyms
         - RequiredTypeArguments

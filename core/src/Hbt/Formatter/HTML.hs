@@ -39,7 +39,8 @@ data TemplateEntity = MkTemplateEntity
   }
   deriving (Generic)
 
-instance ToJSON TemplateEntity
+instance ToJSON TemplateEntity where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
 
 getFirstName :: Text -> Set Name -> Text
 getFirstName def names
