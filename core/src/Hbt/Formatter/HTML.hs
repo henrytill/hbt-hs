@@ -37,7 +37,7 @@ data TemplateEntity = MkTemplateEntity
   , lastVisit :: Maybe Text
   , description :: Maybe Text
   }
-  deriving (Generic)
+  deriving stock (Generic)
 
 instance ToJSON TemplateEntity where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions

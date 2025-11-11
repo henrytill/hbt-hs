@@ -70,7 +70,7 @@ instance FromJSON UpdateTime where
   parseJSON = Aeson.genericParseJSON updateTimeOptions
 
 data Bookmark = MkBookmark
-  deriving (Eq, Show, Generic)
+  deriving stock (Eq, Show, Generic)
 
 instance ToJSON Bookmark where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions
@@ -85,7 +85,7 @@ instance ToHttpApiData Tag where
   toQueryParam (MkTag t) = t
 
 data Format = JSON
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 instance ToHttpApiData Format where
   toQueryParam JSON = "json"
@@ -102,7 +102,7 @@ data Config = MkConfig
   { version :: ConfigVersion
   , apiToken :: ApiToken
   }
-  deriving (Eq, Show, Generic)
+  deriving stock (Eq, Show, Generic)
 
 instance ToJSON Config where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions

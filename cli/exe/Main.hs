@@ -35,7 +35,7 @@ data Options = MkOptions
   , mappingsFile :: Maybe FilePath
   , showHelp :: Bool
   }
-  deriving (Show)
+  deriving stock (Show)
 
 instance HasFormat From Options where
   format f opts = (\x -> opts {inputFormat = x}) <$> f opts.inputFormat

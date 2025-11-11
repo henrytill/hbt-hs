@@ -32,7 +32,7 @@ data TestCase (f :: Flow) = MkTestCase
   , input :: Text
   , expected :: Text
   }
-  deriving (Show)
+  deriving stock (Show)
 
 instance Eq (TestCase f) where
   a == b = a.name == b.name

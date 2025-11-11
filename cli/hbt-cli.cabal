@@ -13,16 +13,23 @@ category:           Web
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 
-executable hbt
-    main-is:          Main.hs
-    hs-source-dirs:   exe
-    default-language: GHC2024
+common warnings
+    ghc-options:
+        -Wall
+        -Wmissing-deriving-strategies
+
+common exts
     default-extensions:
         DuplicateRecordFields
         NoFieldSelectors
         OverloadedRecordDot
         StrictData
-    ghc-options:      -Wall
+
+executable hbt
+    import:           warnings, exts
+    main-is:          Main.hs
+    hs-source-dirs:   exe
+    default-language: GHC2024
     build-depends:
         base >=4.20.1 && <4.22,
         containers >=0.7 && <0.9,

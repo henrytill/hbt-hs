@@ -25,6 +25,11 @@ extra-source-files:
     test/data/pinboard/xml/*.xml
     test/data/pinboard/xml/*.yaml
 
+common warnings
+    ghc-options:
+        -Wall
+        -Wmissing-deriving-strategies
+
 common exts
     default-extensions:
         DuplicateRecordFields
@@ -33,7 +38,7 @@ common exts
         StrictData
 
 library
-    import: exts
+    import: warnings, exts
     exposed-modules:
         Hbt
         Hbt.Collection
@@ -54,7 +59,6 @@ library
         Hbt.Parser.Common
         Hbt.Parser.Pinboard.Common
     default-language: GHC2024
-    ghc-options:      -Wall
     build-depends:
         base >=4.20.1 && <4.22,
         aeson ^>=2.2.3.0,
@@ -77,7 +81,7 @@ library
         yaml ^>=0.11.11.2
 
 test-suite hbt-test
-    import:           exts
+    import:           warnings, exts
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
     hs-source-dirs:   test
@@ -87,7 +91,6 @@ test-suite hbt-test
         TestUtilities
 
     default-language: GHC2024
-    ghc-options:      -Wall
     build-depends:
         base >=4.20.1 && <4.22,
         bytestring >=0.12.1.0 && <0.13,

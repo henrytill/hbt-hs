@@ -21,7 +21,7 @@ import Data.Time.Format qualified as Format
 
 data Error
   = InvalidTime Text
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 instance Exception Error
 

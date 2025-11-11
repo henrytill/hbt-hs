@@ -27,7 +27,7 @@ import Xeno.Types (XenoException)
 data Error
   = ParseError String
   | XenoError XenoException
-  deriving (Show)
+  deriving stock (Show)
 
 instance Exception Error
 
@@ -35,7 +35,7 @@ data ParseState = MkParseState
   { collection :: Collection
   , entities :: [Entity]
   }
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 empty :: ParseState
 empty =

@@ -53,7 +53,7 @@ data Collection = MkCollection
   , edges :: Vector Edges
   , uris :: Map URI Id
   }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show)
 
 empty :: Collection
 empty = MkCollection Vector.empty Vector.empty Map.empty

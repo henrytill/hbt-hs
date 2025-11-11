@@ -48,7 +48,7 @@ data Entity = MkEntity
   , extended :: Maybe Extended
   , lastVisitedAt :: Maybe Time
   }
-  deriving (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord)
 
 instance ToJSON Entity where
   toJSON entity =

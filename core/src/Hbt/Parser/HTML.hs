@@ -52,7 +52,7 @@ data WaitingFor
   | BookmarkDescription
   | ExtendedDescription
   | None
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 data ParseState = MkParseState
   { collection :: Collection
@@ -62,7 +62,7 @@ data ParseState = MkParseState
   , folderStack :: [Text]
   , waitingFor :: WaitingFor
   }
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 empty :: ParseState
 empty =

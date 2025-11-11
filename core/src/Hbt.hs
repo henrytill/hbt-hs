@@ -38,11 +38,11 @@ data Format (f :: Flow) where
   HTML :: Format f
   YAML :: Format To
 
-deriving instance Show (Format f)
+deriving stock instance Show (Format f)
 
-deriving instance Eq (Format f)
+deriving stock instance Eq (Format f)
 
-deriving instance Ord (Format f)
+deriving stock instance Ord (Format f)
 
 allInputFormats :: [Format From]
 allInputFormats = [JSON, XML, Markdown, HTML]

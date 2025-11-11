@@ -31,7 +31,7 @@ import Lens.Family2.State.Strict
 data Error
   = NoSaveableEntity
   | ParseError Commonmark.ParseError
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 instance Exception Error
 
@@ -44,7 +44,7 @@ data ParseState = MkParseState
   , maybeParent :: Maybe Id
   , parents :: [Id]
   }
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 empty :: ParseState
 empty =

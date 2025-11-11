@@ -12,7 +12,7 @@ data NodeRepr = MkNodeRepr
   , entity :: Entity
   , edges :: Vector Id
   }
-  deriving (Show, Eq, Generic)
+  deriving stock (Show, Eq, Generic)
 
 instance ToJSON NodeRepr where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions
@@ -25,7 +25,7 @@ data CollectionRepr = MkCollectionRepr
   , length :: Int
   , value :: Vector NodeRepr
   }
-  deriving (Show, Eq, Generic)
+  deriving stock (Show, Eq, Generic)
 
 instance ToJSON CollectionRepr where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions

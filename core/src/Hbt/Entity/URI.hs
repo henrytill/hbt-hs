@@ -26,7 +26,7 @@ import Prelude hiding (null)
 
 data Error
   = InvalidURI URIParseError Text
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
 
 instance Exception Error
 
