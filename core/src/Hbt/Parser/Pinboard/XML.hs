@@ -65,12 +65,14 @@ accumulatePost post (attrKey, attrValue) =
       value = Text.decodeUtf8 attrValue
    in case key of
         "href" -> post {href = value}
-        "description" -> post {description = value}
-        "extended" -> post {extended = value}
+        "description" -> post {description = Just value}
+        "extended" -> post {extended = Just value}
         "time" -> post {time = value}
-        "tag" -> post {tags = value}
+        "tag" -> post {tags = Pinboard.mkTags value}
+        "meta" -> post {meta = Just value}
+        "hash" -> post {hash = Just value}
         "shared" | value == "yes" -> post {shared = Pinboard.True}
-        "toread" | value == "yes" -> post {toread = Just Pinboard.True}
+        "toread" | value == "yes" -> post {toread = Pinboard.True}
         _ -> post
 
 createPostFromAttrs :: (HasCallStack) => [(ByteString, ByteString)] -> IO Post

@@ -5,6 +5,7 @@ module Hbt.Parser.Pinboard.Common
 where
 
 import Control.Exception (throwIO)
+import Data.Functor ((<&>))
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -17,33 +18,27 @@ import Hbt.Entity.URI qualified as URI
 import Hbt.Pinboard (Post (..))
 import Hbt.Pinboard qualified as Pinboard
 
-toLabel :: Text -> Maybe Label
-toLabel t =
+nonEmpty :: Text -> Maybe Text
+nonEmpty t =
   let stripped = Text.strip t
    in if Text.null stripped
         then Nothing
-        else Just (MkLabel stripped)
+        else Just stripped
 
-parseTags :: Text -> [Label]
-parseTags str
-  | Text.null str = []
-  | otherwise = Maybe.mapMaybe toLabel (Text.words str)
+toLabel :: Text -> Maybe Label
+toLabel t = nonEmpty t <&> MkLabel
 
 postToEntity :: (HasCallStack) => Post -> IO Entity
 postToEntity post = do
   uri <- either throwIO pure (URI.parse post.href)
   createdAt <- either throwIO pure (Time.parseRFC3339 post.time)
   let updatedAt = []
-      name = case post.description of
-        desc | Text.null desc -> Nothing
-        desc -> Just (MkName desc)
+      name = post.description >>= nonEmpty <&> MkName
       names = maybe Set.empty Set.singleton name
-      labels = Set.fromList (parseTags post.tags)
-      extended = case post.extended of
-        ext | Text.null ext -> Nothing
-        ext -> Just (MkExtended ext)
+      labels = Set.fromList (Maybe.mapMaybe toLabel post.tags.unTags)
+      extended = post.extended >>= nonEmpty <&> MkExtended
       shared = Pinboard.toBool post.shared
-      toRead = maybe False Pinboard.toBool post.toread
+      toRead = Pinboard.toBool post.toread
       isFeed = False
       lastVisitedAt = Nothing
   pure
