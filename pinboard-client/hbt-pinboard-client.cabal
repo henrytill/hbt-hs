@@ -15,6 +15,7 @@ common warnings
         -Wcompat
         -Wmissing-deriving-strategies
         -Wmissing-export-lists
+        -Wmonomorphism-restriction
 
 common exts
     default-extensions:

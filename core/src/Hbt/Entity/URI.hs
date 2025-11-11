@@ -12,7 +12,7 @@ where
 
 import Control.Applicative ((<|>))
 import Control.Exception (Exception)
-import Control.Monad.Except (liftEither, runExcept)
+import Control.Monad.Except (MonadError, liftEither, runExcept)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor qualified as Bifunctor
@@ -54,15 +54,19 @@ normalizeURI uri
       uri {URI.uriPath = "/"}
   | otherwise = uri
 
+parseURI :: Text -> Either URIParseError (URI.URIRef URI.Absolute)
+parseURI text = URI.parseURI URI.laxURIParserOptions (Text.Encoding.encodeUtf8 text)
+
+liftedParse :: (MonadError [URIParseError] m) => Text -> m (URI.URIRef URI.Absolute)
+liftedParse text = liftEither (Bifunctor.first (: []) (parseURI text))
+
 parse :: Text -> Either Error URI
-parse s =
-  let parseURI text = URI.parseURI URI.laxURIParserOptions (Text.Encoding.encodeUtf8 text)
-      liftedParse text = liftEither (Bifunctor.first (: []) (parseURI text))
-      tryOriginal = liftedParse s
-      tryTranslated = liftedParse (translate s)
+parse text =
+  let tryOriginal = liftedParse text
+      tryTranslated = liftedParse (translate text)
    in case runExcept (tryOriginal <|> tryTranslated) of
         Left [] -> error "Impossible: both URI parsing attempts failed but no errors recorded"
-        Left (err : _) -> Left (InvalidURI err s)
+        Left (err : _) -> Left (InvalidURI err text)
         Right uri -> Right (MkURI (normalizeURI uri))
 
 toText :: URI -> Text

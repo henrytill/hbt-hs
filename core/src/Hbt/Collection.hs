@@ -30,6 +30,7 @@ import Data.List (elemIndex)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe qualified as Maybe
+import Data.Text (Text)
 import Data.Vector (Vector, elem, (!), (//))
 import Data.Vector qualified as Vector
 import Data.Yaml.Pretty qualified as YamlPretty
@@ -127,7 +128,8 @@ mkNodeRepr collection id entity =
 
 toRepr :: Collection -> CollectionRepr
 toRepr collection =
-  let version = "0.1.0"
+  let version :: String
+      version = "0.1.0"
       length = Vector.length collection.nodes
       value = Vector.imap (mkNodeRepr collection . MkId) collection.nodes
    in MkCollectionRepr {version, length, value}
@@ -150,6 +152,7 @@ instance FromJSON Collection where
 yamlConfig :: YamlPretty.Config
 yamlConfig = YamlPretty.setConfCompare fieldCompare YamlPretty.defConfig
   where
+    fieldOrder :: [Text]
     fieldOrder =
       [ "version"
       , "length"

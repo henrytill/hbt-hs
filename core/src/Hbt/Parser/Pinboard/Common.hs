@@ -13,6 +13,7 @@ import Data.Text qualified as Text
 import GHC.Stack (HasCallStack)
 import Hbt.Entity (Entity, Extended (..), Label (..), Name (..))
 import Hbt.Entity qualified as Entity
+import Hbt.Entity.Time (Time)
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
 import Hbt.Pinboard (Post (..))
@@ -32,7 +33,8 @@ postToEntity :: (HasCallStack) => Post -> IO Entity
 postToEntity post = do
   uri <- either throwIO pure (URI.parse post.href)
   createdAt <- either throwIO pure (Time.parseRFC3339 post.time)
-  let updatedAt = []
+  let updatedAt :: [Time]
+      updatedAt = []
       name = post.description >>= nonEmpty <&> MkName
       names = maybe Set.empty Set.singleton name
       labels = Set.fromList (Maybe.mapMaybe toLabel post.tags.unTags)
@@ -40,6 +42,7 @@ postToEntity post = do
       shared = Pinboard.toBool post.shared
       toRead = Pinboard.toBool post.toread
       isFeed = False
+      lastVisitedAt :: Maybe Time
       lastVisitedAt = Nothing
   pure
     Entity.MkEntity

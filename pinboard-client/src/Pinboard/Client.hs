@@ -61,7 +61,8 @@ newtype UpdateTime = MkUpdateTime {unUpdateTime :: UTCTime}
 
 updateTimeOptions :: Options
 updateTimeOptions =
-  let mappings = [("unUpdateTime", "update_time")]
+  let mappings :: [(String, String)]
+      mappings = [("unUpdateTime", "update_time")]
    in Aeson.defaultOptions {Aeson.fieldLabelModifier = remapField mappings}
 
 instance ToJSON UpdateTime where
