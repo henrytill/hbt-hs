@@ -91,26 +91,26 @@
                 commonmark-initial = hfinal.callCabal2nix "commonmark-initial" commonmark-initial-src { };
                 dwergaz = hfinal.callCabal2nix "dwergaz" dwergaz-src { };
                 uri-bytestring = hfinal.callCabal2nix "uri-bytestring" uri-bytestring-src { };
-                hbt-pinboard-types = hfinal.callCabal2nix "hbt-pinboard-types" (builtins.path {
-                  path = ./pinboard-types;
-                  name = "hbt-pinboard-types-src";
-                }) { };
-                hbt-core = hfinal.callCabal2nix "hbt-core" (builtins.path {
-                  path = ./core;
-                  name = "hbt-core-src";
-                }) { };
                 hbt-cli = maybeStaticExecutable isStatic final prev (
                   hfinal.callCabal2nix "hbt-cli" (builtins.path {
                     path = ./cli;
                     name = "hbt-cli-src";
                   }) { }
                 );
+                hbt-core = hfinal.callCabal2nix "hbt-core" (builtins.path {
+                  path = ./core;
+                  name = "hbt-core-src";
+                }) { };
                 hbt-pinboard-client = maybeStaticExecutable isStatic final prev (
                   hfinal.callCabal2nix "hbt-pinboard-client" (builtins.path {
                     path = ./pinboard-client;
                     name = "hbt-pinboard-client-src";
                   }) { }
                 );
+                hbt-pinboard-types = hfinal.callCabal2nix "hbt-pinboard-types" (builtins.path {
+                  path = ./pinboard-types;
+                  name = "hbt-pinboard-types-src";
+                }) { };
               };
             };
           };
@@ -125,15 +125,15 @@
       in
       {
         packages = rec {
-          hbt = pkgs.haskell.packages.${ghcName}.hbt-cli;
-          hbt-static = pkgsMusl.haskell.packages.${ghcName}.hbt-cli;
+          hbt-cli = pkgs.haskell.packages.${ghcName}.hbt-cli;
+          hbt-cli-static = pkgsMusl.haskell.packages.${ghcName}.hbt-cli;
           hbt-pinboard-client = pkgs.haskell.packages.${ghcName}.hbt-pinboard-client;
           hbt-pinboard-client-static = pkgsMusl.haskell.packages.${ghcName}.hbt-pinboard-client;
           all = pkgs.symlinkJoin {
             pname = "hbt-all";
             version = "0.1.0.0";
             paths = [
-              hbt
+              hbt-cli
               hbt-pinboard-client
             ];
           };
@@ -141,7 +141,7 @@
             pname = "hbt-all-static";
             version = "0.1.0.0";
             paths = [
-              hbt-static
+              hbt-cli-static
               hbt-pinboard-client-static
             ];
           };
@@ -149,8 +149,10 @@
         };
         devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
           packages = hpkgs: [
+            hpkgs.hbt-cli
             hpkgs.hbt-core
             hpkgs.hbt-pinboard-client
+            hpkgs.hbt-pinboard-types
           ];
           withHoogle = true;
           nativeBuildInputs = with pkgs; [
