@@ -1,4 +1,4 @@
-module Hbt.Parser.Pinboard.JSON where
+module Hbt.Parser.Pinboard.JSON (Error (..), parse) where
 
 import Control.Exception (Exception, throwIO)
 import Data.Aeson qualified as Aeson

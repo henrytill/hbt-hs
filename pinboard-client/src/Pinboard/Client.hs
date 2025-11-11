@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Pinboard.Client where
+module Pinboard.Client (someFunc) where
 
 import Data.Aeson (FromJSON (..), Options, ToJSON (..))
 import Data.Aeson qualified as Aeson

@@ -14,6 +14,7 @@ common warnings
         -Wall
         -Wcompat
         -Wmissing-deriving-strategies
+        -Wmissing-export-lists
 
 common exts
     default-extensions:

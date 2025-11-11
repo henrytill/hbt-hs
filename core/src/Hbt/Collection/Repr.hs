@@ -1,4 +1,8 @@
-module Hbt.Collection.Repr where
+module Hbt.Collection.Repr
+  ( NodeRepr (..)
+  , CollectionRepr (..)
+  )
+where
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as Aeson

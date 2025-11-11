@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 
-module Hbt.Parser.Markdown where
+module Hbt.Parser.Markdown (Error (..), parse) where
 
 import Commonmark qualified
 import Commonmark.Initial (Block, Blocks, Inline, pattern MkBlock, pattern MkInline)

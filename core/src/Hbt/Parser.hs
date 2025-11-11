@@ -1,1 +1,1 @@
-module Hbt.Parser where
+module Hbt.Parser () where

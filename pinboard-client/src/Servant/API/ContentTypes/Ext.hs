@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Servant.API.ContentTypes.Ext where
+module Servant.API.ContentTypes.Ext (JSON) where
 
 import Data.Aeson (FromJSON, eitherDecode)
 import Network.HTTP.Media ((//))

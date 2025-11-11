@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Hbt.Parser.Pinboard.XML where
+module Hbt.Parser.Pinboard.XML (Error (..), parse) where
 
 import Control.Exception (Exception, throwIO)
 import Control.Monad.Catch (MonadThrow (..))

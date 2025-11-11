@@ -2,7 +2,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Hbt.Parser.HTML where
+module Hbt.Parser.HTML (Error (..), parse) where
 
 import Control.Exception (Exception, throwIO)
 import Control.Monad (foldM, forM_, when)
