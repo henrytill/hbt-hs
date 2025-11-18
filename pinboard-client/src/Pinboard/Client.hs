@@ -5,7 +5,7 @@
 module Pinboard.Client (someFunc) where
 
 import Control.Exception (throwIO)
-import Data.Aeson (FromJSON (..), Options, ToJSON (..))
+import Data.Aeson (FromJSON (..), Options (fieldLabelModifier), ToJSON (..))
 import Data.Aeson qualified as Aeson
 import Data.Default (def)
 import Data.Proxy (Proxy (..))
@@ -68,7 +68,8 @@ updateTimeOptions :: Options
 updateTimeOptions =
   let mappings :: [(String, String)]
       mappings = [("unUpdateTime", "update_time")]
-   in Aeson.defaultOptions {Aeson.fieldLabelModifier = remapField mappings}
+      fieldLabelModifier = remapField mappings
+   in Aeson.defaultOptions {fieldLabelModifier}
 
 data Bookmark = MkBookmark
   deriving stock (Eq, Show, Generic)
