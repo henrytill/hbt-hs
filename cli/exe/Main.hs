@@ -96,14 +96,14 @@ instance FormatFlow To where
   detectFromExtension ".yml" = Just YAML
   detectFromExtension _ = Nothing
 
-supportedFormats :: forall f -> (FormatFlow f) => [String]
-supportedFormats f = map toString (allConstructors @f)
-
 setFormat :: forall f -> (FormatFlow f, HasFormat f s) => String -> s -> s
 setFormat f str opts =
   case parseFormatFlow @f str of
     Nothing -> error (formatErrorFlow @f str)
     Just fmt -> set format (Just fmt) opts
+
+supportedFormats :: forall f -> (FormatFlow f) => [String]
+supportedFormats f = map toString (allConstructors @f)
 
 generateFormatHelp :: forall f -> (FormatFlow f) => String -> String
 generateFormatHelp f label =
