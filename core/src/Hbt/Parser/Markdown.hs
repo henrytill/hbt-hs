@@ -104,7 +104,7 @@ saveEntity = do
   let (entityId, coll1) = Collection.upsert entity coll0
   collection .= coll1
   parentStack <- use parents
-  forM_ (take 1 parentStack) $ \pid -> do
+  forM_ (take 1 parentStack) $ \pid ->
     collection %= Collection.addEdges entityId pid
   maybeParent .= Just entityId
   maybeURI .= Nothing
