@@ -44,7 +44,12 @@ data Post = MkPost
   deriving anyclass (FromJSON)
 
 epochTimeText :: Text
-epochTimeText = Text.pack (Format.formatTime Format.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (POSIX.posixSecondsToUTCTime 0))
+epochTimeText =
+  Text.pack $
+    Format.formatTime
+      Format.defaultTimeLocale
+      "%Y-%m-%dT%H:%M:%SZ"
+      (POSIX.posixSecondsToUTCTime 0)
 
 empty :: Post
 empty =
