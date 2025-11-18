@@ -26,7 +26,7 @@ import Lens.Family2.State.Strict
 import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
 
 newtype Error = ParseError String
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
 isTagName :: Text -> Text -> Bool
@@ -52,7 +52,7 @@ data WaitingFor
   | BookmarkDescription
   | ExtendedDescription
   | None
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 data ParseState = MkParseState
   { collection :: Collection
@@ -62,7 +62,7 @@ data ParseState = MkParseState
   , folderStack :: [Text]
   , waitingFor :: WaitingFor
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 empty :: ParseState
 empty =

@@ -17,7 +17,7 @@ import Prelude hiding (Bool, False, True)
 import Prelude qualified
 
 newtype Bool = MkBool Text
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 pattern True :: Bool
 pattern True = MkBool "yes"

@@ -44,7 +44,7 @@ import Hbt.Entity.URI (URI)
 import Prelude hiding (elem, id, length, null)
 
 newtype Error = MissingEntities [Id]
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
 type Edges = Vector Id

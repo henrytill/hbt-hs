@@ -27,11 +27,11 @@ import Prelude hiding (null)
 
 data Error
   = InvalidURI URIParseError Text
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
 newtype URI = MkURI {unURI :: URI.URIRef URI.Absolute}
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Eq, Ord, Show)
 
 empty :: URI
 empty = MkURI (URI.URI (URI.Scheme mempty) Nothing mempty (URI.Query mempty) Nothing)

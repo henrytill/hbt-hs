@@ -13,7 +13,7 @@ import Hbt.Parser.Pinboard.Common (postToEntity)
 import Hbt.Pinboard (Post)
 
 newtype Error = ParseError String
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
 postsToCollection :: [Post] -> IO Collection

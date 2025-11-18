@@ -17,7 +17,7 @@ data NodeRepr = MkNodeRepr
   , entity :: Entity
   , edges :: Vector Id
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 data CollectionRepr = MkCollectionRepr
@@ -25,5 +25,5 @@ data CollectionRepr = MkCollectionRepr
   , length :: Int
   , value :: Vector NodeRepr
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)

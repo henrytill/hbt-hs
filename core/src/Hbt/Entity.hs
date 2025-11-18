@@ -26,16 +26,16 @@ import Hbt.Entity.URI qualified as URI
 import Prelude hiding (id)
 
 newtype Name = MkName {unName :: Text}
-  deriving stock (Show, Eq, Ord)
-  deriving newtype (ToJSON, FromJSON)
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (FromJSON, ToJSON)
 
 newtype Label = MkLabel {unLabel :: Text}
-  deriving stock (Show, Eq, Ord)
-  deriving newtype (ToJSON, FromJSON)
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (FromJSON, ToJSON)
 
 newtype Extended = MkExtended {unExtended :: Text}
-  deriving stock (Show, Eq, Ord)
-  deriving newtype (ToJSON, FromJSON)
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (FromJSON, ToJSON)
 
 data Entity = MkEntity
   { uri :: URI
@@ -49,7 +49,7 @@ data Entity = MkEntity
   , extended :: Maybe Extended
   , lastVisitedAt :: Maybe Time
   }
-  deriving stock (Show, Eq, Ord, Generic)
+  deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 mkEntity :: URI -> Time -> Maybe Name -> Set Label -> Entity

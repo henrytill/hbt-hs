@@ -35,7 +35,7 @@ data ParseState = MkParseState
   { collection :: Collection
   , entities :: [Entity]
   }
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
 
 empty :: ParseState
 empty =

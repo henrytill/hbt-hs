@@ -23,11 +23,11 @@ import Data.Time.Format qualified as Format
 
 newtype Error
   = InvalidTime Text
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
 newtype Time = MkTime {unTime :: POSIXTime}
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Eq, Ord, Show)
 
 toText :: Time -> Text
 toText (MkTime posixTime) = Text.pack (show @Integer (round posixTime))

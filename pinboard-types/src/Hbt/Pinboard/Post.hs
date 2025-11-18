@@ -20,7 +20,7 @@ import GHC.Generics (Generic)
 import Hbt.Pinboard.Bool qualified as Pinboard (Bool, pattern False)
 
 newtype Tags = MkTags {unTags :: [Text]}
-  deriving stock (Show, Eq)
+  deriving stock (Eq, Show)
   deriving newtype (Semigroup, Monoid)
 
 mkTags :: Text -> Tags
@@ -40,7 +40,7 @@ data Post = MkPost
   , shared :: Pinboard.Bool
   , toread :: Pinboard.Bool
   }
-  deriving stock (Show, Eq, Generic)
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON)
 
 epochTimeText :: Text
