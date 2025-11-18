@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Entity
@@ -12,12 +13,12 @@ module Hbt.Entity
   )
 where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.:?), (.=))
-import Data.Aeson qualified as Aeson
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.List qualified as List
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
+import GHC.Generics (Generic)
 import Hbt.Entity.Time (Time)
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI (URI)
@@ -48,36 +49,8 @@ data Entity = MkEntity
   , extended :: Maybe Extended
   , lastVisitedAt :: Maybe Time
   }
-  deriving stock (Show, Eq, Ord)
-
-instance ToJSON Entity where
-  toJSON entity =
-    Aeson.object
-      [ "uri" .= entity.uri
-      , "createdAt" .= entity.createdAt
-      , "updatedAt" .= entity.updatedAt
-      , "names" .= Set.toList entity.names
-      , "labels" .= Set.toList entity.labels
-      , "shared" .= entity.shared
-      , "toRead" .= entity.toRead
-      , "isFeed" .= entity.isFeed
-      , "extended" .= entity.extended
-      , "lastVisitedAt" .= entity.lastVisitedAt
-      ]
-
-instance FromJSON Entity where
-  parseJSON = Aeson.withObject "Entity" $ \o ->
-    MkEntity
-      <$> o .: "uri"
-      <*> o .: "createdAt"
-      <*> o .: "updatedAt"
-      <*> fmap Set.fromList (o .: "names")
-      <*> fmap Set.fromList (o .: "labels")
-      <*> o .: "shared"
-      <*> o .: "toRead"
-      <*> o .: "isFeed"
-      <*> o .:? "extended"
-      <*> o .:? "lastVisitedAt"
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 mkEntity :: URI -> Time -> Maybe Name -> Set Label -> Entity
 mkEntity uri createdAt maybeName labels =
