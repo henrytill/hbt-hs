@@ -49,8 +49,8 @@ getFirstName def names
 getLastModified :: Entity -> Maybe Time
 getLastModified entity = Maybe.listToMaybe entity.updatedAt
 
-toTemplateEntity :: Entity -> TemplateEntity
-toTemplateEntity entity =
+fromEntity :: Entity -> TemplateEntity
+fromEntity entity =
   let uriText = URI.toText entity.uri
       tagsList = List.sort (map (.unLabel) (Set.toList entity.labels))
       tagsText = Text.intercalate "," tagsList
@@ -69,7 +69,7 @@ toTemplateEntity entity =
 
 format :: Template -> Collection -> Text
 format template collection =
-  let f e acc = toTemplateEntity e : acc
+  let f e acc = fromEntity e : acc
       templateEntities = Vector.foldr f [] (Collection.allEntities collection)
       toRender = Aeson.object ["entities" .= templateEntities]
    in LazyText.toStrict (Microstache.renderMustache template toRender)
