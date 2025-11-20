@@ -143,7 +143,7 @@ fromRepr serialized =
    in MkCollection {nodes, edges, uris}
 
 instance ToJSON Collection where
-  toJSON collection = toJSON (toRepr collection)
+  toJSON = toJSON . toRepr
 
 instance FromJSON Collection where
   parseJSON json = fmap fromRepr (parseJSON json)
