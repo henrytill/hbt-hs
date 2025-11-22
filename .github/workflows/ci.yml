@@ -20,6 +20,19 @@ jobs:
           name: henrytill
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
       - run: nix build -L .#all -o result-all
+
+  linux-flake-static:
+    needs: linux-flake
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: cachix/install-nix-action@v31
+      - uses: cachix/cachix-action@v15
+        with:
+          name: henrytill
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
       - run: nix build -L .#all-static -o result-all-static
       - uses: actions/upload-artifact@v5
         with:
