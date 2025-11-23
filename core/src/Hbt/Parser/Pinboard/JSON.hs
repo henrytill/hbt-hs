@@ -9,19 +9,12 @@ import Data.Text.Encoding qualified as Text
 import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity (fromPost)
-import Hbt.Pinboard (Post)
 
 newtype Error = ParseError String
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
-postsToCollection :: [Post] -> IO Collection
-postsToCollection posts = do
-  entities <- traverse fromPost (reverse posts)
-  pure (Collection.fromEntities entities)
-
 parse :: (HasCallStack) => Text -> IO Collection
 parse input = do
   posts <- either (throwIO . ParseError) pure (Aeson.eitherDecodeStrict (Text.encodeUtf8 input))
-  postsToCollection posts
+  Collection.fromPosts posts

@@ -8,6 +8,7 @@ module Hbt.Collection
   , Collection
   , empty
   , fromEntities
+  , fromPosts
   , length
   , null
   , entityAt
@@ -27,7 +28,7 @@ where
 
 import Control.Exception (Exception, throw)
 import Data.Aeson (FromJSON (..), ToJSON (..))
-import Data.List (elemIndex)
+import Data.List (elemIndex, sortOn)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe qualified as Maybe
@@ -38,9 +39,11 @@ import Data.Yaml.Pretty qualified as YamlPretty
 import GHC.Stack (HasCallStack)
 import Hbt.Collection.Id (Id (..))
 import Hbt.Collection.Repr (CollectionRepr (..), NodeRepr (..))
-import Hbt.Entity (Entity (..))
+import Hbt.Entity (Entity (..), fromPost)
 import Hbt.Entity qualified as Entity
 import Hbt.Entity.URI (URI)
+import Hbt.Pinboard (Post)
+import Hbt.Pinboard qualified as Pinboard
 import Prelude hiding (elem, id, length, null)
 
 newtype Error = MissingEntities [Id]
@@ -103,6 +106,12 @@ upsert entity collection =
 
 fromEntities :: [Entity] -> Collection
 fromEntities = foldl' (\coll entity -> snd (upsert entity coll)) empty
+
+fromPosts :: [Post] -> IO Collection
+fromPosts posts = do
+  let sorted = sortOn (.time) posts
+  entities <- traverse fromPost sorted
+  pure (fromEntities entities)
 
 addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdge from to collection =

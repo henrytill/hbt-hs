@@ -15,7 +15,6 @@ import Data.Text.Encoding qualified as Text
 import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity (Entity, fromPost)
 import Hbt.Parser.Common (StateIO, runStateIO)
 import Hbt.Pinboard (Post (..))
 import Hbt.Pinboard qualified as Pinboard
@@ -32,7 +31,7 @@ data Error
 
 data ParseState = MkParseState
   { collection :: Collection
-  , entities :: [Entity]
+  , posts :: [Post]
   }
   deriving stock (Eq, Show)
 
@@ -40,14 +39,14 @@ empty :: ParseState
 empty =
   MkParseState
     { collection = Collection.empty
-    , entities = []
+    , posts = []
     }
 
 collection :: Lens' ParseState Collection
 collection f s = (\c -> s {collection = c}) <$> f s.collection
 
-entities :: Lens' ParseState [Entity]
-entities f s = (\e -> s {entities = e}) <$> f s.entities
+posts :: Lens' ParseState [Post]
+posts f s = (\p -> s {posts = p}) <$> f s.posts
 
 newtype PinboardM a = MkPinboardM (StateIO ParseState a)
   deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
@@ -92,16 +91,16 @@ handleNode node = do
     "post" -> do
       let attrs = Xeno.attributes node
       post <- liftIO (createPostFromAttrs attrs)
-      result <- liftIO (fromPost post)
-      entities %= (result :)
+      posts %= (post :)
     _ -> pure ()
   mapM_ handleContent (Xeno.contents node)
 
 processNode :: Xeno.Node -> PinboardM Collection
 processNode rootNode = do
   handleNode rootNode
-  collectedEntities <- use entities
-  collection .= Collection.fromEntities collectedEntities
+  collectedPosts <- use posts
+  result <- liftIO (Collection.fromPosts collectedPosts)
+  collection .= result
   use collection
 
 parse :: (HasCallStack) => Text -> IO Collection
