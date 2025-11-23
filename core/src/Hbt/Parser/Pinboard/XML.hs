@@ -15,9 +15,8 @@ import Data.Text.Encoding qualified as Text
 import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity (Entity)
+import Hbt.Entity (Entity, fromPost)
 import Hbt.Parser.Common (StateIO, runStateIO)
-import Hbt.Parser.Pinboard.Common (postToEntity)
 import Hbt.Pinboard (Post (..))
 import Hbt.Pinboard qualified as Pinboard
 import Lens.Family2
@@ -93,7 +92,7 @@ handleNode node = do
     "post" -> do
       let attrs = Xeno.attributes node
       post <- liftIO (createPostFromAttrs attrs)
-      result <- liftIO (postToEntity post)
+      result <- liftIO (fromPost post)
       entities %= (result :)
     _ -> pure ()
   mapM_ handleContent (Xeno.contents node)

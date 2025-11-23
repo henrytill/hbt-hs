@@ -9,7 +9,7 @@ import Data.Text.Encoding qualified as Text
 import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Parser.Pinboard.Common (postToEntity)
+import Hbt.Entity (fromPost)
 import Hbt.Pinboard (Post)
 
 newtype Error = ParseError String
@@ -18,7 +18,7 @@ newtype Error = ParseError String
 
 postsToCollection :: [Post] -> IO Collection
 postsToCollection posts = do
-  entities <- traverse postToEntity (reverse posts)
+  entities <- traverse fromPost (reverse posts)
   pure (Collection.fromEntities entities)
 
 parse :: (HasCallStack) => Text -> IO Collection

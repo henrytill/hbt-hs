@@ -10,19 +10,27 @@ module Hbt.Entity
   , empty
   , update
   , absorb
+  , fromPost
   )
 where
 
+import Control.Exception (throwIO)
 import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Functor ((<&>))
 import Data.List qualified as List
+import Data.Maybe qualified as Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
+import Data.Text qualified as Text
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import Hbt.Entity.Time (Time)
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI (URI)
 import Hbt.Entity.URI qualified as URI
+import Hbt.Pinboard (Post (..))
+import Hbt.Pinboard qualified as Pinboard
 import Prelude hiding (id)
 
 newtype Name = MkName {unName :: Text}
@@ -106,3 +114,32 @@ absorb :: Entity -> Entity -> Entity
 absorb other existing
   | other /= existing = update other.createdAt other.names other.labels existing
   | otherwise = existing
+
+nonEmpty :: Text -> Maybe Text
+nonEmpty t =
+  let stripped = Text.strip t
+   in if Text.null stripped
+        then Nothing
+        else Just stripped
+
+toLabel :: Text -> Maybe Label
+toLabel t = nonEmpty t <&> MkLabel
+
+fromPost :: (HasCallStack) => Post -> IO Entity
+fromPost post = do
+  uri <- either throwIO pure (URI.parse post.href)
+  createdAt <- either throwIO pure (Time.parseRFC3339 post.time)
+  let name = post.description >>= nonEmpty <&> MkName
+  pure
+    MkEntity
+      { uri
+      , createdAt
+      , updatedAt = []
+      , names = maybe Set.empty Set.singleton name
+      , labels = Set.fromList (Maybe.mapMaybe toLabel post.tags.unTags)
+      , shared = Pinboard.toBool post.shared
+      , toRead = Pinboard.toBool post.toread
+      , isFeed = False
+      , extended = post.extended >>= nonEmpty <&> MkExtended
+      , lastVisitedAt = Nothing
+      }
