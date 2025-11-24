@@ -94,7 +94,7 @@ newtype MarkdownM a = MkMarkdownM (StateIO ParseState a)
 runMarkdownM :: MarkdownM a -> ParseState -> IO (a, ParseState)
 runMarkdownM (MkMarkdownM m) = runStateIO m
 
-liftEither :: (Exception e) => Either e b -> MarkdownM b
+liftEither :: (Exception e, HasCallStack) => Either e b -> MarkdownM b
 liftEither = either throwM pure
 
 saveEntity :: MarkdownM ()
