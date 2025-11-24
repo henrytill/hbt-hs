@@ -27,20 +27,14 @@ import Test.Dwergaz
 import TestUtilities (testIO)
 
 data TestCase (f :: Flow) = MkTestCase
-  { name :: String
+  { stem :: String
   , format :: Format f
   , input :: Text
   , expected :: Text
   }
-  deriving stock (Show)
+  deriving stock (Eq, Ord, Show)
 
-instance Eq (TestCase f) where
-  a == b = a.name == b.name
-
-instance Ord (TestCase f) where
-  compare a b = compare a.name b.name
-
-type TestMap f = Map FilePath (TestCase f)
+type TestMap f = Map String (TestCase f)
 
 baseDir :: FilePath
 baseDir = "test" </> "data"
@@ -75,40 +69,40 @@ splitExt s = filter (not . null) (Split.splitOn "." s)
 
 processFile :: Format From -> FilePath -> TestMap From -> FilePath -> IO (TestMap From)
 processFile format dir acc file = do
-  let (name, ext) = split file
+  let (stem, ext) = split file
       fullPath = dir </> file
   case splitExt ext of
     ["expected", "yaml"] -> do
       expected <- readText fullPath
       let updater maybeCase = case maybeCase of
-            Nothing -> Just (MkTestCase {name, format, input = Text.empty, expected})
+            Nothing -> Just (MkTestCase {stem, format, input = Text.empty, expected})
             Just tc -> Just (tc {expected})
-      pure (Map.alter updater name acc)
+      pure (Map.alter updater stem acc)
     ["input", e] | e == formatExt format -> do
       input <- readText fullPath
       let updater maybeCase = case maybeCase of
-            Nothing -> Just (MkTestCase {name, format, input, expected = Text.empty})
+            Nothing -> Just (MkTestCase {stem, format, input, expected = Text.empty})
             Just tc -> Just (tc {input})
-      pure (Map.alter updater name acc)
+      pure (Map.alter updater stem acc)
     _ -> pure acc
 
 processOutputFile :: Format To -> FilePath -> TestMap To -> FilePath -> IO (TestMap To)
 processOutputFile format dir acc file = do
-  let (name, ext) = split file
+  let (stem, ext) = split file
       fullPath = dir </> file
   case splitExt ext of
     ["expected", e] | e == formatExt format -> do
       expected <- readText fullPath
       let updater maybeCase = case maybeCase of
-            Nothing -> Just (MkTestCase {name, format, input = Text.empty, expected})
+            Nothing -> Just (MkTestCase {stem, format, input = Text.empty, expected})
             Just tc -> Just (tc {expected})
-      pure (Map.alter updater name acc)
+      pure (Map.alter updater stem acc)
     ["input", _] -> do
       input <- readText fullPath
       let updater maybeCase = case maybeCase of
-            Nothing -> Just (MkTestCase {name, format, input, expected = Text.empty})
+            Nothing -> Just (MkTestCase {stem, format, input, expected = Text.empty})
             Just tc -> Just (tc {input})
-      pure (Map.alter updater name acc)
+      pure (Map.alter updater stem acc)
     _ -> pure acc
 
 discoverInput :: Format From -> IO [TestCase From]
@@ -132,18 +126,18 @@ discoverOutput format =
       pure (sort tests)
 
 testParser :: TestCase From -> IO Test
-testParser testCase = testIO testCase.name $ do
+testParser testCase = testIO testCase.stem $ do
   expected <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expected)
   actual <- parseWith testCase.format testCase.input
-  pure (assertEqual testCase.name expected actual)
+  pure (assertEqual testCase.stem expected actual)
 
 testFormatter :: Format From -> TestCase To -> IO Test
-testFormatter inputFormat testCase = testIO testCase.name $ do
+testFormatter inputFormat testCase = testIO testCase.stem $ do
   parsed <- parseWith inputFormat testCase.input
   formatted <- formatWith testCase.format parsed
   actualReparsed <- parseWith inputFormat formatted
   expectedReparsed <- parseWith inputFormat testCase.expected
-  pure (assertEqual testCase.name expectedReparsed actualReparsed)
+  pure (assertEqual testCase.stem expectedReparsed actualReparsed)
 
 parserTests :: String -> [TestCase From] -> IO Test
 parserTests groupName testCases = do
