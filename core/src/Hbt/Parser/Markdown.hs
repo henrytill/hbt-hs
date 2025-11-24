@@ -10,6 +10,7 @@ import Commonmark.Initial qualified as Initial
 import Control.Exception (Exception, throwIO)
 import Control.Monad (forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
+import Control.Monad.State.Class (gets)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -98,8 +99,8 @@ liftEither = either throwM pure
 
 saveEntity :: MarkdownM ()
 saveEntity = do
-  st0 <- use id
-  entity <- maybe (throwM NoSaveableEntity) pure (toEntity st0)
+  maybeEntity <- gets toEntity
+  entity <- maybe (throwM NoSaveableEntity) pure maybeEntity
   coll0 <- use collection
   let (entityId, coll1) = Collection.upsert entity coll0
   collection .= coll1
@@ -113,11 +114,14 @@ saveEntity = do
 textFromInlines :: [Inline a] -> Text
 textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input))
   where
+    backtick :: Builder
+    backtick = Builder.singleton '`'
+
     go :: Inline a -> Builder
     go (MkInline _ il) =
       case il of
-        Initial.LineBreak -> "\n"
-        Initial.SoftBreak -> " "
+        Initial.LineBreak -> Builder.singleton '\n'
+        Initial.SoftBreak -> Builder.singleton '\SP'
         Initial.Str t -> Builder.fromText t
         Initial.Entity t -> Builder.fromText t
         Initial.EscapedChar c -> Builder.singleton c
@@ -125,7 +129,7 @@ textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input)
         Initial.Strong ils -> foldMap go ils
         Initial.Link _ _ ils -> foldMap go ils
         Initial.Image _ _ ils -> foldMap go ils
-        Initial.Code t -> "`" <> Builder.fromText t <> "`"
+        Initial.Code t -> backtick <> Builder.fromText t <> backtick
         Initial.RawInline _ t -> Builder.fromText t
 
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
