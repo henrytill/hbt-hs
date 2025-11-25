@@ -55,15 +55,16 @@ normalizeURI uri
   | otherwise = uri
 
 parseURI :: Text -> Either URIParseError (URI.URIRef URI.Absolute)
-parseURI text = URI.parseURI URI.laxURIParserOptions (Text.Encoding.encodeUtf8 text)
+parseURI = URI.parseURI URI.laxURIParserOptions . Text.Encoding.encodeUtf8
 
-liftedParse :: (MonadError [URIParseError] m) => Text -> m (URI.URIRef URI.Absolute)
-liftedParse text = liftEither (Bifunctor.first (: []) (parseURI text))
+-- Lift single error into list to enable Alternative composition
+liftSingle :: (MonadError [e] m) => (Either e a) -> m a
+liftSingle = liftEither . Bifunctor.first (: [])
 
 parse :: Text -> Either Error URI
 parse text =
-  let tryOriginal = liftedParse text
-      tryTranslated = liftedParse (translate text)
+  let tryOriginal = liftSingle (parseURI text)
+      tryTranslated = liftSingle (parseURI (translate text))
    in case runExcept (tryOriginal <|> tryTranslated) of
         Left [] -> error "Impossible: both URI parsing attempts failed but no errors recorded"
         Left (err : _) -> Left (InvalidURI err text)
