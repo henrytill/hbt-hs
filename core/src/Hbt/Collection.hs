@@ -27,6 +27,7 @@ module Hbt.Collection
 where
 
 import Control.Exception (Exception, throw)
+import Control.Monad (foldM)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.List (elemIndex, sortOn)
 import Data.Map.Strict (Map)
@@ -107,11 +108,11 @@ upsert entity collection =
 fromEntities :: [Entity] -> Collection
 fromEntities = foldl' (\coll entity -> snd (upsert entity coll)) empty
 
+accumPosts :: Collection -> Post -> IO Collection
+accumPosts coll post = fromPost post >>= \entity -> pure (snd (upsert entity coll))
+
 fromPosts :: [Post] -> IO Collection
-fromPosts posts = do
-  let sorted = sortOn (.time) posts
-  entities <- traverse fromPost sorted
-  pure (fromEntities entities)
+fromPosts posts = foldM accumPosts empty (sortOn (.time) posts)
 
 addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdge from to collection =
