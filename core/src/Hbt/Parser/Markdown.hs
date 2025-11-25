@@ -10,6 +10,7 @@ import Control.Exception (Exception, throwIO)
 import Control.Monad (forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.State.Class (gets)
+import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -100,12 +101,11 @@ saveEntity :: MarkdownM ()
 saveEntity = do
   maybeEntity <- gets toEntity
   entity <- maybe (throwM NoSaveableEntity) pure maybeEntity
-  coll0 <- use collection
-  let (entityId, coll1) = Collection.upsert entity coll0
-  collection .= coll1
-  parentStack <- use parents
-  forM_ (take 1 parentStack) $ \pid ->
-    collection %= Collection.addEdges entityId pid
+  (entityId, coll) <- uses collection $ Collection.upsert entity
+  collection .= coll
+  parent <- uses parents Maybe.listToMaybe
+  forM_ parent $ \p ->
+    collection %= Collection.addEdges entityId p
   maybeParent .= Just entityId
   maybeURI .= Nothing
   maybeName .= Nothing
@@ -163,8 +163,8 @@ handleBlock (MkBlock _ b) =
       labels %= (label :) . take (level - 2)
     Initial.List _ _ blocksList -> do
       currentParent <- use maybeParent
-      forM_ currentParent $ \pid ->
-        parents %= (pid :)
+      forM_ currentParent $ \p ->
+        parents %= (p :)
       forM_ blocksList (mapM_ handleBlock)
       maybeParent .= Nothing
       parents %= drop1
