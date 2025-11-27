@@ -19,7 +19,7 @@ import Data.Vector qualified as Vector
 import GHC.Generics (Generic)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity (Entity (..), Extended (..), Label (..), Name (..))
+import Hbt.Entity (Entity (..), Extended (..), Label (..), Name (..), getIsFeed, getLastVisited, getShared, getToRead)
 import Hbt.Entity.Time (Time)
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
@@ -47,24 +47,26 @@ getFirstName def names
   | otherwise = (Set.findMin names).unName
 
 getLastModified :: Entity -> Maybe Time
-getLastModified entity = Maybe.listToMaybe entity.updatedAt
+getLastModified entity
+  | Set.null entity.updatedAt = Nothing
+  | otherwise = Just (Set.findMax entity.updatedAt)
 
 fromEntity :: Entity -> TemplateEntity
 fromEntity entity =
-  let uriText = URI.toText entity.uri
+  let uri = URI.toText entity.uri
       tagsList = List.sort (map (.unLabel) (Set.toList entity.labels))
       tagsText = Text.intercalate "," tagsList
    in MkTemplateEntity
-        { uri = uriText
+        { uri
         , createdAt = Time.toText entity.createdAt
-        , title = getFirstName uriText entity.names
+        , title = getFirstName uri entity.names
         , lastModified = fmap Time.toText (getLastModified entity)
         , tags = if null tagsList then Nothing else Just tagsText
-        , shared = entity.shared
-        , toRead = entity.toRead
-        , isFeed = entity.isFeed
-        , lastVisit = fmap Time.toText entity.lastVisitedAt
-        , description = fmap (.unExtended) entity.extended
+        , shared = getShared entity.shared
+        , toRead = getToRead entity.toRead
+        , isFeed = getIsFeed entity.isFeed
+        , lastVisit = fmap Time.toText (getLastVisited entity.lastVisitedAt)
+        , description = fmap (.unExtended) (Maybe.listToMaybe entity.extended)
         }
 
 format :: Template -> Collection -> Text
