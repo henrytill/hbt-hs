@@ -18,9 +18,11 @@ import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor qualified as Bifunctor
 import Data.Maybe qualified as Maybe
+import Data.Monoid (First (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
+import GHC.Generics (Generic)
 import URI.ByteString (URIParseError)
 import URI.ByteString qualified as URI
 import Prelude hiding (null)
@@ -30,11 +32,15 @@ data Error
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
-newtype URI = MkURI {unURI :: URI.URIRef URI.Absolute}
-  deriving stock (Eq, Ord, Show)
+newtype URI = MkURI {unURI :: First (URI.URIRef URI.Absolute)}
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving newtype (Semigroup, Monoid)
+
+mkURI :: URI.URIRef URI.Absolute -> URI
+mkURI = MkURI . First . Just
 
 empty :: URI
-empty = MkURI (URI.URI (URI.Scheme mempty) Nothing mempty (URI.Query mempty) Nothing)
+empty = mempty
 
 null :: URI -> Bool
 null = (==) empty
@@ -68,10 +74,10 @@ parse text =
    in case runExcept (tryOriginal <|> tryTranslated) of
         Left [] -> error "Impossible: both URI parsing attempts failed but no errors recorded"
         Left (err : _) -> Left (InvalidURI err text)
-        Right uri -> Right (MkURI (normalizeURI uri))
+        Right uri -> Right (mkURI (normalizeURI uri))
 
-toText :: URI -> Text
-toText (MkURI uri) = Text.Encoding.decodeUtf8 (URI.serializeURIRef' uri)
+toText :: URI -> Maybe Text
+toText (MkURI (First maybeURI)) = fmap (Text.Encoding.decodeUtf8 . URI.serializeURIRef') maybeURI
 
 instance ToJSON URI where
   toJSON = toJSON . toText

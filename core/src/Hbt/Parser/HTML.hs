@@ -106,23 +106,26 @@ accumulateEntity entity (Attr name value) =
       uri <- either throwIO pure (URI.parse value)
       pure (entity {uri})
     "add_date" ->
-      let createdAt = Maybe.fromMaybe Time.epoch (Time.parseTimestamp value)
-       in pure (entity {createdAt})
+      let createdAtTime = Maybe.fromMaybe Time.epoch (Time.parseTimestamp value)
+          updatedAt = Set.insert createdAtTime entity.updatedAt
+       in pure (entity {updatedAt})
     "last_modified" ->
-      let updatedAt = Maybe.maybeToList (Time.parseTimestamp value)
+      let modifiedTime = Time.parseTimestamp value
+          updatedAt = maybe entity.updatedAt (`Set.insert` entity.updatedAt) modifiedTime
        in pure (entity {updatedAt})
     "last_visit" ->
-      let lastVisitedAt = Time.parseTimestamp value
+      let lastVisitedAtTime = Time.parseTimestamp value
+          lastVisitedAt = Entity.MkLastVisited lastVisitedAtTime
        in pure (entity {lastVisitedAt})
     "tags" ->
       let tagList = Text.splitOn "," value
           newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") tagList))
-          toRead = entity.toRead || "toread" `elem` tagList
+          toRead = entity.toRead <> if "toread" `elem` tagList then Entity.mkToRead True else mempty
           labels = Set.union entity.labels newLabels
        in pure (entity {labels, toRead})
-    "private" -> pure (entity {shared = value /= "1"})
-    "toread" -> pure (entity {toRead = value == "1"})
-    "feed" -> pure (entity {isFeed = value == "true"})
+    "private" -> pure (entity {shared = Entity.mkShared (value /= "1")})
+    "toread" -> pure (entity {toRead = Entity.mkToRead (value == "1")})
+    "feed" -> pure (entity {isFeed = Entity.mkIsFeed (value == "true")})
     _ -> pure entity
 
 createEntity :: NetscapeM Entity
@@ -131,12 +134,12 @@ createEntity = do
   folders <- use folderStack
   name <- use maybeDescription
   ext <- use maybeExtended
-  let startEntity = Entity.empty {shared = True}
+  let startEntity = Entity.empty
   accumulated <- liftIO (foldM accumulateEntity startEntity attrs)
   let names = maybe Set.empty (Set.singleton . Entity.MkName) name
       folderLabels = Set.fromList (map Entity.MkLabel (reverse folders))
       allLabels = Set.unions [accumulated.labels, folderLabels]
-      extended = fmap Entity.MkExtended ext
+      extended = Maybe.maybeToList (fmap Entity.MkExtended ext)
       finalEntity = accumulated {names, labels = allLabels, extended}
    in if URI.null finalEntity.uri
         then throwM (ParseError "missing required attribute: href")
