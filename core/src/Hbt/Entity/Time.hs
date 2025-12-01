@@ -14,6 +14,7 @@ where
 
 import Control.Exception (Exception)
 import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Int (Int64)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Read qualified as Read
@@ -29,20 +30,24 @@ newtype Error
 newtype Time = MkTime {unTime :: POSIXTime}
   deriving stock (Eq, Ord, Show)
 
+fromSeconds :: Int64 -> Time
+fromSeconds = MkTime . realToFrac @Int64
+
+epoch :: Time
+epoch = fromSeconds 0
+
+instance Bounded Time where
+  minBound = epoch
+  maxBound = MkTime (realToFrac (maxBound @Int64))
+
 toText :: Time -> Text
-toText (MkTime posixTime) = Text.pack (show @Integer (round posixTime))
+toText (MkTime posixTime) = Text.pack (show (round posixTime :: Int64))
 
 instance ToJSON Time where
   toJSON = toJSON . toText
 
 instance FromJSON Time where
-  parseJSON json = fmap (MkTime . fromInteger) (parseJSON json)
-
-epoch :: Time
-epoch = MkTime 0
-
-fromSeconds :: Int -> Time
-fromSeconds = MkTime . fromIntegral
+  parseJSON json = fmap fromSeconds (parseJSON json)
 
 parse :: Text -> Either Error Time
 parse s =

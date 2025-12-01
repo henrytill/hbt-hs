@@ -1,28 +1,41 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Entity
   ( Name (..)
   , Label (..)
+  , Shared
+  , mkShared
+  , getShared
+  , ToRead
+  , mkToRead
+  , getToRead
+  , IsFeed
+  , mkIsFeed
+  , getIsFeed
   , Extended (..)
+  , LastVisited (..)
+  , getLastVisited
   , Entity (..)
   , mkEntity
   , empty
-  , update
   , absorb
   , fromPost
   )
 where
 
 import Control.Exception (throwIO)
-import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?), (.=))
 import Data.Functor ((<&>))
-import Data.List qualified as List
 import Data.Maybe qualified as Maybe
+import Data.Monoid (Last (..))
+import Data.Semigroup (Any (..))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..))
 import GHC.Stack (HasCallStack)
 import Hbt.Entity.Time (Time)
 import Hbt.Entity.Time qualified as Time
@@ -40,78 +53,150 @@ newtype Label = MkLabel {unLabel :: Text}
   deriving stock (Eq, Ord, Show)
   deriving newtype (FromJSON, ToJSON)
 
+newtype Shared = MkShared (Last Bool)
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving newtype (Semigroup, Monoid, FromJSON, ToJSON)
+
+mkShared :: Bool -> Shared
+mkShared = MkShared . Last . Just
+
+getShared :: Shared -> Maybe Bool
+getShared (MkShared value) = getLast value
+
+newtype ToRead = MkToRead (Last Bool)
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving newtype (Semigroup, Monoid, FromJSON, ToJSON)
+
+mkToRead :: Bool -> ToRead
+mkToRead = MkToRead . Last . Just
+
+getToRead :: ToRead -> Maybe Bool
+getToRead (MkToRead value) = getLast value
+
+newtype IsFeed = MkIsFeed Any
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving newtype (Semigroup, Monoid, FromJSON, ToJSON)
+
+mkIsFeed :: Bool -> IsFeed
+mkIsFeed = MkIsFeed . Any
+
+getIsFeed :: IsFeed -> Bool
+getIsFeed (MkIsFeed value) = getAny value
+
 newtype Extended = MkExtended {unExtended :: Text}
   deriving stock (Eq, Ord, Show)
   deriving newtype (FromJSON, ToJSON)
 
+newtype LastVisited = MkLastVisited (Maybe Time)
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving newtype (FromJSON, ToJSON)
+
+getLastVisited :: LastVisited -> Maybe Time
+getLastVisited (MkLastVisited a) = a
+
+instance Semigroup LastVisited where
+  MkLastVisited a <> MkLastVisited b = MkLastVisited (max a b)
+
+instance Monoid LastVisited where
+  mempty = MkLastVisited Nothing
+
 data Entity = MkEntity
   { uri :: URI
-  , createdAt :: Time
-  , updatedAt :: [Time]
+  , updatedAt :: Set Time
   , names :: Set Name
   , labels :: Set Label
-  , shared :: Bool
-  , toRead :: Bool
-  , isFeed :: Bool
-  , extended :: Maybe Extended
-  , lastVisitedAt :: Maybe Time
+  , isFeed :: IsFeed
+  , shared :: Shared
+  , toRead :: ToRead
+  , extended :: [Extended]
+  , lastVisitedAt :: LastVisited
   }
-  deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving stock (Eq, Ord, Show)
+
+instance HasField "createdAt" Entity Time where
+  getField entity
+    | Set.null entity.updatedAt = minBound
+    | otherwise = Set.findMin entity.updatedAt
+
+instance ToJSON Entity where
+  toJSON entity =
+    object $
+      [ "uri" .= entity.uri
+      , "createdAt" .= entity.createdAt
+      , "updatedAt" .= Set.delete entity.createdAt entity.updatedAt
+      , "names" .= entity.names
+      , "labels" .= entity.labels
+      , "isFeed" .= entity.isFeed
+      ]
+        ++ ["shared" .= s | Just s <- [getShared entity.shared]]
+        ++ ["toRead" .= t | Just t <- [getToRead entity.toRead]]
+        ++ ["extended" .= entity.extended | not (null entity.extended)]
+        ++ ["lastVisitedAt" .= entity.lastVisitedAt | Maybe.isJust (getLastVisited entity.lastVisitedAt)]
+
+instance FromJSON Entity where
+  parseJSON = withObject "Entity" $ \v -> do
+    createdAt <- v .: "createdAt"
+    updatedAt <- v .: "updatedAt"
+    let updatedAtWithCreation = Set.insert createdAt updatedAt
+    MkEntity
+      <$> v .: "uri"
+      <*> pure updatedAtWithCreation
+      <*> v .: "names"
+      <*> v .: "labels"
+      <*> v .: "isFeed"
+      <*> v .:? "shared" .!= mempty
+      <*> v .:? "toRead" .!= mempty
+      <*> v .:? "extended" .!= mempty
+      <*> v .:? "lastVisitedAt" .!= mempty
 
 mkEntity :: URI -> Time -> Maybe Name -> Set Label -> Entity
 mkEntity uri createdAt maybeName labels =
   MkEntity
     { uri
-    , createdAt
-    , updatedAt = []
+    , updatedAt = Set.singleton createdAt
     , names = maybe Set.empty Set.singleton maybeName
     , labels
-    , shared = False
-    , toRead = False
-    , isFeed = False
-    , extended = Nothing
-    , lastVisitedAt = Nothing
+    , isFeed = mkIsFeed False
+    , shared = mkShared False
+    , toRead = mkToRead False
+    , extended = []
+    , lastVisitedAt = MkLastVisited Nothing
     }
+
+instance Semigroup Entity where
+  a <> b =
+    MkEntity
+      { uri = a.uri <> b.uri
+      , updatedAt = a.updatedAt <> b.updatedAt
+      , names = a.names <> b.names
+      , labels = a.labels <> b.labels
+      , isFeed = a.isFeed <> b.isFeed
+      , shared = a.shared <> b.shared
+      , toRead = a.toRead <> b.toRead
+      , extended = a.extended <> b.extended
+      , lastVisitedAt = a.lastVisitedAt <> b.lastVisitedAt
+      }
+
+instance Monoid Entity where
+  mempty =
+    MkEntity
+      { uri = mempty
+      , updatedAt = mempty
+      , names = mempty
+      , labels = mempty
+      , isFeed = mempty
+      , shared = mempty
+      , toRead = mempty
+      , extended = mempty
+      , lastVisitedAt = mempty
+      }
 
 empty :: Entity
-empty =
-  MkEntity
-    { uri = URI.empty
-    , createdAt = Time.epoch
-    , updatedAt = []
-    , names = Set.empty
-    , labels = Set.empty
-    , shared = False
-    , toRead = False
-    , isFeed = False
-    , extended = Nothing
-    , lastVisitedAt = Nothing
-    }
-
-update :: Time -> Set Name -> Set Label -> Entity -> Entity
-update updatedAt names labels entity =
-  let createdAt = entity.createdAt
-      updatedNames = Set.union entity.names names
-      updatedLabels = Set.union entity.labels labels
-   in if createdAt > updatedAt
-        then
-          entity
-            { updatedAt = List.insert createdAt entity.updatedAt
-            , createdAt = updatedAt
-            , names = updatedNames
-            , labels = updatedLabels
-            }
-        else
-          entity
-            { updatedAt = List.insert updatedAt entity.updatedAt
-            , names = updatedNames
-            , labels = updatedLabels
-            }
+empty = mempty
 
 absorb :: Entity -> Entity -> Entity
 absorb other existing
-  | other /= existing = update other.createdAt other.names other.labels existing
+  | other /= existing = existing <> other
   | otherwise = existing
 
 nonEmpty :: Text -> Maybe Text
@@ -126,19 +211,18 @@ toLabel t = nonEmpty t <&> MkLabel
 
 fromPost :: (HasCallStack) => Post -> IO Entity
 fromPost post = do
-  uri <- either throwIO pure (URI.parse post.href)
-  createdAt <- either throwIO pure (Time.parseRFC3339 post.time)
+  parsedURI <- either throwIO pure (URI.parse post.href)
+  time <- either throwIO pure (Time.parseRFC3339 post.time)
   let name = post.description >>= nonEmpty <&> MkName
   pure
     MkEntity
-      { uri
-      , createdAt
-      , updatedAt = []
+      { uri = parsedURI
+      , updatedAt = Set.singleton time
       , names = maybe Set.empty Set.singleton name
       , labels = Set.fromList (Maybe.mapMaybe toLabel post.tags.unTags)
-      , shared = Pinboard.toBool post.shared
-      , toRead = Pinboard.toBool post.toread
-      , isFeed = False
-      , extended = post.extended >>= nonEmpty <&> MkExtended
-      , lastVisitedAt = Nothing
+      , isFeed = mkIsFeed False
+      , shared = mkShared (Pinboard.toBool post.shared)
+      , toRead = mkToRead (Pinboard.toBool post.toread)
+      , extended = Maybe.maybeToList (post.extended >>= nonEmpty <&> MkExtended)
+      , lastVisitedAt = MkLastVisited Nothing
       }
