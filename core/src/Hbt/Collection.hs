@@ -7,7 +7,6 @@ module Hbt.Collection
   , Error (..)
   , Collection
   , empty
-  , fromEntities
   , fromPosts
   , length
   , null
@@ -104,9 +103,6 @@ upsert entity collection =
        in if updated == existing
             then (existingId, collection)
             else (existingId, collection {nodes = collection.nodes // [(existingId.value, updated)]})
-
-fromEntities :: [Entity] -> Collection
-fromEntities = foldl' (\coll entity -> snd (upsert entity coll)) empty
 
 accumPosts :: Collection -> Post -> IO Collection
 accumPosts coll post = fromPost post >>= \entity -> pure (snd (upsert entity coll))
