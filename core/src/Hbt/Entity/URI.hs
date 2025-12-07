@@ -23,7 +23,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
 import GHC.Generics (Generic)
-import URI.ByteString (URIParseError)
+import URI.ByteString (Absolute, URIParseError, URIRef)
 import URI.ByteString qualified as URI
 import Prelude hiding (null)
 
@@ -32,11 +32,11 @@ data Error
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
-newtype URI = MkURI {unURI :: First (URI.URIRef URI.Absolute)}
+newtype URI = MkURI (First (URIRef Absolute))
   deriving stock (Eq, Ord, Show, Generic)
   deriving newtype (Semigroup, Monoid)
 
-mkURI :: URI.URIRef URI.Absolute -> URI
+mkURI :: URIRef Absolute -> URI
 mkURI = MkURI . First . Just
 
 empty :: URI
@@ -52,7 +52,7 @@ translate uriText =
         then uriText
         else beforeQuery <> Text.replace ";" "&" afterQuery
 
-normalizeURI :: URI.URIRef URI.Absolute -> URI.URIRef URI.Absolute
+normalizeURI :: URIRef Absolute -> URIRef Absolute
 normalizeURI uri
   | URI.schemeBS (URI.uriScheme uri) `elem` ["http", "https"]
   , URI.uriPath uri == mempty
@@ -60,7 +60,7 @@ normalizeURI uri
       uri {URI.uriPath = "/"}
   | otherwise = uri
 
-parseURI :: Text -> Either URIParseError (URI.URIRef URI.Absolute)
+parseURI :: Text -> Either URIParseError (URIRef Absolute)
 parseURI = URI.parseURI URI.laxURIParserOptions . Text.Encoding.encodeUtf8
 
 -- Lift single error into list to enable Alternative composition
@@ -83,5 +83,4 @@ instance ToJSON URI where
   toJSON = toJSON . toText
 
 instance FromJSON URI where
-  parseJSON = Aeson.withText "URI" $ \t ->
-    either (fail . show) pure (parse t)
+  parseJSON = Aeson.withText "URI" $ \t -> either (fail . show) pure (parse t)
