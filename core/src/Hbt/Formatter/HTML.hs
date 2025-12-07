@@ -8,6 +8,7 @@ where
 
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Aeson qualified as Aeson
+import Data.Coerce (coerce)
 import Data.List qualified as List
 import Data.Maybe qualified as Maybe
 import Data.Set (Set)
@@ -54,7 +55,7 @@ getLastModified entity
 fromEntity :: Entity -> TemplateEntity
 fromEntity entity =
   let uri = Maybe.fromMaybe mempty (URI.toText entity.uri) -- TODO
-      tagsList = List.sort (map (.unLabel) (Set.toList entity.labels))
+      tagsList = List.sort (coerce (Set.toList entity.labels))
       tagsText = Text.intercalate "," tagsList
    in MkTemplateEntity
         { uri

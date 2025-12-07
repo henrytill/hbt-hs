@@ -9,6 +9,7 @@ import Control.Exception (Exception, throwIO)
 import Control.Monad (foldM, forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
+import Data.Coerce (coerce)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -119,7 +120,7 @@ accumulateEntity entity (Attr name value) =
        in pure (entity {lastVisitedAt})
     "tags" ->
       let tagList = Text.splitOn "," value
-          newLabels = Set.fromList (map Entity.MkLabel (filter (/= "toread") tagList))
+          newLabels = Set.fromList (coerce (filter (/= "toread") tagList))
           toRead = entity.toRead <> if "toread" `elem` tagList then Entity.mkToRead True else mempty
           labels = Set.union entity.labels newLabels
        in pure (entity {labels, toRead})
@@ -137,7 +138,7 @@ createEntity = do
   let startEntity = Entity.empty
   accumulated <- liftIO (foldM accumulateEntity startEntity attrs)
   let names = maybe Set.empty (Set.singleton . Entity.MkName) name
-      folderLabels = Set.fromList (map Entity.MkLabel (reverse folders))
+      folderLabels = Set.fromList (coerce (reverse folders))
       allLabels = Set.unions [accumulated.labels, folderLabels]
       extended = Maybe.maybeToList (fmap Entity.MkExtended ext)
       finalEntity = accumulated {names, labels = allLabels, extended}
