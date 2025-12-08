@@ -9,6 +9,7 @@ import Control.Exception (Exception, throwIO)
 import Control.Monad (foldM, forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.State.Strict qualified as State
 import Data.Coerce (coerce)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
@@ -21,7 +22,7 @@ import Hbt.Entity (Entity (..))
 import Hbt.Entity qualified as Entity
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
-import Hbt.Parser.Common (StateIO, drop1, runStateIO)
+import Hbt.Parser.Common (drop1)
 import Lens.Family2
 import Lens.Family2.State.Strict
 import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
@@ -94,11 +95,11 @@ folderStack f s = (\fs -> s {folderStack = fs}) <$> f s.folderStack
 waitingFor :: Lens' ParseState WaitingFor
 waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
 
-newtype NetscapeM a = MkNetscapeM (StateIO ParseState a)
+newtype NetscapeM a = MkNetscapeM (State.StateT ParseState IO a)
   deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
 
 runNetscapeM :: NetscapeM a -> ParseState -> IO (a, ParseState)
-runNetscapeM (MkNetscapeM m) = runStateIO m
+runNetscapeM (MkNetscapeM m) = State.runStateT m
 
 accumulateEntity :: (HasCallStack) => Entity -> Attr -> IO Entity
 accumulateEntity entity (Attr name value) =
