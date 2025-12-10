@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Entity
@@ -55,7 +54,7 @@ newtype Label = MkLabel {unLabel :: Text}
 
 newtype Shared = MkShared (Last Bool)
   deriving stock (Eq, Ord, Show, Generic)
-  deriving newtype (Semigroup, Monoid, FromJSON, ToJSON)
+  deriving newtype (FromJSON, ToJSON, Semigroup, Monoid)
 
 mkShared :: Bool -> Shared
 mkShared = MkShared . Last . Just
@@ -65,7 +64,7 @@ getShared (MkShared value) = getLast value
 
 newtype ToRead = MkToRead (Last Bool)
   deriving stock (Eq, Ord, Show, Generic)
-  deriving newtype (Semigroup, Monoid, FromJSON, ToJSON)
+  deriving newtype (FromJSON, ToJSON, Semigroup, Monoid)
 
 mkToRead :: Bool -> ToRead
 mkToRead = MkToRead . Last . Just
@@ -75,7 +74,7 @@ getToRead (MkToRead value) = getLast value
 
 newtype IsFeed = MkIsFeed Any
   deriving stock (Eq, Ord, Show, Generic)
-  deriving newtype (Semigroup, Monoid, FromJSON, ToJSON)
+  deriving newtype (FromJSON, ToJSON, Semigroup, Monoid)
 
 mkIsFeed :: Bool -> IsFeed
 mkIsFeed = MkIsFeed . Any

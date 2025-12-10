@@ -64,7 +64,7 @@ parseURI :: Text -> Either URIParseError (URIRef Absolute)
 parseURI = URI.parseURI URI.laxURIParserOptions . Text.Encoding.encodeUtf8
 
 -- Lift single error into list to enable Alternative composition
-liftSingle :: (MonadError [e] m) => (Either e a) -> m a
+liftSingle :: (MonadError [e] m) => Either e a -> m a
 liftSingle = liftEither . Bifunctor.first (: [])
 
 parse :: Text -> Either Error URI
