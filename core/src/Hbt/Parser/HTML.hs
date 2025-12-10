@@ -117,7 +117,7 @@ accumulateEntity entity (Attr name value) =
        in pure (entity {updatedAt})
     "last_visit" ->
       let lastVisitedAtTime = Time.parseTimestamp value
-          lastVisitedAt = Entity.MkLastVisited lastVisitedAtTime
+          lastVisitedAt = Entity.MkLastVisitedAt lastVisitedAtTime
        in pure (entity {lastVisitedAt})
     "tags" ->
       let tagList = Text.splitOn "," value

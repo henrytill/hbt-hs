@@ -14,8 +14,8 @@ module Hbt.Entity
   , mkIsFeed
   , getIsFeed
   , Extended (..)
-  , LastVisited (..)
-  , getLastVisited
+  , LastVisitedAt (..)
+  , getLastVisitedAt
   , Entity (..)
   , mkEntity
   , empty
@@ -87,18 +87,18 @@ newtype Extended = MkExtended {unExtended :: Text}
   deriving stock (Eq, Ord, Show)
   deriving newtype (FromJSON, ToJSON)
 
-newtype LastVisited = MkLastVisited (Maybe Time)
+newtype LastVisitedAt = MkLastVisitedAt (Maybe Time)
   deriving stock (Eq, Ord, Show, Generic)
   deriving newtype (FromJSON, ToJSON)
 
-getLastVisited :: LastVisited -> Maybe Time
-getLastVisited (MkLastVisited a) = a
+getLastVisitedAt :: LastVisitedAt -> Maybe Time
+getLastVisitedAt (MkLastVisitedAt a) = a
 
-instance Semigroup LastVisited where
-  MkLastVisited a <> MkLastVisited b = MkLastVisited (max a b)
+instance Semigroup LastVisitedAt where
+  MkLastVisitedAt a <> MkLastVisitedAt b = MkLastVisitedAt (max a b)
 
-instance Monoid LastVisited where
-  mempty = MkLastVisited Nothing
+instance Monoid LastVisitedAt where
+  mempty = MkLastVisitedAt Nothing
 
 data Entity = MkEntity
   { uri :: URI
@@ -109,7 +109,7 @@ data Entity = MkEntity
   , shared :: Shared
   , toRead :: ToRead
   , extended :: [Extended]
-  , lastVisitedAt :: LastVisited
+  , lastVisitedAt :: LastVisitedAt
   }
   deriving stock (Eq, Ord, Show)
 
@@ -131,7 +131,7 @@ instance ToJSON Entity where
         ++ ["shared" .= s | Just s <- [getShared entity.shared]]
         ++ ["toRead" .= t | Just t <- [getToRead entity.toRead]]
         ++ ["extended" .= entity.extended | not (null entity.extended)]
-        ++ ["lastVisitedAt" .= entity.lastVisitedAt | Maybe.isJust (getLastVisited entity.lastVisitedAt)]
+        ++ ["lastVisitedAt" .= entity.lastVisitedAt | Maybe.isJust (getLastVisitedAt entity.lastVisitedAt)]
 
 instance FromJSON Entity where
   parseJSON = withObject "Entity" $ \v -> do
@@ -160,7 +160,7 @@ mkEntity uri createdAt maybeName labels =
     , shared = mkShared False
     , toRead = mkToRead False
     , extended = []
-    , lastVisitedAt = MkLastVisited Nothing
+    , lastVisitedAt = MkLastVisitedAt Nothing
     }
 
 instance Semigroup Entity where
@@ -224,5 +224,5 @@ fromPost post = do
       , shared = mkShared (Pinboard.toBool post.shared)
       , toRead = mkToRead (Pinboard.toBool post.toread)
       , extended = Maybe.maybeToList (post.extended >>= nonEmpty <&> MkExtended)
-      , lastVisitedAt = MkLastVisited Nothing
+      , lastVisitedAt = MkLastVisitedAt Nothing
       }

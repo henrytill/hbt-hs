@@ -20,7 +20,7 @@ import Data.Vector qualified as Vector
 import GHC.Generics (Generic)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity (Entity (..), Extended (..), Label (..), Name (..), getIsFeed, getLastVisited, getShared, getToRead)
+import Hbt.Entity (Entity (..), Extended (..), Label (..), Name (..), getIsFeed, getLastVisitedAt, getShared, getToRead)
 import Hbt.Entity.Time (Time)
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
@@ -66,7 +66,7 @@ fromEntity entity =
         , private = fmap not (getShared entity.shared)
         , toRead = getToRead entity.toRead
         , isFeed = getIsFeed entity.isFeed
-        , lastVisit = fmap Time.toText (getLastVisited entity.lastVisitedAt)
+        , lastVisit = fmap Time.toText (getLastVisitedAt entity.lastVisitedAt)
         , description = fmap (.unExtended) (Maybe.listToMaybe entity.extended)
         }
 
