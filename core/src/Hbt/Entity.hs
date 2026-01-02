@@ -147,20 +147,6 @@ instance FromJSON Entity where
       <*> v .:? "extended" .!= mempty
       <*> v .:? "lastVisitedAt" .!= mempty
 
-mkEntity :: URI -> Time -> Maybe Name -> Set Label -> Entity
-mkEntity uri createdAt maybeName labels =
-  MkEntity
-    { uri
-    , updatedAt = Set.singleton createdAt
-    , names = maybe Set.empty Set.singleton maybeName
-    , labels
-    , isFeed = mempty
-    , shared = mempty
-    , toRead = mempty
-    , extended = mempty
-    , lastVisitedAt = mempty
-    }
-
 instance Semigroup Entity where
   a <> b =
     MkEntity
@@ -191,6 +177,15 @@ instance Monoid Entity where
 
 empty :: Entity
 empty = mempty
+
+mkEntity :: URI -> Time -> Maybe Name -> Set Label -> Entity
+mkEntity uri createdAt maybeName labels =
+  mempty
+    { uri
+    , updatedAt = Set.singleton createdAt
+    , names = maybe Set.empty Set.singleton maybeName
+    , labels
+    }
 
 absorb :: Entity -> Entity -> Entity
 absorb other existing
