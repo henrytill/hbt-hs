@@ -28,7 +28,6 @@ import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), 
 import Data.Functor ((<&>))
 import Data.Maybe qualified as Maybe
 import Data.Monoid (Last (..))
-import Data.Semigroup (Any (..))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -72,15 +71,15 @@ mkToRead = MkToRead . Last . Just
 getToRead :: ToRead -> Maybe Bool
 getToRead (MkToRead value) = getLast value
 
-newtype IsFeed = MkIsFeed Any
+newtype IsFeed = MkIsFeed (Last Bool)
   deriving stock (Eq, Ord, Show, Generic)
   deriving newtype (FromJSON, ToJSON, Semigroup, Monoid)
 
 mkIsFeed :: Bool -> IsFeed
-mkIsFeed = MkIsFeed . Any
+mkIsFeed = MkIsFeed . Last . Just
 
-getIsFeed :: IsFeed -> Bool
-getIsFeed (MkIsFeed value) = getAny value
+getIsFeed :: IsFeed -> Maybe Bool
+getIsFeed (MkIsFeed value) = getLast value
 
 newtype Extended = MkExtended {unExtended :: Text}
   deriving stock (Eq, Ord, Show)
@@ -125,8 +124,8 @@ instance ToJSON Entity where
       , "updatedAt" .= Set.delete entity.createdAt entity.updatedAt
       , "names" .= entity.names
       , "labels" .= entity.labels
-      , "isFeed" .= entity.isFeed
       ]
+        ++ ["isFeed" .= s | Just s <- [getIsFeed entity.isFeed]]
         ++ ["shared" .= s | Just s <- [getShared entity.shared]]
         ++ ["toRead" .= t | Just t <- [getToRead entity.toRead]]
         ++ ["extended" .= entity.extended | not (null entity.extended)]
@@ -142,7 +141,7 @@ instance FromJSON Entity where
       <*> pure updatedAtWithCreation
       <*> v .: "names"
       <*> v .: "labels"
-      <*> v .: "isFeed"
+      <*> v .:? "isFeed" .!= mempty
       <*> v .:? "shared" .!= mempty
       <*> v .:? "toRead" .!= mempty
       <*> v .:? "extended" .!= mempty
@@ -155,11 +154,11 @@ mkEntity uri createdAt maybeName labels =
     , updatedAt = Set.singleton createdAt
     , names = maybe Set.empty Set.singleton maybeName
     , labels
-    , isFeed = mkIsFeed False
-    , shared = mkShared False
-    , toRead = mkToRead False
-    , extended = []
-    , lastVisitedAt = MkLastVisitedAt Nothing
+    , isFeed = mempty
+    , shared = mempty
+    , toRead = mempty
+    , extended = mempty
+    , lastVisitedAt = mempty
     }
 
 instance Semigroup Entity where

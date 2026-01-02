@@ -4,7 +4,7 @@
 <H1>Bookmarks</H1>
 <DL><p>
 {{#entities}}
-    <DT><A HREF="{{uri}}" ADD_DATE="{{createdAt}}"{{#lastModified}} LAST_MODIFIED="{{.}}"{{/lastModified}}{{#tags}} TAGS="{{.}}"{{/tags}}{{#private}} PRIVATE="1"{{/private}}{{#toRead}} TOREAD="1"{{/toRead}}{{#isFeed}} FEED="true"{{/isFeed}}{{#lastVisit}} LAST_VISIT="{{.}}"{{/lastVisit}}>{{title}}</A>
+    <DT><A HREF="{{uri}}" ADD_DATE="{{addDate}}"{{#lastModified}} LAST_MODIFIED="{{.}}"{{/lastModified}}{{#tags}} TAGS="{{.}}"{{/tags}}{{#private}} PRIVATE="{{.}}"{{/private}}{{#toRead}} TOREAD="{{.}}"{{/toRead}}{{#feed}} FEED="{{.}}"{{/feed}}{{#lastVisit}} LAST_VISIT="{{.}}"{{/lastVisit}}>{{title}}</A>
 {{#description}}
     <DD>{{{.}}}
 {{/description}}

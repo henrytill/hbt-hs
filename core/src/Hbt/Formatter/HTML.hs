@@ -29,13 +29,13 @@ import Text.Microstache qualified as Microstache
 
 data TemplateEntity = MkTemplateEntity
   { uri :: Text
-  , createdAt :: Text
+  , addDate :: Text
   , title :: Text
   , lastModified :: Maybe Text
   , tags :: Maybe Text
-  , private :: Maybe Bool
-  , toRead :: Maybe Bool
-  , isFeed :: Bool
+  , private :: Maybe Text
+  , toRead :: Maybe Text
+  , feed :: Maybe Text
   , lastVisit :: Maybe Text
   , description :: Maybe Text
   }
@@ -52,6 +52,14 @@ getLastModified entity
   | Set.null entity.updatedAt = Nothing
   | otherwise = Just (Set.findMax entity.updatedAt)
 
+stringOfBool :: Bool -> Text
+stringOfBool False = "0"
+stringOfBool True = "1"
+
+feedOfBool :: Bool -> Text
+feedOfBool False = "false"
+feedOfBool True = "true"
+
 fromEntity :: Entity -> TemplateEntity
 fromEntity entity =
   let uri = Maybe.fromMaybe mempty (URI.toText entity.uri) -- TODO
@@ -59,13 +67,13 @@ fromEntity entity =
       tagsText = Text.intercalate "," tagsList
    in MkTemplateEntity
         { uri
-        , createdAt = Time.toText entity.createdAt
+        , addDate = Time.toText entity.createdAt
         , title = getFirstName uri entity.names
         , lastModified = fmap Time.toText (getLastModified entity)
         , tags = if null tagsList then Nothing else Just tagsText
-        , private = fmap not (getShared entity.shared)
-        , toRead = getToRead entity.toRead
-        , isFeed = getIsFeed entity.isFeed
+        , private = fmap (stringOfBool . not) (getShared entity.shared)
+        , toRead = fmap stringOfBool (getToRead entity.toRead)
+        , feed = fmap feedOfBool (getIsFeed entity.isFeed)
         , lastVisit = fmap Time.toText (getLastVisitedAt entity.lastVisitedAt)
         , description = fmap (.unExtended) (Maybe.listToMaybe entity.extended)
         }
