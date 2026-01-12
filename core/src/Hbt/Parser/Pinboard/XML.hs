@@ -6,7 +6,7 @@ module Hbt.Parser.Pinboard.XML (Error (..), parse) where
 import Control.Exception (Exception, throwIO)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.State.Strict qualified as State
+import Control.Monad.State.Strict (StateT (..))
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as Char8
 import Data.Char qualified as Char
@@ -48,11 +48,11 @@ collection f s = (\c -> s {collection = c}) <$> f s.collection
 posts :: Lens' ParseState [Post]
 posts f s = (\p -> s {posts = p}) <$> f s.posts
 
-newtype PinboardM a = MkPinboardM (State.StateT ParseState IO a)
+newtype PinboardM a = MkPinboardM (StateT ParseState IO a)
   deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
 
 runPinboardM :: PinboardM a -> ParseState -> IO (a, ParseState)
-runPinboardM (MkPinboardM m) = State.runStateT m
+runPinboardM (MkPinboardM m) = runStateT m
 
 toLower :: ByteString -> ByteString
 toLower = Char8.map Char.toLower

@@ -10,7 +10,7 @@ import Control.Exception (Exception, throwIO)
 import Control.Monad (forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.State.Class (gets)
-import Control.Monad.State.Strict qualified as State
+import Control.Monad.State.Strict (StateT (..))
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -89,11 +89,11 @@ maybeParent f s = (\p -> s {maybeParent = p}) <$> f s.maybeParent
 parents :: Lens' ParseState [Id]
 parents f s = (\p -> s {parents = p}) <$> f s.parents
 
-newtype MarkdownM a = MkMarkdownM (State.StateT ParseState IO a)
+newtype MarkdownM a = MkMarkdownM (StateT ParseState IO a)
   deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadThrow)
 
 runMarkdownM :: MarkdownM a -> ParseState -> IO (a, ParseState)
-runMarkdownM (MkMarkdownM m) = State.runStateT m
+runMarkdownM (MkMarkdownM m) = runStateT m
 
 liftEither :: (Exception e, HasCallStack) => Either e b -> MarkdownM b
 liftEither = either throwM pure

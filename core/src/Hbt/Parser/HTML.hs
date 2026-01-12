@@ -9,7 +9,7 @@ import Control.Exception (Exception, throwIO)
 import Control.Monad (foldM, forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.State.Strict qualified as State
+import Control.Monad.State.Strict (StateT (..))
 import Data.Coerce (coerce)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
@@ -95,11 +95,11 @@ folderStack f s = (\fs -> s {folderStack = fs}) <$> f s.folderStack
 waitingFor :: Lens' ParseState WaitingFor
 waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
 
-newtype NetscapeM a = MkNetscapeM (State.StateT ParseState IO a)
+newtype NetscapeM a = MkNetscapeM (StateT ParseState IO a)
   deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
 
 runNetscapeM :: NetscapeM a -> ParseState -> IO (a, ParseState)
-runNetscapeM (MkNetscapeM m) = State.runStateT m
+runNetscapeM (MkNetscapeM m) = runStateT m
 
 accumulateEntity :: (HasCallStack) => Entity -> Attr -> IO Entity
 accumulateEntity entity (Attr name value) =
