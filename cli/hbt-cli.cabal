@@ -35,7 +35,7 @@ executable hbt
     hs-source-dirs:   exe
     default-language: GHC2024
     build-depends:
-        base >=4.20.1 && <4.22,
+        base >=4.20.1 && <4.23,
         containers >=0.7 && <0.9,
         filepath ^>=1.5.2.0,
         lens-family ^>=2.1.3,
