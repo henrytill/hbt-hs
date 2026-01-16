@@ -38,7 +38,7 @@ epoch = fromSeconds 0
 
 instance Bounded Time where
   minBound = epoch
-  maxBound = MkTime (realToFrac (maxBound @Int64))
+  maxBound = fromSeconds maxBound
 
 toText :: Time -> Text
 toText (MkTime posixTime) = Text.pack (show (round posixTime :: Int64))
