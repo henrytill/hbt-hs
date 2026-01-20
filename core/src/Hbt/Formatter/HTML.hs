@@ -28,7 +28,7 @@ import Text.Microstache (Template)
 import Text.Microstache qualified as Microstache
 
 data TemplateEntity = MkTemplateEntity
-  { uri :: Text
+  { href :: Text
   , addDate :: Text
   , title :: Text
   , lastModified :: Maybe Text
@@ -62,13 +62,13 @@ feedOfBool True = "true"
 
 fromEntity :: Entity -> TemplateEntity
 fromEntity entity =
-  let uri = Maybe.fromMaybe mempty (URI.toText entity.uri) -- TODO
+  let href = Maybe.fromMaybe mempty (URI.toText entity.uri) -- TODO
       tagsList = List.sort (coerce (Set.toList entity.labels))
       tagsText = Text.intercalate "," tagsList
    in MkTemplateEntity
-        { uri
+        { href
         , addDate = Time.toText entity.createdAt
-        , title = getFirstName uri entity.names
+        , title = getFirstName href entity.names
         , lastModified = fmap Time.toText (getLastModified entity)
         , tags = if null tagsList then Nothing else Just tagsText
         , private = fmap (stringOfBool . not) (getShared entity.shared)
