@@ -20,7 +20,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Text.Encoding.Error qualified as Text.Error
 import Data.Yaml qualified as Yaml
-import Hbt (Flow (..), Format (..), formatWith, parseWith)
+import Hbt (Flow (..), Format (..), SFlow (..), formatWith, parseWith)
 import System.Directory (listDirectory)
 import System.FilePath (splitExtensions, (</>))
 import Test.Dwergaz
@@ -67,63 +67,39 @@ split path = fmap (drop 1) (splitExtensions path)
 splitExt :: String -> [String]
 splitExt s = filter (not . null) (Split.splitOn "." s)
 
-processFile :: Format From -> FilePath -> TestMap From -> FilePath -> IO (TestMap From)
-processFile format dir acc file = do
+processFile :: SFlow f -> Format f -> FilePath -> TestMap f -> FilePath -> IO (TestMap f)
+processFile sflow format dir acc file = do
   let (stem, ext) = split file
       fullPath = dir </> file
-  case splitExt ext of
-    ["expected", "yaml"] -> do
-      expected <- readText fullPath
-      let updater maybeCase = case maybeCase of
-            Nothing -> Just (MkTestCase {stem, format, input = Text.empty, expected})
-            Just tc -> Just (tc {expected})
-      pure (Map.alter updater stem acc)
-    ["input", e] | e == formatExt format -> do
-      input <- readText fullPath
-      let updater maybeCase = case maybeCase of
-            Nothing -> Just (MkTestCase {stem, format, input, expected = Text.empty})
-            Just tc -> Just (tc {input})
-      pure (Map.alter updater stem acc)
+      parts = splitExt ext
+      updateWith field = do
+        text <- readText fullPath
+        let updater maybeCase = case maybeCase of
+              Nothing -> Just (field (MkTestCase {stem, format, input = Text.empty, expected = Text.empty}) text)
+              Just tc -> Just (field tc text)
+        pure (Map.alter updater stem acc)
+  case (sflow, parts) of
+    (SFrom, ["expected", "yaml"]) -> updateWith (\tc t -> tc {expected = t})
+    (SFrom, ["input", e]) | e == formatExt format -> updateWith (\tc t -> tc {input = t})
+    (STo, ["expected", e]) | e == formatExt format -> updateWith (\tc t -> tc {expected = t})
+    (STo, ["input", _]) -> updateWith (\tc t -> tc {input = t})
     _ -> pure acc
 
-processOutputFile :: Format To -> FilePath -> TestMap To -> FilePath -> IO (TestMap To)
-processOutputFile format dir acc file = do
-  let (stem, ext) = split file
-      fullPath = dir </> file
-  case splitExt ext of
-    ["expected", e] | e == formatExt format -> do
-      expected <- readText fullPath
-      let updater maybeCase = case maybeCase of
-            Nothing -> Just (MkTestCase {stem, format, input = Text.empty, expected})
-            Just tc -> Just (tc {expected})
-      pure (Map.alter updater stem acc)
-    ["input", _] -> do
-      input <- readText fullPath
-      let updater maybeCase = case maybeCase of
-            Nothing -> Just (MkTestCase {stem, format, input, expected = Text.empty})
-            Just tc -> Just (tc {input})
-      pure (Map.alter updater stem acc)
-    _ -> pure acc
+discover :: SFlow f -> (Format f -> Maybe FilePath) -> Format f -> IO [TestCase f]
+discover sflow dirFor format =
+  case dirFor format of
+    Nothing -> pure []
+    Just dir -> do
+      allFiles <- listDirectory dir
+      testMap <- foldM (processFile sflow format dir) Map.empty allFiles
+      let tests = map snd (Map.toList testMap)
+      pure (sort tests)
 
 discoverInput :: Format From -> IO [TestCase From]
-discoverInput format =
-  case inputDir format of
-    Nothing -> pure []
-    Just dir -> do
-      allFiles <- listDirectory dir
-      testMap <- foldM (processFile format dir) Map.empty allFiles
-      let tests = map snd (Map.toList testMap)
-      pure (sort tests)
+discoverInput = discover SFrom inputDir
 
 discoverOutput :: Format To -> IO [TestCase To]
-discoverOutput format =
-  case outputDir format of
-    Nothing -> pure []
-    Just dir -> do
-      allFiles <- listDirectory dir
-      testMap <- foldM (processOutputFile format dir) Map.empty allFiles
-      let tests = map snd (Map.toList testMap)
-      pure (sort tests)
+discoverOutput = discover STo outputDir
 
 testParser :: TestCase From -> IO Test
 testParser testCase = testIO testCase.stem $ do

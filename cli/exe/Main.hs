@@ -1,6 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE RequiredTypeArguments #-}
-
 module Main (main) where
 
 import Control.Applicative ((<|>))
@@ -12,7 +9,7 @@ import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Vector qualified as Vector
-import Hbt (Flow (..), Format (..), allInputFormats, allOutputFormats, formatWith, parseWith, toString)
+import Hbt (Flow (..), Format (..), SFlow (..), allInputFormats, allOutputFormats, formatWith, parseWith, toString)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity (..), Label (..))
@@ -22,9 +19,6 @@ import System.Environment qualified as Environment
 import System.Exit qualified as Exit
 import System.FilePath qualified as FilePath
 import System.IO qualified as IO
-
-class HasFormat (f :: Flow) s where
-  format :: Lens' s (Maybe (Format f))
 
 data Options = MkOptions
   { inputFormat :: Maybe (Format From)
@@ -36,12 +30,6 @@ data Options = MkOptions
   , showHelp :: Bool
   }
   deriving stock (Show)
-
-instance HasFormat From Options where
-  format f opts = (\x -> opts {inputFormat = x}) <$> f opts.inputFormat
-
-instance HasFormat To Options where
-  format f opts = (\x -> opts {outputFormat = x}) <$> f opts.outputFormat
 
 defaultOptions :: Options
 defaultOptions =
@@ -55,59 +43,44 @@ defaultOptions =
     , showHelp = False
     }
 
-class FormatFlow (f :: Flow) where
-  -- | Get all format constructors for this flow direction
-  allConstructors :: [Format f]
+formatLens :: SFlow f -> Lens' Options (Maybe (Format f))
+formatLens SFrom f opts = (\x -> opts {inputFormat = x}) <$> f opts.inputFormat
+formatLens STo f opts = (\x -> opts {outputFormat = x}) <$> f opts.outputFormat
 
-  -- | Generate flow-specific error message for invalid format
-  formatErrorFlow :: String -> String
+allConstructors :: SFlow f -> [Format f]
+allConstructors SFrom = allInputFormats
+allConstructors STo = allOutputFormats
 
-  -- | Detect format from file extension
-  detectFromExtension :: String -> Maybe (Format f)
+formatErrorFlow :: SFlow f -> String -> String
+formatErrorFlow SFrom f = "Invalid input format: " ++ f
+formatErrorFlow STo f = "Invalid output format: " ++ f
 
-  -- | Parse format string to format type (derived)
-  parseFormatFlow :: String -> Maybe (Format f)
-  parseFormatFlow s = List.find (\fmt -> toString fmt == s) allConstructors
+detectFromExtension :: SFlow f -> String -> Maybe (Format f)
+detectFromExtension SFrom ".html" = Just HTML
+detectFromExtension SFrom ".json" = Just JSON
+detectFromExtension SFrom ".xml" = Just XML
+detectFromExtension SFrom ".md" = Just Markdown
+detectFromExtension SFrom _ = Nothing
+detectFromExtension STo ".html" = Just HTML
+detectFromExtension STo ".yaml" = Just YAML
+detectFromExtension STo ".yml" = Just YAML
+detectFromExtension STo _ = Nothing
 
-instance FormatFlow From where
-  allConstructors :: [Format From]
-  allConstructors = allInputFormats
+parseFormatFlow :: SFlow f -> String -> Maybe (Format f)
+parseFormatFlow sflow s = List.find (\fmt -> toString fmt == s) (allConstructors sflow)
 
-  formatErrorFlow :: String -> String
-  formatErrorFlow f = "Invalid input format: " ++ f
+setFormat :: SFlow f -> String -> Options -> Options
+setFormat sflow str opts =
+  case parseFormatFlow sflow str of
+    Nothing -> error (formatErrorFlow sflow str)
+    Just fmt -> set (formatLens sflow) (Just fmt) opts
 
-  detectFromExtension :: String -> Maybe (Format From)
-  detectFromExtension ".html" = Just HTML
-  detectFromExtension ".json" = Just JSON
-  detectFromExtension ".xml" = Just XML
-  detectFromExtension ".md" = Just Markdown
-  detectFromExtension _ = Nothing
+supportedFormats :: SFlow f -> [String]
+supportedFormats sflow = map toString (allConstructors sflow)
 
-instance FormatFlow To where
-  allConstructors :: [Format To]
-  allConstructors = allOutputFormats
-
-  formatErrorFlow :: String -> String
-  formatErrorFlow f = "Invalid output format: " ++ f
-
-  detectFromExtension :: String -> Maybe (Format To)
-  detectFromExtension ".html" = Just HTML
-  detectFromExtension ".yaml" = Just YAML
-  detectFromExtension ".yml" = Just YAML
-  detectFromExtension _ = Nothing
-
-setFormat :: forall f -> (FormatFlow f, HasFormat f s) => String -> s -> s
-setFormat f str opts =
-  case parseFormatFlow @f str of
-    Nothing -> error (formatErrorFlow @f str)
-    Just fmt -> set format (Just fmt) opts
-
-supportedFormats :: forall f -> (FormatFlow f) => [String]
-supportedFormats f = map toString (allConstructors @f)
-
-generateFormatHelp :: forall f -> (FormatFlow f) => String -> String
-generateFormatHelp f label =
-  let formatList = List.intercalate ", " (supportedFormats f)
+generateFormatHelp :: SFlow f -> String -> String
+generateFormatHelp sflow label =
+  let formatList = List.intercalate ", " (supportedFormats sflow)
    in label ++ " format (" ++ formatList ++ ")"
 
 options :: [OptDescr (Options -> Options)]
@@ -115,13 +88,13 @@ options =
   [ Option
       ['f']
       ["from"]
-      (ReqArg (setFormat From) "FORMAT")
-      (generateFormatHelp From "Input")
+      (ReqArg (setFormat SFrom) "FORMAT")
+      (generateFormatHelp SFrom "Input")
   , Option
       ['t']
       ["to"]
-      (ReqArg (setFormat To) "FORMAT")
-      (generateFormatHelp To "Output")
+      (ReqArg (setFormat STo) "FORMAT")
+      (generateFormatHelp STo "Output")
   , Option
       ['o']
       ["output"]
@@ -165,10 +138,10 @@ parseOptions argv =
       Exit.exitFailure
 
 detectInputFormat :: FilePath -> Maybe (Format From)
-detectInputFormat file = detectFromExtension (FilePath.takeExtension file)
+detectInputFormat file = detectFromExtension SFrom (FilePath.takeExtension file)
 
 detectOutputFormat :: FilePath -> Maybe (Format To)
-detectOutputFormat file = detectFromExtension (FilePath.takeExtension file)
+detectOutputFormat file = detectFromExtension STo (FilePath.takeExtension file)
 
 parseFile :: Format From -> FilePath -> Text -> IO Collection
 parseFile fmt _file = parseWith fmt

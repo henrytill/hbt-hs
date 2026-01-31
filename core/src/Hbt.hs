@@ -4,6 +4,7 @@
 
 module Hbt
   ( Flow (..)
+  , SFlow (..)
   , Format (..)
   , allInputFormats
   , allOutputFormats
@@ -30,6 +31,10 @@ import Hbt.Parser.Pinboard.XML qualified as PinboardXML
 import Text.Microstache qualified as Microstache
 
 type data Flow = From | To
+
+data SFlow (f :: Flow) where
+  SFrom :: SFlow From
+  STo :: SFlow To
 
 data Format (f :: Flow) where
   JSON :: Format From
