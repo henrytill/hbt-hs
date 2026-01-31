@@ -44,7 +44,7 @@ library
                     , servant-client ^>=0.20
                     , text ^>=2.1.3
                     , time >=1.12 && <1.16
-                    , tls ^>=2.1.8
+                    , tls >=2.1.8 && <2.3
 
 
 executable pinboard-client
