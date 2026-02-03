@@ -43,31 +43,20 @@ defaultOptions =
     , showHelp = False
     }
 
-formatLens :: SFlow f -> Lens' Options (Maybe (Format f))
-formatLens SFrom f opts = (\x -> opts {inputFormat = x}) <$> f opts.inputFormat
-formatLens STo f opts = (\x -> opts {outputFormat = x}) <$> f opts.outputFormat
-
 allConstructors :: SFlow f -> [Format f]
 allConstructors SFrom = allInputFormats
 allConstructors STo = allOutputFormats
+
+parseFormatFlow :: SFlow f -> String -> Maybe (Format f)
+parseFormatFlow sflow s = List.find (\fmt -> toString fmt == s) (allConstructors sflow)
 
 formatErrorFlow :: SFlow f -> String -> String
 formatErrorFlow SFrom f = "Invalid input format: " ++ f
 formatErrorFlow STo f = "Invalid output format: " ++ f
 
-detectFromExtension :: SFlow f -> String -> Maybe (Format f)
-detectFromExtension SFrom ".html" = Just HTML
-detectFromExtension SFrom ".json" = Just JSON
-detectFromExtension SFrom ".xml" = Just XML
-detectFromExtension SFrom ".md" = Just Markdown
-detectFromExtension SFrom _ = Nothing
-detectFromExtension STo ".html" = Just HTML
-detectFromExtension STo ".yaml" = Just YAML
-detectFromExtension STo ".yml" = Just YAML
-detectFromExtension STo _ = Nothing
-
-parseFormatFlow :: SFlow f -> String -> Maybe (Format f)
-parseFormatFlow sflow s = List.find (\fmt -> toString fmt == s) (allConstructors sflow)
+formatLens :: SFlow f -> Lens' Options (Maybe (Format f))
+formatLens SFrom f opts = (\x -> opts {inputFormat = x}) <$> f opts.inputFormat
+formatLens STo f opts = (\x -> opts {outputFormat = x}) <$> f opts.outputFormat
 
 setFormat :: SFlow f -> String -> Options -> Options
 setFormat sflow str opts =
@@ -75,13 +64,17 @@ setFormat sflow str opts =
     Nothing -> error (formatErrorFlow sflow str)
     Just fmt -> set (formatLens sflow) (Just fmt) opts
 
+mkLabel :: SFlow f -> String
+mkLabel SFrom = "Input"
+mkLabel STo = "Output"
+
 supportedFormats :: SFlow f -> [String]
 supportedFormats sflow = map toString (allConstructors sflow)
 
-generateFormatHelp :: SFlow f -> String -> String
-generateFormatHelp sflow label =
-  let formatList = List.intercalate ", " (supportedFormats sflow)
-   in label ++ " format (" ++ formatList ++ ")"
+generateFormatHelp :: SFlow f -> String
+generateFormatHelp sflow = mkLabel sflow ++ " format (" ++ formats ++ ")"
+  where
+    formats = List.intercalate ", " (supportedFormats sflow)
 
 options :: [OptDescr (Options -> Options)]
 options =
@@ -89,12 +82,12 @@ options =
       ['f']
       ["from"]
       (ReqArg (setFormat SFrom) "FORMAT")
-      (generateFormatHelp SFrom "Input")
+      (generateFormatHelp SFrom)
   , Option
       ['t']
       ["to"]
       (ReqArg (setFormat STo) "FORMAT")
-      (generateFormatHelp STo "Output")
+      (generateFormatHelp STo)
   , Option
       ['o']
       ["output"]
@@ -137,14 +130,22 @@ parseOptions argv =
       printUsage
       Exit.exitFailure
 
+detectFromExtension :: SFlow f -> String -> Maybe (Format f)
+detectFromExtension SFrom ".html" = Just HTML
+detectFromExtension SFrom ".json" = Just JSON
+detectFromExtension SFrom ".xml" = Just XML
+detectFromExtension SFrom ".md" = Just Markdown
+detectFromExtension SFrom _ = Nothing
+detectFromExtension STo ".html" = Just HTML
+detectFromExtension STo ".yaml" = Just YAML
+detectFromExtension STo ".yml" = Just YAML
+detectFromExtension STo _ = Nothing
+
 detectInputFormat :: FilePath -> Maybe (Format From)
 detectInputFormat file = detectFromExtension SFrom (FilePath.takeExtension file)
 
 detectOutputFormat :: FilePath -> Maybe (Format To)
 detectOutputFormat file = detectFromExtension STo (FilePath.takeExtension file)
-
-parseFile :: Format From -> FilePath -> Text -> IO Collection
-parseFile fmt _file = parseWith fmt
 
 applyMappings :: Maybe FilePath -> Collection -> IO Collection
 applyMappings Nothing collection = pure collection
@@ -166,12 +167,12 @@ printCollection file opts collection
   | Just fmt <- opts.outputFormat =
       formatWith fmt collection >>= writeOutput opts.outputFile
   | otherwise =
-      error "printCollection: outputFormat should be validated in main"
+      fail "printCollection: outputFormat should be validated in main"
 
 processFile :: Options -> FilePath -> IO ()
 processFile opts file = do
-  let inputFmt = Maybe.fromMaybe (error "processFile: inputFormat should be validated in main") opts.inputFormat
-  Text.readFile file >>= parseFile inputFmt file >>= applyMappings opts.mappingsFile >>= printCollection file opts
+  inputFmt <- Maybe.maybe (fail "processFile: inputFormat should be validated in main") pure opts.inputFormat
+  Text.readFile file >>= parseWith inputFmt >>= applyMappings opts.mappingsFile >>= printCollection file opts
 
 main :: IO ()
 main = do

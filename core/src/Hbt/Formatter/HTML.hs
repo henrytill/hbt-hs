@@ -62,25 +62,25 @@ feedOfBool True = "true"
 
 fromEntity :: Entity -> TemplateEntity
 fromEntity entity =
-  let href = Maybe.fromMaybe mempty (URI.toText entity.uri) -- TODO
-      tagsList = List.sort (coerce (Set.toList entity.labels))
-      tagsText = Text.intercalate "," tagsList
-   in MkTemplateEntity
-        { href
-        , addDate = Time.toText entity.createdAt
-        , title = getFirstName href entity.names
-        , lastModified = fmap Time.toText (getLastModified entity)
-        , tags = if null tagsList then Nothing else Just tagsText
-        , private = fmap (stringOfBool . not) (getShared entity.shared)
-        , toRead = fmap stringOfBool (getToRead entity.toRead)
-        , feed = fmap feedOfBool (getIsFeed entity.isFeed)
-        , lastVisit = fmap Time.toText (getLastVisitedAt entity.lastVisitedAt)
-        , description = fmap (.unExtended) (Maybe.listToMaybe entity.extended)
-        }
+  MkTemplateEntity
+    { href
+    , addDate = Time.toText entity.createdAt
+    , title = getFirstName href entity.names
+    , lastModified = fmap Time.toText (getLastModified entity)
+    , tags = if null tagsList then Nothing else Just (Text.intercalate "," tagsList)
+    , private = fmap (stringOfBool . not) (getShared entity.shared)
+    , toRead = fmap stringOfBool (getToRead entity.toRead)
+    , feed = fmap feedOfBool (getIsFeed entity.isFeed)
+    , lastVisit = fmap Time.toText (getLastVisitedAt entity.lastVisitedAt)
+    , description = fmap (.unExtended) (Maybe.listToMaybe entity.extended)
+    }
+  where
+    href = Maybe.fromMaybe mempty (URI.toText entity.uri) -- TODO
+    tagsList = List.sort (coerce (Set.toList entity.labels))
 
 format :: Template -> Collection -> Text
-format template collection =
-  let f e acc = fromEntity e : acc
-      templateEntities = Vector.foldr f [] (Collection.allEntities collection)
-      toRender = Aeson.object ["entities" .= templateEntities]
-   in LazyText.toStrict (Microstache.renderMustache template toRender)
+format template collection = LazyText.toStrict (Microstache.renderMustache template toRender)
+  where
+    f e acc = fromEntity e : acc
+    templateEntities = Vector.foldr f [] (Collection.allEntities collection)
+    toRender = Aeson.object ["entities" .= templateEntities]

@@ -17,8 +17,8 @@ testIO testName action = do
 
 -- | Generate standardized test results with output and pass/fail status
 testResults :: String -> Test -> (String, Bool)
-testResults _groupName test =
-  let result = runTest test
-      buildString output = showString (resultToString result) (showChar '\n' output)
-      allPassed = resultIsPassed result
-   in (buildString mempty, allPassed)
+testResults _groupName test = (buildString mempty, allPassed)
+  where
+    result = runTest test
+    buildString output = showString (resultToString result) (showChar '\n' output)
+    allPassed = resultIsPassed result

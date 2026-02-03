@@ -86,12 +86,12 @@ allEntities :: Collection -> Vector Entity
 allEntities collection = collection.nodes
 
 insert :: Entity -> Collection -> (Id, Collection)
-insert entity collection =
-  let newId = MkId (Vector.length collection.nodes)
-      nodes = Vector.snoc collection.nodes entity
-      edges = Vector.snoc collection.edges Vector.empty
-      uris = Map.insert entity.uri newId collection.uris
-   in (newId, MkCollection {nodes, edges, uris})
+insert entity collection = (newId, MkCollection {nodes, edges, uris})
+  where
+    newId = MkId (Vector.length collection.nodes)
+    nodes = Vector.snoc collection.nodes entity
+    edges = Vector.snoc collection.edges Vector.empty
+    uris = Map.insert entity.uri newId collection.uris
 
 upsert :: Entity -> Collection -> (Id, Collection)
 upsert entity collection =
@@ -128,25 +128,23 @@ addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdges from to collection = addEdge from to (addEdge to from collection)
 
 mkNodeRepr :: Collection -> Id -> Entity -> NodeRepr
-mkNodeRepr collection id entity =
-  let edges = edgesAt id collection
-   in MkNodeRepr {id, entity, edges}
+mkNodeRepr collection id entity = MkNodeRepr {id, entity, edges}
+  where
+    edges = edgesAt id collection
 
 toRepr :: Collection -> CollectionRepr
-toRepr collection =
-  let version :: String
-      version = "0.1.0"
-      length = Vector.length collection.nodes
-      value = Vector.imap (mkNodeRepr collection . MkId) collection.nodes
-   in MkCollectionRepr {version, length, value}
+toRepr collection = MkCollectionRepr {version, length, value}
+  where
+    version = "0.1.0" :: String
+    length = Vector.length collection.nodes
+    value = Vector.imap (mkNodeRepr collection . MkId) collection.nodes
 
 fromRepr :: CollectionRepr -> Collection
-fromRepr serialized =
-  let entities = Vector.map (.entity) serialized.value
-      nodes = entities
-      edges = Vector.map (.edges) serialized.value
-      uris = Map.fromList (zipWith (\entity i -> (entity.uri, MkId i)) (Vector.toList entities) [0 ..])
-   in MkCollection {nodes, edges, uris}
+fromRepr serialized = MkCollection {nodes, edges, uris}
+  where
+    nodes = Vector.map (.entity) serialized.value
+    edges = Vector.map (.edges) serialized.value
+    uris = Map.fromList (zipWith (\entity i -> (entity.uri, MkId i)) (Vector.toList nodes) [0 ..])
 
 instance ToJSON Collection where
   toJSON = toJSON . toRepr

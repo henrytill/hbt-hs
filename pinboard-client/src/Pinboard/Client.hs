@@ -65,11 +65,11 @@ remapField mappings field
   | otherwise = field
 
 updateTimeOptions :: Options
-updateTimeOptions =
-  let mappings :: [(String, String)]
-      mappings = [("unUpdateTime", "update_time")]
-      fieldLabelModifier = remapField mappings
-   in Aeson.defaultOptions {fieldLabelModifier}
+updateTimeOptions = Aeson.defaultOptions {fieldLabelModifier}
+  where
+    mappings :: [(String, String)]
+    mappings = [("unUpdateTime", "update_time")]
+    fieldLabelModifier = remapField mappings
 
 data Bookmark = MkBookmark
   deriving stock (Eq, Show, Generic)
@@ -116,12 +116,12 @@ readConfig path = do
   Aeson.throwDecodeStrictText configText
 
 managerSettings :: ManagerSettings
-managerSettings =
-  let settingClientSupported = (def @Supported) {supportedExtendedMainSecret = AllowEMS}
-      tlsSettings = case def @TLSSettings of
-        settings@(TLSSettingsSimple {}) -> settings {settingClientSupported}
-        TLSSettings params -> TLSSettings (params {clientSupported = settingClientSupported})
-   in TLS.mkManagerSettings tlsSettings Nothing
+managerSettings = TLS.mkManagerSettings tlsSettings Nothing
+  where
+    settingClientSupported = (def @Supported) {supportedExtendedMainSecret = AllowEMS}
+    tlsSettings = case def @TLSSettings of
+      settings@(TLSSettingsSimple {}) -> settings {settingClientSupported}
+      TLSSettings params -> TLSSettings (params {clientSupported = settingClientSupported})
 
 runClient :: ApiToken -> IO ()
 runClient apiToken = do
