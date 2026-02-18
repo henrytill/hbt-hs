@@ -1,0 +1,52 @@
+cabal-version:      3.0
+name:               hbt-attic
+version:            0.1.0.0
+-- synopsis:
+-- description:
+license:            ISC
+license-file:       LICENSE
+author:             Henry Till
+maintainer:         henrytill@gmail.com
+homepage:           https://github.com/henrytill/hbt-hs
+copyright:          Copyright (c) 2026, Henry Till
+category:           Web
+build-type:         Simple
+extra-doc-files:    CHANGELOG.md
+-- extra-source-files:
+
+common warnings
+    ghc-options:
+        -Wall
+        -Wcompat
+        -Wmissing-deriving-strategies
+        -Wmissing-export-lists
+        -Wmonomorphism-restriction
+        -Wredundant-constraints
+
+common exts
+    default-extensions:
+        DuplicateRecordFields
+        NoFieldSelectors
+        OverloadedRecordDot
+        StrictData
+library
+    import: warnings, exts
+    exposed-modules:  Hbt.Attic
+    -- other-modules:
+    -- other-extensions:
+    hs-source-dirs:   src
+    default-language: GHC2024
+    build-depends:
+        base >=4.20.1 && <4.23
+
+test-suite hbt-attic-test
+    import: warnings, exts
+    default-language: GHC2024
+    -- other-modules:
+    -- other-extensions:
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Main.hs
+    build-depends:
+        base >=4.20.1 && <4.23,
+        hbt-attic
