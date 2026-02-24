@@ -30,7 +30,7 @@ module Hbt.Attic.Belnap
   , BelnapVec (..)
 
     -- * BelnapVec construction
-  , new
+  , mkBelnapVec
   , allTrue
   , allFalse
 
@@ -224,8 +224,8 @@ filled width fill =
 -- BelnapVec construction
 
 -- | Create a vector of @width@ elements, all 'Unknown'.
-new :: Int -> BelnapVec
-new width = BelnapVec {width, words = Unboxed.replicate (2 * wordsNeeded width) 0}
+mkBelnapVec :: Int -> BelnapVec
+mkBelnapVec width = BelnapVec {width, words = Unboxed.replicate (2 * wordsNeeded width) 0}
 
 -- | Create a vector of @width@ elements, all 'True'.
 allTrue :: Int -> BelnapVec

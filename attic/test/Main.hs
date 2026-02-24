@@ -101,7 +101,7 @@ scalarQueryTests =
 
 vecGetSetTests :: Test
 vecGetSetTests =
-  let v0 = Belnap.new 4
+  let v0 = Belnap.mkBelnapVec 4
       v1 = Belnap.set 0 Belnap.Unknown v0
       v2 = Belnap.set 1 Belnap.True v1
       v3 = Belnap.set 2 Belnap.False v2
@@ -159,7 +159,7 @@ vecBulkMergeTests =
 vecIsConsistentTests :: Test
 vecIsConsistentTests =
   let consistent1 = Belnap.allTrue 64
-      consistent2 = Belnap.set 1 Belnap.False (Belnap.set 0 Belnap.True (Belnap.new 10))
+      consistent2 = Belnap.set 1 Belnap.False (Belnap.set 0 Belnap.True (Belnap.mkBelnapVec 10))
       inconsistent = Belnap.set 2 Belnap.Both consistent2
    in group
         "vec is consistent"
@@ -170,7 +170,7 @@ vecIsConsistentTests =
 
 vecIsAllDeterminedTests :: Test
 vecIsAllDeterminedTests =
-  let v0 = Belnap.new 4
+  let v0 = Belnap.mkBelnapVec 4
       v1 = Belnap.set 0 Belnap.True v0
       v2 = Belnap.set 1 Belnap.False v1
       v3 = Belnap.set 2 Belnap.True v2
@@ -186,7 +186,7 @@ vecIsAllDeterminedTests =
 
 vecCountsTests :: Test
 vecCountsTests =
-  let v0 = Belnap.new 10
+  let v0 = Belnap.mkBelnapVec 10
       v1 = Belnap.set 0 Belnap.True v0
       v2 = Belnap.set 1 Belnap.True v1
       v3 = Belnap.set 2 Belnap.False v2
@@ -201,7 +201,7 @@ vecCountsTests =
 
 vecAutoGrowTests :: Test
 vecAutoGrowTests =
-  let v0 = Belnap.new 10
+  let v0 = Belnap.mkBelnapVec 10
       v = Belnap.set 100 Belnap.Both v0
    in group
         "vec auto grow"
@@ -236,7 +236,7 @@ vecResizeTests =
             , assertEqual "count true" 10 (Belnap.countTrue v)
             , assertEqual "count false" 90 (Belnap.countFalse v)
             ]
-    , let v = Belnap.resize 100 Belnap.True (Belnap.new 10)
+    , let v = Belnap.resize 100 Belnap.True (Belnap.mkBelnapVec 10)
        in group
             "grow with True fill"
             [ assertEqual "width" 100 v.width
@@ -256,13 +256,13 @@ vecResizeTests =
             [ assertEqual "width" 10 v.width
             , assertBool "still all true after shrink" (Belnap.isAllTrue v)
             ]
-    , let v = Belnap.resize 64 Belnap.True (Belnap.new 0)
+    , let v = Belnap.resize 64 Belnap.True (Belnap.mkBelnapVec 0)
        in group
             "grow from empty with True"
             [ assertEqual "width" 64 v.width
             , assertBool "is all true" (Belnap.isAllTrue v)
             ]
-    , let v = Belnap.resize 100 Belnap.False (Belnap.new 0)
+    , let v = Belnap.resize 100 Belnap.False (Belnap.mkBelnapVec 0)
        in group
             "grow from empty with False"
             [ assertEqual "width" 100 v.width
@@ -298,7 +298,7 @@ vecAndDifferentWidthsTests =
           ( Belnap.set
               1
               Belnap.False
-              (Belnap.set 0 Belnap.True (Belnap.new 10))
+              (Belnap.set 0 Belnap.True (Belnap.mkBelnapVec 10))
           )
       long =
         Belnap.set
@@ -310,7 +310,7 @@ vecAndDifferentWidthsTests =
               ( Belnap.set
                   1
                   Belnap.True
-                  (Belnap.set 0 Belnap.True (Belnap.new 100))
+                  (Belnap.set 0 Belnap.True (Belnap.mkBelnapVec 100))
               )
           )
       ab = Belnap.vecAnd short long
@@ -336,7 +336,7 @@ vecOrDifferentWidthsTests =
           ( Belnap.set
               1
               Belnap.False
-              (Belnap.set 0 Belnap.True (Belnap.new 10))
+              (Belnap.set 0 Belnap.True (Belnap.mkBelnapVec 10))
           )
       long =
         Belnap.set
@@ -348,7 +348,7 @@ vecOrDifferentWidthsTests =
               ( Belnap.set
                   1
                   Belnap.True
-                  (Belnap.set 0 Belnap.False (Belnap.new 100))
+                  (Belnap.set 0 Belnap.False (Belnap.mkBelnapVec 100))
               )
           )
       ab = Belnap.vecOr short long
@@ -371,7 +371,7 @@ vecMergeDifferentWidthsTests =
         Belnap.set
           1
           Belnap.False
-          (Belnap.set 0 Belnap.True (Belnap.new 10))
+          (Belnap.set 0 Belnap.True (Belnap.mkBelnapVec 10))
       long =
         Belnap.set
           99
@@ -379,7 +379,7 @@ vecMergeDifferentWidthsTests =
           ( Belnap.set
               1
               Belnap.True
-              (Belnap.set 0 Belnap.False (Belnap.new 100))
+              (Belnap.set 0 Belnap.False (Belnap.mkBelnapVec 100))
           )
       ab = Belnap.vecMerge short long
       ba = Belnap.vecMerge long short
