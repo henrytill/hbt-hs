@@ -1,4 +1,3 @@
-module Hbt.Attic (someFunc) where
+module Hbt.Attic (module Hbt.Attic.Belnap) where
 
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
+import Hbt.Attic.Belnap
