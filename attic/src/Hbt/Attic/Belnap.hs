@@ -1,3 +1,4 @@
+{-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE PatternSynonyms #-}
 
@@ -86,16 +87,16 @@ newtype Belnap = MkBelnap Word8
   deriving stock (Eq, Ord, Show)
 
 pattern Unknown :: Belnap
-pattern Unknown = MkBelnap 0x00
+pattern Unknown = MkBelnap 0b00
 
 pattern True :: Belnap
-pattern True = MkBelnap 0x01
+pattern True = MkBelnap 0b01
 
 pattern False :: Belnap
-pattern False = MkBelnap 0x02
+pattern False = MkBelnap 0b10
 
 pattern Both :: Belnap
-pattern Both = MkBelnap 0x03
+pattern Both = MkBelnap 0b11
 
 {-# COMPLETE Unknown, True, False, Both #-}
 
@@ -140,7 +141,7 @@ isDetermined (MkBelnap a) = ((a .&. 1) `xor` ((a `shiftR` 1) .&. 1)) /= 0
 
 -- | Returns 'Prelude.True' if this value is 'Both' (contradicted).
 isContradicted :: Belnap -> Bool
-isContradicted (MkBelnap a) = a == 0x03
+isContradicted (MkBelnap a) = a == 0b11
 
 -- | Converts to 'Bool' if the value is exactly 'True' or 'False'.
 toBool :: Belnap -> Maybe Bool
