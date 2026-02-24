@@ -65,7 +65,7 @@ where
 
 import Control.Exception (Exception)
 import Data.Bits (complement, popCount, shiftL, shiftR, xor, (.&.), (.|.))
-import Data.Vector.Unboxed ((!), (//))
+import Data.Vector.Unboxed ((!))
 import Data.Vector.Unboxed qualified as Unboxed
 import Data.Word (Word64, Word8)
 import Prelude hiding (False, True, truncate, words)
@@ -197,11 +197,7 @@ maskTail bv
   | otherwise =
       let nw = wordsNeeded bv.width
           base = 2 * (nw - 1)
-          words =
-            bv.words
-              // [ (base, bv.words ! base .&. m)
-                 , (base + 1, bv.words ! (base + 1) .&. m)
-                 ]
+          words = Unboxed.accum (.&.) bv.words [(base, m), (base + 1, m)]
        in bv {words}
   where
     m = tailMask bv.width
@@ -268,13 +264,8 @@ set i v bv =
       bitsW = fromIntegral bits :: Word64
       posBit = (bitsW .&. 1) `shiftL` b
       negBit = ((bitsW `shiftR` 1) .&. 1) `shiftL` b
-      posIdx = 2 * w
-      negIdx = 2 * w + 1
-      words =
-        grown.words
-          // [ (posIdx, (grown.words ! posIdx .&. bitMask) .|. posBit)
-             , (negIdx, (grown.words ! negIdx .&. bitMask) .|. negBit)
-             ]
+      base = 2 * w
+      words = Unboxed.accum (\old new -> (old .&. bitMask) .|. new) grown.words [(base, posBit), (base + 1, negBit)]
    in grown {words}
 
 -- BelnapVec bulk operations
@@ -351,11 +342,7 @@ resize width fill bv
           -- Fill unused high bits in the current last word pair (if any).
           filledWords =
             if isKnown fill && highMask /= 0
-              then
-                bv.words
-                  // [ (base, bv.words ! base .|. (posW .&. highMask))
-                     , (base + 1, bv.words ! (base + 1) .|. (negW .&. highMask))
-                     ]
+              then Unboxed.accum (.|.) bv.words [(base, posW .&. highMask), (base + 1, negW .&. highMask)]
               else bv.words
           -- Append new full word pairs.
           extension =
