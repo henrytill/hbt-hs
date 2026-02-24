@@ -105,25 +105,25 @@ pattern Both = MkBelnap 0b11
 -- | Belnap logical NOT: swaps True<->False, leaves Unknown and Both unchanged.
 belnapNot :: Belnap -> Belnap
 belnapNot (MkBelnap a) =
-  MkBelnap (((a .&. 1) `shiftL` 1) .|. ((a `shiftR` 1) .&. 1))
+  MkBelnap $ ((a .&. 1) `shiftL` 1) .|. ((a `shiftR` 1) .&. 1)
 
 -- | Belnap logical AND: pos = pos_a & pos_b, neg = neg_a | neg_b.
 belnapAnd :: Belnap -> Belnap -> Belnap
 belnapAnd (MkBelnap a) (MkBelnap b) =
   let rPos = (a .&. 1) .&. (b .&. 1)
       rNeg = ((a `shiftR` 1) .&. 1) .|. ((b `shiftR` 1) .&. 1)
-   in MkBelnap ((rNeg `shiftL` 1) .|. rPos)
+   in MkBelnap $ (rNeg `shiftL` 1) .|. rPos
 
 -- | Belnap logical OR: pos = pos_a | pos_b, neg = neg_a & neg_b.
 belnapOr :: Belnap -> Belnap -> Belnap
 belnapOr (MkBelnap a) (MkBelnap b) =
   let rPos = (a .&. 1) .|. (b .&. 1)
       rNeg = ((a `shiftR` 1) .&. 1) .&. ((b `shiftR` 1) .&. 1)
-   in MkBelnap ((rNeg `shiftL` 1) .|. rPos)
+   in MkBelnap $ (rNeg `shiftL` 1) .|. rPos
 
 -- | Knowledge-ordering join: combine observations from independent sources.
 merge :: Belnap -> Belnap -> Belnap
-merge (MkBelnap a) (MkBelnap b) = MkBelnap (a .|. b)
+merge (MkBelnap a) (MkBelnap b) = MkBelnap $ a .|. b
 
 -- | Belnap implication: @implies a b = belnapOr (belnapNot a) b@.
 implies :: Belnap -> Belnap -> Belnap
@@ -255,12 +255,11 @@ growTo width bv =
 -- | Write element @i@.  Auto-grows the vector (filling with 'Unknown') when
 -- @i >= width@, mirroring the Rust @set@ behaviour.
 set :: Int -> Belnap -> BelnapVec -> BelnapVec
-set i v bv =
+set i (MkBelnap bits) bv =
   let grown = if i >= bv.width then growTo (i + 1) bv else bv
       w = i `shiftR` bitsLog2
       b = i .&. bitsMask
       bitMask = complement (1 `shiftL` b) :: Word64
-      (MkBelnap bits) = v
       bitsW = fromIntegral bits :: Word64
       posBit = (bitsW .&. 1) `shiftL` b
       negBit = ((bitsW `shiftR` 1) .&. 1) `shiftL` b
