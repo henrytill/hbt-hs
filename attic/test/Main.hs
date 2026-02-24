@@ -292,14 +292,27 @@ vecTruncateTests =
 vecAndDifferentWidthsTests :: Test
 vecAndDifferentWidthsTests =
   let short =
-        Belnap.set 2 Belnap.Both
-          (Belnap.set 1 Belnap.False
-            (Belnap.set 0 Belnap.True (Belnap.new 10)))
+        Belnap.set
+          2
+          Belnap.Both
+          ( Belnap.set
+              1
+              Belnap.False
+              (Belnap.set 0 Belnap.True (Belnap.new 10))
+          )
       long =
-        Belnap.set 99 Belnap.True
-          (Belnap.set 2 Belnap.True
-            (Belnap.set 1 Belnap.True
-              (Belnap.set 0 Belnap.True (Belnap.new 100))))
+        Belnap.set
+          99
+          Belnap.True
+          ( Belnap.set
+              2
+              Belnap.True
+              ( Belnap.set
+                  1
+                  Belnap.True
+                  (Belnap.set 0 Belnap.True (Belnap.new 100))
+              )
+          )
       ab = Belnap.vecAnd short long
       ba = Belnap.vecAnd long short
    in group
@@ -317,14 +330,27 @@ vecAndDifferentWidthsTests =
 vecOrDifferentWidthsTests :: Test
 vecOrDifferentWidthsTests =
   let short =
-        Belnap.set 2 Belnap.Both
-          (Belnap.set 1 Belnap.False
-            (Belnap.set 0 Belnap.True (Belnap.new 10)))
+        Belnap.set
+          2
+          Belnap.Both
+          ( Belnap.set
+              1
+              Belnap.False
+              (Belnap.set 0 Belnap.True (Belnap.new 10))
+          )
       long =
-        Belnap.set 99 Belnap.False
-          (Belnap.set 2 Belnap.False
-            (Belnap.set 1 Belnap.True
-              (Belnap.set 0 Belnap.False (Belnap.new 100))))
+        Belnap.set
+          99
+          Belnap.False
+          ( Belnap.set
+              2
+              Belnap.False
+              ( Belnap.set
+                  1
+                  Belnap.True
+                  (Belnap.set 0 Belnap.False (Belnap.new 100))
+              )
+          )
       ab = Belnap.vecOr short long
       ba = Belnap.vecOr long short
    in group
@@ -342,12 +368,19 @@ vecOrDifferentWidthsTests =
 vecMergeDifferentWidthsTests :: Test
 vecMergeDifferentWidthsTests =
   let short =
-        Belnap.set 1 Belnap.False
+        Belnap.set
+          1
+          Belnap.False
           (Belnap.set 0 Belnap.True (Belnap.new 10))
       long =
-        Belnap.set 99 Belnap.True
-          (Belnap.set 1 Belnap.True
-            (Belnap.set 0 Belnap.False (Belnap.new 100)))
+        Belnap.set
+          99
+          Belnap.True
+          ( Belnap.set
+              1
+              Belnap.True
+              (Belnap.set 0 Belnap.False (Belnap.new 100))
+          )
       ab = Belnap.vecMerge short long
       ba = Belnap.vecMerge long short
    in group
