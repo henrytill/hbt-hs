@@ -6,7 +6,6 @@ import Hbt.Attic.Belnap qualified as Belnap
 import System.Exit (exitFailure)
 import Test.Dwergaz
 
--- ---------------------------------------------------------------------------
 -- Scalar tests
 
 scalarNotTests :: Test
@@ -96,7 +95,6 @@ scalarQueryTests =
     , assertEqual "Both toBool" Nothing (Belnap.toBool Belnap.Both)
     ]
 
--- ---------------------------------------------------------------------------
 -- BelnapVec tests
 
 vecGetSetTests :: Test
@@ -406,7 +404,6 @@ vecImpliesDifferentWidthsTests =
         , assertEqual "get 50: Unknown implies True = True" (Right Belnap.True) (Belnap.get 50 result)
         ]
 
--- ---------------------------------------------------------------------------
 -- Top-level test runner
 
 allTests :: Test

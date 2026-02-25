@@ -77,12 +77,12 @@ import Prelude qualified
 --
 -- Uses a 'Word8' with the encoding @(neg_bit \`shiftL\` 1) .|. pos_bit@:
 --
--- > | pos | neg | bits   | variant   |
--- > |-----|-----|--------|-----------|
--- > | 0   | 0   | 0b00   | Unknown   |
--- > | 1   | 0   | 0b01   | True      |
--- > | 0   | 1   | 0b10   | False     |
--- > | 1   | 1   | 0b11   | Both      |
+-- > | pos | neg | bits | variant |
+-- > |-----|-----|------|---------|
+-- > | 0   | 0   | 0b00 | Unknown |
+-- > | 1   | 0   | 0b01 | True    |
+-- > | 0   | 1   | 0b10 | False   |
+-- > | 1   | 1   | 0b11 | Both    |
 newtype Belnap = MkBelnap Word8
   deriving stock (Eq, Ord, Show)
 
