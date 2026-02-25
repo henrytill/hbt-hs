@@ -1,10 +1,17 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Main (main) where
 
+import Algebra.Lattice (BoundedJoinSemiLattice (..), BoundedMeetSemiLattice (..), Lattice (..))
 import Control.Monad (unless)
-import Hbt.Attic.Belnap (OutOfBounds (..))
+import Hbt.Attic.Belnap (AsKnowledge (..), AsTruth (..), Belnap, BelnapVec, OutOfBounds (..))
 import Hbt.Attic.Belnap qualified as Belnap
 import System.Exit (exitFailure)
 import Test.Dwergaz
+import Test.QuickCheck (Arbitrary (..), Gen, Property, chooseInt, elements, forAll, isSuccess, quickCheckResult, vectorOf, (===))
+
+variants :: [Belnap]
+variants = [Belnap.Unknown, Belnap.True, Belnap.False, Belnap.Both]
 
 -- Scalar tests
 
@@ -20,8 +27,7 @@ scalarNotTests =
 
 scalarAndTests :: Test
 scalarAndTests =
-  let variants = [Belnap.Unknown, Belnap.True, Belnap.False, Belnap.Both]
-      -- Full 4x4 truth table per Wikipedia B4; rows/columns: N, T, F, B
+  let -- Full 4x4 truth table per Wikipedia B4; rows/columns: N, T, F, B
       expected =
         [ [Belnap.Unknown, Belnap.Unknown, Belnap.False, Belnap.False]
         , [Belnap.Unknown, Belnap.True, Belnap.False, Belnap.Both]
@@ -40,8 +46,7 @@ scalarAndTests =
 
 scalarOrTests :: Test
 scalarOrTests =
-  let variants = [Belnap.Unknown, Belnap.True, Belnap.False, Belnap.Both]
-      -- Full 4x4 truth table per Wikipedia B4; rows/columns: N, T, F, B
+  let -- Full 4x4 truth table per Wikipedia B4; rows/columns: N, T, F, B
       expected =
         [ [Belnap.Unknown, Belnap.True, Belnap.Unknown, Belnap.True]
         , [Belnap.True, Belnap.True, Belnap.True, Belnap.True]
@@ -404,6 +409,131 @@ vecImpliesDifferentWidthsTests =
         , assertEqual "get 50: Unknown implies True = True" (Right Belnap.True) (Belnap.get 50 result)
         ]
 
+-- Instance law tests
+
+latticeLawTests :: (Eq a, Show a, Lattice a) => String -> [a] -> Test
+latticeLawTests label vs =
+  group
+    ("Lattice laws: " ++ label)
+    [ group
+        "join associativity"
+        [ assertEqual
+            (show x ++ " \\/ (" ++ show y ++ " \\/ " ++ show z ++ ")")
+            (x \/ (y \/ z))
+            ((x \/ y) \/ z)
+        | x <- vs
+        , y <- vs
+        , z <- vs
+        ]
+    , group
+        "join commutativity"
+        [ assertEqual (show x ++ " \\/ " ++ show y) (x \/ y) (y \/ x)
+        | x <- vs
+        , y <- vs
+        ]
+    , group
+        "join idempotency"
+        [ assertEqual (show x ++ " \\/ " ++ show x) x (x \/ x)
+        | x <- vs
+        ]
+    , group
+        "meet associativity"
+        [ assertEqual
+            (show x ++ " /\\ (" ++ show y ++ " /\\ " ++ show z ++ ")")
+            (x /\ (y /\ z))
+            ((x /\ y) /\ z)
+        | x <- vs
+        , y <- vs
+        , z <- vs
+        ]
+    , group
+        "meet commutativity"
+        [ assertEqual (show x ++ " /\\ " ++ show y) (x /\ y) (y /\ x)
+        | x <- vs
+        , y <- vs
+        ]
+    , group
+        "meet idempotency"
+        [ assertEqual (show x ++ " /\\ " ++ show x) x (x /\ x)
+        | x <- vs
+        ]
+    , group
+        "absorption: x \\/ (x /\\ y)"
+        [ assertEqual (show x ++ " \\/ (" ++ show x ++ " /\\ " ++ show y ++ ")") x (x \/ (x /\ y))
+        | x <- vs
+        , y <- vs
+        ]
+    , group
+        "absorption: x /\\ (x \\/ y)"
+        [ assertEqual (show x ++ " /\\ (" ++ show x ++ " \\/ " ++ show y ++ ")") x (x /\ (x \/ y))
+        | x <- vs
+        , y <- vs
+        ]
+    ]
+
+boundedLawTests :: (Eq a, Show a, BoundedJoinSemiLattice a, BoundedMeetSemiLattice a) => String -> [a] -> Test
+boundedLawTests label vs =
+  group
+    ("Bounded lattice laws: " ++ label)
+    [ group
+        "bottom identity: x \\/ bottom"
+        [ assertEqual (show x ++ " \\/ bottom") x (x \/ bottom)
+        | x <- vs
+        ]
+    , group
+        "top identity: x /\\ top"
+        [ assertEqual (show x ++ " /\\ top") x (x /\ top)
+        | x <- vs
+        ]
+    ]
+
+asTruthVariants :: [AsTruth Belnap]
+asTruthVariants = map AsTruth variants
+
+asKnowledgeVariants :: [AsKnowledge Belnap]
+asKnowledgeVariants = map AsKnowledge variants
+
+-- QuickCheck properties for BelnapVec instance laws
+
+genBelnapVec :: Int -> Gen BelnapVec
+genBelnapVec width = do
+  values <- vectorOf width (elements variants)
+  pure $ foldl (\v (i, b) -> Belnap.set i b v) (Belnap.mkBelnapVec width) (zip [0 ..] values)
+
+instance Arbitrary BelnapVec where
+  arbitrary = chooseInt (0, 200) >>= genBelnapVec
+  shrink bv = [Belnap.truncate w bv | w <- shrink bv.width, w >= 0]
+
+vecLatticeQCProps :: (Eq a, Show a, Lattice a) => String -> (BelnapVec -> a) -> [(String, Property)]
+vecLatticeQCProps label wrap =
+  let gen w = wrap <$> genBelnapVec w
+      gen1 = chooseInt (0, 200) >>= gen
+      gen2 = chooseInt (0, 200) >>= \w -> (,) <$> gen w <*> gen w
+      gen3 = chooseInt (0, 200) >>= \w -> (,,) <$> gen w <*> gen w <*> gen w
+   in [ (label ++ " join associativity", forAll gen3 $ \(x, y, z) -> x \/ (y \/ z) === (x \/ y) \/ z)
+      , (label ++ " join commutativity", forAll gen2 $ \(x, y) -> x \/ y === y \/ x)
+      , (label ++ " join idempotency", forAll gen1 $ \x -> x \/ x === x)
+      , (label ++ " meet associativity", forAll gen3 $ \(x, y, z) -> x /\ (y /\ z) === (x /\ y) /\ z)
+      , (label ++ " meet commutativity", forAll gen2 $ \(x, y) -> x /\ y === y /\ x)
+      , (label ++ " meet idempotency", forAll gen1 $ \x -> x /\ x === x)
+      , (label ++ " absorption (join)", forAll gen2 $ \(x, y) -> x \/ (x /\ y) === x)
+      , (label ++ " absorption (meet)", forAll gen2 $ \(x, y) -> x /\ (x \/ y) === x)
+      ]
+
+quickCheckProps :: [(String, Property)]
+quickCheckProps =
+  vecLatticeQCProps "BelnapVec AsTruth" AsTruth
+    ++ vecLatticeQCProps "BelnapVec AsKnowledge" AsKnowledge
+    ++ [ ( "BelnapVec AsKnowledge bottom identity"
+         , forAll arbitrary $ \bv -> AsKnowledge bv \/ (bottom :: AsKnowledge BelnapVec) === AsKnowledge bv
+         )
+       ]
+
+runQuickCheckProps :: [(String, Property)] -> IO Bool
+runQuickCheckProps props = do
+  results <- mapM (\(name, prop) -> putStrLn ("Testing " ++ name ++ "...") >> quickCheckResult prop) props
+  pure (all isSuccess results)
+
 -- Top-level test runner
 
 allTests :: Test
@@ -430,10 +560,15 @@ allTests =
     , vecOrDifferentWidthsTests
     , vecMergeDifferentWidthsTests
     , vecImpliesDifferentWidthsTests
+    , latticeLawTests "AsTruth" asTruthVariants
+    , latticeLawTests "AsKnowledge" asKnowledgeVariants
+    , boundedLawTests "AsTruth" asTruthVariants
+    , boundedLawTests "AsKnowledge" asKnowledgeVariants
     ]
 
 main :: IO ()
 main = do
   let result = runTest allTests
   putStrLn (resultToString result)
-  unless (resultIsPassed result) exitFailure
+  qcOk <- runQuickCheckProps quickCheckProps
+  unless (resultIsPassed result && qcOk) exitFailure

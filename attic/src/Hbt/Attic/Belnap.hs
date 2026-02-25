@@ -15,7 +15,12 @@ module Hbt.Attic.Belnap
   , belnapAnd
   , belnapOr
   , merge
+  , consensus
   , implies
+
+    -- * Newtype wrappers
+  , AsTruth (..)
+  , AsKnowledge (..)
 
     -- * Scalar queries
   , isKnown
@@ -44,6 +49,7 @@ module Hbt.Attic.Belnap
   , vecOr
   , vecImplies
   , vecMerge
+  , vecConsensus
 
     -- * BelnapVec resize
   , truncate
@@ -63,6 +69,7 @@ module Hbt.Attic.Belnap
   )
 where
 
+import Algebra.Lattice (BoundedJoinSemiLattice (..), BoundedMeetSemiLattice (..), Lattice (..))
 import Control.Exception (Exception)
 import Data.Bits (complement, popCount, shiftL, shiftR, xor, (.&.), (.|.))
 import Data.Vector.Unboxed ((!))
@@ -129,6 +136,10 @@ merge (MkBelnap a) (MkBelnap b) = MkBelnap $ a .|. b
 implies :: Belnap -> Belnap -> Belnap
 implies a b = belnapOr (belnapNot a) b
 
+-- | Knowledge-ordering meet: keep only information that both sources agree on.
+consensus :: Belnap -> Belnap -> Belnap
+consensus (MkBelnap a) (MkBelnap b) = MkBelnap (a .&. b)
+
 -- Scalar queries
 
 -- | Returns 'Prelude.True' if this value carries any information (not 'Unknown').
@@ -148,6 +159,51 @@ toBool :: Belnap -> Maybe Bool
 toBool True = Just Prelude.True
 toBool False = Just Prelude.False
 toBool _ = Nothing
+
+-- Newtype wrappers
+
+-- | Wraps a value for the truth-ordering lattice.
+-- For 'Belnap': meet = 'belnapAnd', join = 'belnapOr', bottom = 'False', top = 'True'.
+-- For 'BelnapVec': meet = 'vecAnd', join = 'vecOr'.
+newtype AsTruth a = AsTruth {getTruth :: a}
+  deriving stock (Eq, Ord, Show)
+
+instance Lattice (AsTruth Belnap) where
+  AsTruth a \/ AsTruth b = AsTruth (belnapOr a b)
+  AsTruth a /\ AsTruth b = AsTruth (belnapAnd a b)
+
+instance BoundedJoinSemiLattice (AsTruth Belnap) where
+  bottom = AsTruth False
+
+instance BoundedMeetSemiLattice (AsTruth Belnap) where
+  top = AsTruth True
+
+instance Lattice (AsTruth BelnapVec) where
+  AsTruth a \/ AsTruth b = AsTruth (vecOr a b)
+  AsTruth a /\ AsTruth b = AsTruth (vecAnd a b)
+
+-- | Wraps a value for the knowledge-ordering lattice.
+-- For 'Belnap': meet = 'consensus', join = 'merge', bottom = 'Unknown', top = 'Both'.
+-- For 'BelnapVec': meet = 'vecConsensus', join = 'vecMerge'.
+newtype AsKnowledge a = AsKnowledge {getKnowledge :: a}
+  deriving stock (Eq, Ord, Show)
+
+instance Lattice (AsKnowledge Belnap) where
+  AsKnowledge a \/ AsKnowledge b = AsKnowledge (merge a b)
+  AsKnowledge a /\ AsKnowledge b = AsKnowledge (consensus a b)
+
+instance BoundedJoinSemiLattice (AsKnowledge Belnap) where
+  bottom = AsKnowledge Unknown
+
+instance BoundedMeetSemiLattice (AsKnowledge Belnap) where
+  top = AsKnowledge Both
+
+instance Lattice (AsKnowledge BelnapVec) where
+  AsKnowledge a \/ AsKnowledge b = AsKnowledge (vecMerge a b)
+  AsKnowledge a /\ AsKnowledge b = AsKnowledge (vecConsensus a b)
+
+instance BoundedJoinSemiLattice (AsKnowledge BelnapVec) where
+  bottom = AsKnowledge (mkBelnapVec 0)
 
 -- Error type
 
@@ -315,6 +371,11 @@ vecImplies a b = vecOr (vecNot a) b
 -- input widths.
 vecMerge :: BelnapVec -> BelnapVec -> BelnapVec
 vecMerge = vecBinop (.|.) (.|.)
+
+-- | Element-wise knowledge-ordering meet (consensus).  Output width is @max@
+-- of input widths.
+vecConsensus :: BelnapVec -> BelnapVec -> BelnapVec
+vecConsensus = vecBinop (.&.) (.&.)
 
 -- BelnapVec resize
 
