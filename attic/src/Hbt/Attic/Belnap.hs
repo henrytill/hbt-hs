@@ -298,11 +298,7 @@ vecBinop ::
   BelnapVec n ->
   BelnapVec n
 vecBinop posOp negOp (BelnapVec a) (BelnapVec b) =
-  BelnapVec $
-    VS.izipWith
-      (\fi x y -> if even (getFinite fi) then posOp x y else negOp x y)
-      a
-      b
+  BelnapVec $ VS.izipWith (\fi x y -> if even (getFinite fi) then posOp x y else negOp x y) a b
 
 -- | Element-wise Belnap AND.
 vecAnd :: BelnapVec n -> BelnapVec n -> BelnapVec n
