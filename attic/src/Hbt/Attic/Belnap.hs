@@ -77,6 +77,7 @@ where
 import Algebra.Lattice (BoundedJoinSemiLattice (..), BoundedMeetSemiLattice (..), Lattice (..))
 import Data.Bits (complement, popCount, shiftL, shiftR, xor, (.&.), (.|.))
 import Data.Finite (Finite, getFinite, natToFinite, packFinite)
+import Data.Monoid (All (..), Sum (..))
 import Data.Proxy (Proxy (..))
 import Data.Vector.Unboxed.Sized (Vector)
 import Data.Vector.Unboxed.Sized qualified as VS
@@ -199,9 +200,6 @@ bitsLog2 = 6
 bitsMask :: Int
 bitsMask = (1 `shiftL` bitsLog2) - 1
 
-wordsNeeded :: Int -> Int
-wordsNeeded n = (n + bitsMask) `shiftR` bitsLog2
-
 -- | Mask for valid bits in the last word.  Returns 'maxBound' when @n@ is a
 -- multiple of 64 (all bits in the last word are valid).
 tailMask :: Int -> Word64
@@ -217,10 +215,9 @@ maskTail :: forall n. (KnownNat n) => BelnapVec n -> BelnapVec n
 maskTail bv@(BelnapVec arr)
   | m == maxBound = bv
   | otherwise =
-      let base = 2 * (nw - 1)
+      let base = VS.length arr - 2
        in BelnapVec $ VS.unsafeAccum (.&.) arr [(base, m), (base + 1, m)]
   where
-    nw = wordsNeeded (natInt @n)
     m = tailMask (natInt @n)
 
 -- | Decompose a 'Belnap' value into its pos-plane and neg-plane fill words.
@@ -336,79 +333,63 @@ resize (BelnapVec arr) = maskTail . BelnapVec . VS.generate $ \fi ->
       arrWords = VS.length arr
    in if i < arrWords then VS.unsafeIndex arr i else 0
 
+-- BelnapVec folds
+
+-- | Fold over word pairs, supplying @(mask, pos_word, neg_word)@ to @f@ for
+-- each pair.  The mask is 'maxBound' for full words and 'tailMask' for the
+-- final partial word; callers that do not need it may ignore it with @\_@.
+foldMapWordPairs ::
+  forall n m.
+  (KnownNat n, Monoid m) =>
+  (Word64 -> Word64 -> Word64 -> m) ->
+  BelnapVec n ->
+  m
+foldMapWordPairs f (BelnapVec arr) =
+  foldl'
+    ( \acc i ->
+        acc
+          <> f
+            (if i == lastPair then tm else maxBound)
+            (VS.unsafeIndex arr i)
+            (VS.unsafeIndex arr (i + 1))
+    )
+    mempty
+    [0, 2 .. lastPair]
+  where
+    lastPair = VS.length arr - 2
+    tm = tailMask (natInt @n)
+
 -- BelnapVec queries
 
 -- | Returns 'Prelude.True' if no position is 'Both'.
 isConsistent :: forall n. (KnownNat n) => BelnapVec n -> Bool
-isConsistent (BelnapVec arr) =
-  all
-    (\i -> VS.unsafeIndex arr (2 * i) .&. VS.unsafeIndex arr (2 * i + 1) == 0)
-    [0 .. wordsNeeded (natInt @n) - 1]
+isConsistent = getAll . foldMapWordPairs (\_ pos neg -> All (pos .&. neg == 0))
 
 -- | Returns 'Prelude.True' if every position is 'True' or 'False'.
 isAllDetermined :: forall n. (KnownNat n) => BelnapVec n -> Bool
-isAllDetermined (BelnapVec arr) =
-  all
-    ( \i ->
-        let mask = if i + 1 == nw then tm else maxBound
-         in VS.unsafeIndex arr (2 * i) `xor` VS.unsafeIndex arr (2 * i + 1) == mask
-    )
-    [0 .. nw - 1]
-  where
-    nw = wordsNeeded (natInt @n)
-    tm = tailMask (natInt @n)
+isAllDetermined = getAll . foldMapWordPairs (\m pos neg -> All (pos `xor` neg == m))
 
 -- | Returns 'Prelude.True' if every position is 'True'.
 isAllTrue :: forall n. (KnownNat n) => BelnapVec n -> Bool
-isAllTrue (BelnapVec arr) =
-  all
-    ( \i ->
-        let mask = if i + 1 == nw then tm else maxBound
-         in VS.unsafeIndex arr (2 * i) == mask && VS.unsafeIndex arr (2 * i + 1) == 0
-    )
-    [0 .. nw - 1]
-  where
-    nw = wordsNeeded (natInt @n)
-    tm = tailMask (natInt @n)
+isAllTrue = getAll . foldMapWordPairs (\m pos neg -> All (pos .&. m == m && neg .&. m == 0))
 
 -- | Returns 'Prelude.True' if every position is 'False'.
 isAllFalse :: forall n. (KnownNat n) => BelnapVec n -> Bool
-isAllFalse (BelnapVec arr) =
-  all
-    ( \i ->
-        let mask = if i + 1 == nw then tm else maxBound
-         in VS.unsafeIndex arr (2 * i) == 0 && VS.unsafeIndex arr (2 * i + 1) == mask
-    )
-    [0 .. nw - 1]
-  where
-    nw = wordsNeeded (natInt @n)
-    tm = tailMask (natInt @n)
+isAllFalse = getAll . foldMapWordPairs (\m pos neg -> All (pos .&. m == 0 && neg .&. m == m))
 
 -- BelnapVec counts
 
 -- | Count positions where the value is 'True'.
 countTrue :: forall n. (KnownNat n) => BelnapVec n -> Int
-countTrue (BelnapVec arr) =
-  sum
-    [ popCount (VS.unsafeIndex arr (2 * i) .&. complement (VS.unsafeIndex arr (2 * i + 1)))
-    | i <- [0 .. wordsNeeded (natInt @n) - 1]
-    ]
+countTrue = getSum . foldMapWordPairs (\_ pos neg -> Sum (popCount (pos .&. complement neg)))
 
 -- | Count positions where the value is 'False'.
 countFalse :: forall n. (KnownNat n) => BelnapVec n -> Int
-countFalse (BelnapVec arr) =
-  sum
-    [ popCount (complement (VS.unsafeIndex arr (2 * i)) .&. VS.unsafeIndex arr (2 * i + 1))
-    | i <- [0 .. wordsNeeded (natInt @n) - 1]
-    ]
+countFalse = getSum . foldMapWordPairs (\_ pos neg -> Sum (popCount (complement pos .&. neg)))
 
 -- | Count positions where the value is 'Both'.
 countBoth :: forall n. (KnownNat n) => BelnapVec n -> Int
-countBoth (BelnapVec arr) =
-  sum
-    [ popCount (VS.unsafeIndex arr (2 * i) .&. VS.unsafeIndex arr (2 * i + 1))
-    | i <- [0 .. wordsNeeded (natInt @n) - 1]
-    ]
+countBoth = getSum . foldMapWordPairs (\_ pos neg -> Sum (popCount (pos .&. neg)))
 
 -- | Count positions where the value is 'Unknown'.
 countUnknown :: forall n. (KnownNat n) => BelnapVec n -> Int
