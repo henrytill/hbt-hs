@@ -20,15 +20,15 @@ module Hbt.Attic.Belnap
   , consensus
   , implies
 
-    -- * Newtype wrappers
-  , AsTruth (..)
-  , AsKnowledge (..)
-
     -- * Scalar queries
   , isKnown
   , isDetermined
   , isContradicted
   , toBool
+
+    -- * Newtype wrappers
+  , AsTruth (..)
+  , AsKnowledge (..)
 
     -- * Fin type
   , Finite
@@ -169,12 +169,6 @@ toBool True = Just Prelude.True
 toBool False = Just Prelude.False
 toBool _ = Nothing
 
--- Fin type
-
--- | Compile-time index literal: @fin \@i@ produces @Finite n@ when @(i + 1) <= n@.
-fin :: forall i n. (KnownNat i, KnownNat n, (i + 1) <= n) => Finite n
-fin = natToFinite (Proxy @i)
-
 -- Newtype wrappers
 
 -- | Wraps a value for the truth-ordering lattice.
@@ -228,6 +222,12 @@ instance (KnownNat n) => BoundedJoinSemiLattice (AsKnowledge (BelnapVec n)) wher
 
 instance (KnownNat n) => BoundedMeetSemiLattice (AsKnowledge (BelnapVec n)) where
   top = AsKnowledge allBoth
+
+-- Fin type
+
+-- | Compile-time index literal: @fin \@i@ produces @Finite n@ when @(i + 1) <= n@.
+fin :: forall i n. (KnownNat i, KnownNat n, (i + 1) <= n) => Finite n
+fin = natToFinite (Proxy @i)
 
 -- BelnapVec type
 
