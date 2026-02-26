@@ -91,6 +91,10 @@
                 commonmark-initial = hfinal.callCabal2nix "commonmark-initial" commonmark-initial-src { };
                 dwergaz = hfinal.callCabal2nix "dwergaz" dwergaz-src { };
                 uri-bytestring = hfinal.callCabal2nix "uri-bytestring" uri-bytestring-src { };
+                hbt-attic = hfinal.callCabal2nix "hbt-attic" (builtins.path {
+                  path = ./attic;
+                  name = "hbt-attic-src";
+                }) { };
                 hbt-cli = maybeStaticExecutable isStatic final prev (
                   hfinal.callCabal2nix "hbt-cli" (builtins.path {
                     path = ./cli;
@@ -125,6 +129,7 @@
       in
       {
         packages = rec {
+          hbt-attic = pkgs.haskell.packages.${ghcName}.hbt-attic;
           hbt-cli = pkgs.haskell.packages.${ghcName}.hbt-cli;
           hbt-cli-static = pkgsMusl.haskell.packages.${ghcName}.hbt-cli;
           hbt-pinboard-client = pkgs.haskell.packages.${ghcName}.hbt-pinboard-client;
@@ -133,6 +138,7 @@
             pname = "hbt-all";
             version = "0.1.0.0";
             paths = [
+              hbt-attic
               hbt-cli
               hbt-pinboard-client
             ];
@@ -141,6 +147,7 @@
             pname = "hbt-all-static";
             version = "0.1.0.0";
             paths = [
+              hbt-attic
               hbt-cli-static
               hbt-pinboard-client-static
             ];
@@ -149,6 +156,7 @@
         };
         devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
           packages = hpkgs: [
+            hpkgs.hbt-attic
             hpkgs.hbt-cli
             hpkgs.hbt-core
             hpkgs.hbt-pinboard-client
