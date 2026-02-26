@@ -72,18 +72,41 @@ scalarOrTests =
 
 scalarMergeTests :: Test
 scalarMergeTests =
-  group
-    "scalar merge"
-    [ assertEqual "Unknown merge Unknown" Belnap.Unknown (Belnap.merge Belnap.Unknown Belnap.Unknown)
-    , assertEqual "Unknown merge True" Belnap.True (Belnap.merge Belnap.Unknown Belnap.True)
-    , assertEqual "Unknown merge False" Belnap.False (Belnap.merge Belnap.Unknown Belnap.False)
-    , assertEqual "True merge False" Belnap.Both (Belnap.merge Belnap.True Belnap.False)
-    , assertEqual "Both merge True" Belnap.Both (Belnap.merge Belnap.Both Belnap.True)
-    , assertEqual "Both merge False" Belnap.Both (Belnap.merge Belnap.Both Belnap.False)
-    , assertEqual "Both merge Unknown" Belnap.Both (Belnap.merge Belnap.Both Belnap.Unknown)
-    , assertEqual "True merge True" Belnap.True (Belnap.merge Belnap.True Belnap.True)
-    , assertEqual "False merge False" Belnap.False (Belnap.merge Belnap.False Belnap.False)
-    ]
+  let -- Full 4x4 truth table; rows/columns: N, T, F, B
+      expected =
+        [ [Belnap.Unknown, Belnap.True, Belnap.False, Belnap.Both]
+        , [Belnap.True, Belnap.True, Belnap.Both, Belnap.Both]
+        , [Belnap.False, Belnap.Both, Belnap.False, Belnap.Both]
+        , [Belnap.Both, Belnap.Both, Belnap.Both, Belnap.Both]
+        ]
+      cases =
+        [ assertEqual
+            (show a ++ " merge " ++ show b)
+            (expected !! i !! j)
+            (Belnap.merge a b)
+        | (i, a) <- zip [0 ..] variants
+        , (j, b) <- zip [0 ..] variants
+        ]
+   in group "scalar merge truth table" cases
+
+scalarConsensusTests :: Test
+scalarConsensusTests =
+  let -- Full 4x4 truth table; rows/columns: N, T, F, B
+      expected =
+        [ [Belnap.Unknown, Belnap.Unknown, Belnap.Unknown, Belnap.Unknown]
+        , [Belnap.Unknown, Belnap.True, Belnap.Unknown, Belnap.True]
+        , [Belnap.Unknown, Belnap.Unknown, Belnap.False, Belnap.False]
+        , [Belnap.Unknown, Belnap.True, Belnap.False, Belnap.Both]
+        ]
+      cases =
+        [ assertEqual
+            (show a ++ " consensus " ++ show b)
+            (expected !! i !! j)
+            (Belnap.consensus a b)
+        | (i, a) <- zip [0 ..] variants
+        , (j, b) <- zip [0 ..] variants
+        ]
+   in group "scalar consensus truth table" cases
 
 scalarQueryTests :: Test
 scalarQueryTests =
@@ -439,6 +462,7 @@ allTests =
     , scalarAndTests
     , scalarOrTests
     , scalarMergeTests
+    , scalarConsensusTests
     , scalarQueryTests
     , vecGetSetTests
     , vecBulkAndTests
