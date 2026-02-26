@@ -40,8 +40,11 @@ library
     default-language: GHC2024
     build-depends:
         base >=4.20.1 && <4.23,
+        finite-typelits ^>=0.2.1.0,
+        ghc-typelits-knownnat ^>=0.7.12,
         lattices ^>=2.2.1,
-        vector ^>=0.13.2.0
+        vector ^>=0.13.2.0,
+        vector-sized ^>=1.6.1
 
 test-suite hbt-attic-test
     import: warnings, exts
@@ -54,6 +57,7 @@ test-suite hbt-attic-test
     build-depends:
         base >=4.20.1 && <4.23,
         dwergaz ^>=0.3.1.0,
+        finite-typelits ^>=0.2.1.0,
         lattices ^>=2.2.1,
         QuickCheck >=2.15.0.1 && <2.17,
         hbt-attic

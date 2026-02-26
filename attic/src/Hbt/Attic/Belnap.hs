@@ -1,6 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE NoStarIsType #-}
+{-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
 
 module Hbt.Attic.Belnap
   ( -- * Scalar type
@@ -28,16 +32,20 @@ module Hbt.Attic.Belnap
   , isContradicted
   , toBool
 
-    -- * Error type
-  , OutOfBounds (..)
+    -- * Fin type
+  , Finite
+  , getFinite
+  , packFinite
+  , fin
 
     -- * Bitvector type
-  , BelnapVec (..)
+  , BelnapVec
 
     -- * BelnapVec construction
   , mkBelnapVec
   , allTrue
   , allFalse
+  , allBoth
 
     -- * BelnapVec scalar access
   , get
@@ -70,12 +78,15 @@ module Hbt.Attic.Belnap
 where
 
 import Algebra.Lattice (BoundedJoinSemiLattice (..), BoundedMeetSemiLattice (..), Lattice (..))
-import Control.Exception (Exception)
 import Data.Bits (complement, popCount, shiftL, shiftR, xor, (.&.), (.|.))
-import Data.Vector.Unboxed ((!))
-import Data.Vector.Unboxed qualified as Unboxed
+import Data.Finite (Finite, getFinite, natToFinite, packFinite)
+import Data.Proxy (Proxy (..))
+import Data.Vector.Unboxed.Sized (Vector)
+import Data.Vector.Unboxed.Sized qualified as VS
 import Data.Word (Word64, Word8)
-import Prelude hiding (False, True, truncate, words)
+import GHC.Records (HasField (..))
+import GHC.TypeNats (Div, KnownNat, Nat, natVal, type (*), type (+), type (<=))
+import Prelude hiding (False, True, truncate)
 import Prelude qualified
 
 -- Scalar type
@@ -160,6 +171,12 @@ toBool True = Just Prelude.True
 toBool False = Just Prelude.False
 toBool _ = Nothing
 
+-- Fin type
+
+-- | Compile-time index literal: @fin \@i@ produces @Finite n@ when @(i + 1) <= n@.
+fin :: forall i n. (KnownNat i, KnownNat n, (i + 1) <= n) => Finite n
+fin = natToFinite (Proxy @i)
+
 -- Newtype wrappers
 
 -- | Wraps a value for the truth-ordering lattice.
@@ -178,9 +195,15 @@ instance BoundedJoinSemiLattice (AsTruth Belnap) where
 instance BoundedMeetSemiLattice (AsTruth Belnap) where
   top = AsTruth True
 
-instance Lattice (AsTruth BelnapVec) where
+instance (KnownNat n) => Lattice (AsTruth (BelnapVec n)) where
   AsTruth a \/ AsTruth b = AsTruth (vecOr a b)
   AsTruth a /\ AsTruth b = AsTruth (vecAnd a b)
+
+instance (KnownNat n) => BoundedJoinSemiLattice (AsTruth (BelnapVec n)) where
+  bottom = AsTruth allFalse
+
+instance (KnownNat n) => BoundedMeetSemiLattice (AsTruth (BelnapVec n)) where
+  top = AsTruth allTrue
 
 -- | Wraps a value for the knowledge-ordering lattice.
 -- For 'Belnap': meet = 'consensus', join = 'merge', bottom = 'Unknown', top = 'Both'.
@@ -198,31 +221,32 @@ instance BoundedJoinSemiLattice (AsKnowledge Belnap) where
 instance BoundedMeetSemiLattice (AsKnowledge Belnap) where
   top = AsKnowledge Both
 
-instance Lattice (AsKnowledge BelnapVec) where
+instance (KnownNat n) => Lattice (AsKnowledge (BelnapVec n)) where
   AsKnowledge a \/ AsKnowledge b = AsKnowledge (vecMerge a b)
   AsKnowledge a /\ AsKnowledge b = AsKnowledge (vecConsensus a b)
 
-instance BoundedJoinSemiLattice (AsKnowledge BelnapVec) where
-  bottom = AsKnowledge (mkBelnapVec 0)
+instance (KnownNat n) => BoundedJoinSemiLattice (AsKnowledge (BelnapVec n)) where
+  bottom = AsKnowledge mkBelnapVec
 
--- Error type
-
-data OutOfBounds = OutOfBounds
-  deriving stock (Eq, Show)
-  deriving anyclass (Exception)
+instance (KnownNat n) => BoundedMeetSemiLattice (AsKnowledge (BelnapVec n)) where
+  top = AsKnowledge allBoth
 
 -- BelnapVec type
+
+-- | Storage size in 'Word64' words for a 'BelnapVec' of @n@ elements.
+-- Two bitplanes (pos, neg) interleaved, each needing @ceil(n\/64)@ words.
+type StorageSize n = 2 * Div (n + 63) 64
 
 -- | Packed Belnap bitvector: two-bitplane interleaved representation.
 --
 -- Layout: @[pos_0, neg_0, pos_1, neg_1, ...]@ where each word covers 64 positions.
 -- Element @i@ lives in word pair @i \`shiftR\` 6@, at bit @i .&. 63@.
 -- Unused high bits in the last word pair are always zero.
-data BelnapVec = BelnapVec
-  { width :: Int
-  , words :: Unboxed.Vector Word64
-  }
+newtype BelnapVec (n :: Nat) = BelnapVec (Vector (StorageSize n) Word64)
   deriving stock (Eq, Show)
+
+instance (KnownNat n) => HasField "width" (BelnapVec n) Int where
+  getField _ = fromIntegral (natVal (Proxy @n))
 
 -- Internal helpers
 
@@ -242,21 +266,19 @@ tailMask n =
   let r = n .&. bitsMask
    in if r == 0 then maxBound else (1 `shiftL` r) - 1
 
+width :: forall n. (KnownNat n) => Int
+width = fromIntegral (natVal (Proxy @n))
+
 -- | Zero out unused high bits in the tail word pair.
---
--- 'tailMask' returns 'maxBound' when @width@ is zero or an exact multiple of
--- 64, meaning every bit in the last word pair is valid and no masking is
--- needed.
-maskTail :: BelnapVec -> BelnapVec
-maskTail bv
+maskTail :: forall n. (KnownNat n) => BelnapVec n -> BelnapVec n
+maskTail bv@(BelnapVec arr)
   | m == maxBound = bv
   | otherwise =
-      let nw = wordsNeeded bv.width
-          base = 2 * (nw - 1)
-          words = Unboxed.accum (.&.) bv.words [(base, m), (base + 1, m)]
-       in bv {words}
+      let base = 2 * (nw - 1)
+       in BelnapVec $ VS.unsafeAccum (.&.) arr [(base, m), (base + 1, m)]
   where
-    m = tailMask bv.width
+    nw = wordsNeeded (width @n)
+    m = tailMask (width @n)
 
 -- | Decompose a 'Belnap' value into its pos-plane and neg-plane fill words.
 bitPlanes :: Belnap -> (Word64, Word64)
@@ -266,53 +288,47 @@ bitPlanes (MkBelnap bits) =
   )
 
 -- | Create a vector with every element set to the given value.
-filled :: Int -> Belnap -> BelnapVec
-filled width fill =
-  let nw = wordsNeeded width
-      (posW, negW) = bitPlanes fill
-      words = Unboxed.generate (2 * nw) (\i -> if even i then posW else negW)
-   in maskTail $ BelnapVec {width, words}
+filled :: forall n. (KnownNat n) => Belnap -> BelnapVec n
+filled fill =
+  let (posW, negW) = bitPlanes fill
+   in maskTail $ BelnapVec $ VS.generate $ \fi ->
+        if even (getFinite fi) then posW else negW
 
 -- BelnapVec construction
 
--- | Create a vector of @width@ elements, all 'Unknown'.
-mkBelnapVec :: Int -> BelnapVec
-mkBelnapVec width = BelnapVec {width, words = Unboxed.replicate (2 * wordsNeeded width) 0}
+-- | Create a vector of @n@ elements, all 'Unknown'.
+mkBelnapVec :: (KnownNat n) => BelnapVec n
+mkBelnapVec = BelnapVec (VS.replicate 0)
 
--- | Create a vector of @width@ elements, all 'True'.
-allTrue :: Int -> BelnapVec
-allTrue width = filled width True
+-- | Create a vector of @n@ elements, all 'True'.
+allTrue :: (KnownNat n) => BelnapVec n
+allTrue = filled True
 
--- | Create a vector of @width@ elements, all 'False'.
-allFalse :: Int -> BelnapVec
-allFalse width = filled width False
+-- | Create a vector of @n@ elements, all 'False'.
+allFalse :: (KnownNat n) => BelnapVec n
+allFalse = filled False
+
+-- | Create a vector of @n@ elements, all 'Both'.
+allBoth :: (KnownNat n) => BelnapVec n
+allBoth = filled Both
 
 -- BelnapVec scalar access
 
--- | Read element @i@.  Returns 'Left' 'OutOfBounds' if @i >= width@.
-get :: Int -> BelnapVec -> Either OutOfBounds Belnap
-get i bv
-  | i >= bv.width = Left OutOfBounds
-  | otherwise =
-      let w = i `shiftR` bitsLog2
-          b = i .&. bitsMask
-          posW = bv.words ! (2 * w)
-          negW = bv.words ! (2 * w + 1)
-          bitsW = (((negW `shiftR` b) .&. 1) `shiftL` 1) .|. ((posW `shiftR` b) .&. 1) :: Word64
-       in Right $ MkBelnap (fromIntegral bitsW)
+-- | Read element at index @fi@.
+get :: Finite n -> BelnapVec n -> Belnap
+get fi (BelnapVec arr) =
+  let i = fromIntegral (getFinite fi) :: Int
+      w = i `shiftR` bitsLog2
+      b = i .&. bitsMask
+      posW = VS.unsafeIndex arr (2 * w)
+      negW = VS.unsafeIndex arr (2 * w + 1)
+      bitsW = (((negW `shiftR` b) .&. 1) `shiftL` 1) .|. ((posW `shiftR` b) .&. 1) :: Word64
+   in MkBelnap (fromIntegral bitsW)
 
-growTo :: Int -> BelnapVec -> BelnapVec
-growTo width bv =
-  let oldNw = wordsNeeded bv.width
-      newNw = wordsNeeded width
-      addition = Unboxed.replicate (2 * (newNw - oldNw)) 0
-   in BelnapVec {width, words = Unboxed.concat [bv.words, addition]}
-
--- | Write element @i@.  Auto-grows the vector (filling with 'Unknown') when
--- @i >= width@, mirroring the Rust @set@ behaviour.
-set :: Int -> Belnap -> BelnapVec -> BelnapVec
-set i (MkBelnap bits) bv =
-  let grown = if i >= bv.width then growTo (i + 1) bv else bv
+-- | Write element at index @fi@.
+set :: Finite n -> Belnap -> BelnapVec n -> BelnapVec n
+set fi (MkBelnap bits) (BelnapVec arr) =
+  let i = fromIntegral (getFinite fi) :: Int
       w = i `shiftR` bitsLog2
       b = i .&. bitsMask
       bitMask = complement (1 `shiftL` b) :: Word64
@@ -320,180 +336,162 @@ set i (MkBelnap bits) bv =
       posBit = (bitsW .&. 1) `shiftL` b
       negBit = ((bitsW `shiftR` 1) .&. 1) `shiftL` b
       base = 2 * w
-      words = Unboxed.accum (\old new -> (old .&. bitMask) .|. new) grown.words [(base, posBit), (base + 1, negBit)]
-   in grown {words}
+   in BelnapVec $
+        VS.unsafeAccum
+          (\old new -> (old .&. bitMask) .|. new)
+          arr
+          [(base, posBit), (base + 1, negBit)]
 
 -- BelnapVec bulk operations
 
 -- | Element-wise Belnap NOT.
-vecNot :: BelnapVec -> BelnapVec
-vecNot bv =
-  BelnapVec
-    { width = bv.width
-    , words = Unboxed.generate n (\i -> bv.words ! (i `xor` 1))
-    }
-  where
-    n = Unboxed.length bv.words
+vecNot :: (KnownNat n) => BelnapVec n -> BelnapVec n
+vecNot (BelnapVec arr) =
+  BelnapVec $ VS.generate $ \fi ->
+    let i = fromIntegral (getFinite fi) :: Int
+     in VS.unsafeIndex arr (i `xor` 1)
 
 vecBinop ::
+  (KnownNat n) =>
   (Word64 -> Word64 -> Word64) ->
   (Word64 -> Word64 -> Word64) ->
-  BelnapVec ->
-  BelnapVec ->
-  BelnapVec
-vecBinop posOp negOp a b = BelnapVec {width, words = Unboxed.generate n go}
-  where
-    width = max a.width b.width
-    nw = wordsNeeded width
-    n = 2 * nw
-    lenA = Unboxed.length a.words
-    lenB = Unboxed.length b.words
-    getA i = if i < lenA then a.words ! i else 0
-    getB i = if i < lenB then b.words ! i else 0
-    go i
-      | even i = posOp (getA i) (getB i)
-      | otherwise = negOp (getA i) (getB i)
+  BelnapVec n ->
+  BelnapVec n ->
+  BelnapVec n
+vecBinop posOp negOp (BelnapVec a) (BelnapVec b) =
+  BelnapVec $ VS.generate $ \fi ->
+    let i = fromIntegral (getFinite fi) :: Int
+     in if even i
+          then posOp (VS.unsafeIndex a i) (VS.unsafeIndex b i)
+          else negOp (VS.unsafeIndex a i) (VS.unsafeIndex b i)
 
--- | Element-wise Belnap AND.  Output width is @max@ of input widths; the
--- shorter vector is extended with 'Unknown'.
-vecAnd :: BelnapVec -> BelnapVec -> BelnapVec
+-- | Element-wise Belnap AND.
+vecAnd :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
 vecAnd = vecBinop (.&.) (.|.)
 
--- | Element-wise Belnap OR.  Output width is @max@ of input widths.
-vecOr :: BelnapVec -> BelnapVec -> BelnapVec
+-- | Element-wise Belnap OR.
+vecOr :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
 vecOr = vecBinop (.|.) (.&.)
 
 -- | Element-wise Belnap implication: @vecImplies a b = vecOr (vecNot a) b@.
-vecImplies :: BelnapVec -> BelnapVec -> BelnapVec
+vecImplies :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
 vecImplies a b = vecOr (vecNot a) b
 
--- | Element-wise knowledge-ordering join (merge).  Output width is @max@ of
--- input widths.
-vecMerge :: BelnapVec -> BelnapVec -> BelnapVec
+-- | Element-wise knowledge-ordering join (merge).
+vecMerge :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
 vecMerge = vecBinop (.|.) (.|.)
 
--- | Element-wise knowledge-ordering meet (consensus).  Output width is @max@
--- of input widths.
-vecConsensus :: BelnapVec -> BelnapVec -> BelnapVec
+-- | Element-wise knowledge-ordering meet (consensus).
+vecConsensus :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
 vecConsensus = vecBinop (.&.) (.&.)
 
 -- BelnapVec resize
 
--- | Shrink the vector to @width@ elements.  No-op if @width >= bv.width@.
-truncate :: Int -> BelnapVec -> BelnapVec
-truncate width bv
-  | width >= bv.width = bv
-  | otherwise =
-      let nw = wordsNeeded width
-          words = Unboxed.take (2 * nw) bv.words
-       in maskTail $ BelnapVec {width, words}
+-- | Truncate or extend to @n@ elements (unknown-filled), from @m@-wide source.
+truncate :: forall m n. (KnownNat m, KnownNat n) => BelnapVec m -> BelnapVec n
+truncate (BelnapVec srcArr) = maskTail $ BelnapVec $ VS.generate $ \fi ->
+  let i = fromIntegral (getFinite fi) :: Int
+   in if i < srcWords then VS.unsafeIndex srcArr i else 0
+  where
+    srcWords = 2 * wordsNeeded (width @m)
 
--- | Resize to @width@ elements, filling new positions with @fill@.
--- Shrinks (discarding elements) when @width <= bv.width@.
-resize :: Int -> Belnap -> BelnapVec -> BelnapVec
-resize width fill bv
-  | width <= bv.width = truncate width bv
-  | otherwise =
-      let oldNw = wordsNeeded bv.width
-          newNw = wordsNeeded width
-          (posW, negW) = bitPlanes fill
-          highMask = complement (tailMask bv.width)
-          base = 2 * (oldNw - 1)
-          -- Fill unused high bits in the current last word pair (if any).
-          filledWords =
-            if isKnown fill && highMask /= 0
-              then Unboxed.accum (.|.) bv.words [(base, posW .&. highMask), (base + 1, negW .&. highMask)]
-              else bv.words
-          -- Append new full word pairs.
-          extension =
-            Unboxed.generate
-              (2 * (newNw - oldNw))
-              (\i -> if even i then posW else negW)
-          updated = BelnapVec {width, words = Unboxed.concat [filledWords, extension]}
-       in if isKnown fill then maskTail updated else updated
+-- | Resize to @n@ elements, filling new positions with @fill@.
+-- Shrinks (discarding elements) when @n <= m@.
+resize :: forall m n. (KnownNat m, KnownNat n) => Belnap -> BelnapVec m -> BelnapVec n
+resize fill src
+  | width @n <= width @m = truncate src
+  | otherwise = maskTail $ BelnapVec $ VS.generate $ \fi ->
+      let i = fromIntegral (getFinite fi) :: Int
+          isPos = even i
+          wordPairIdx = i `div` 2
+       in if i < srcWords
+            then
+              let base = VS.unsafeIndex srcArr i
+                  highMask = complement (tailMask (width @m))
+               in if isKnown fill && wordPairIdx == srcNw - 1 && highMask /= 0
+                    then base .|. (if isPos then posW .&. highMask else negW .&. highMask)
+                    else base
+            else if isPos then posW else negW
+  where
+    BelnapVec srcArr = src
+    srcNw = wordsNeeded (width @m)
+    srcWords = 2 * srcNw
+    (posW, negW) = bitPlanes fill
 
 -- BelnapVec queries
 
 -- | Returns 'Prelude.True' if no position is 'Both'.
-isConsistent :: BelnapVec -> Bool
-isConsistent bv =
+isConsistent :: forall n. (KnownNat n) => BelnapVec n -> Bool
+isConsistent (BelnapVec arr) =
   all
-    (\i -> bv.words ! (2 * i) .&. bv.words ! (2 * i + 1) == 0)
-    [0 .. nw - 1]
-  where
-    nw = wordsNeeded bv.width
+    (\i -> VS.unsafeIndex arr (2 * i) .&. VS.unsafeIndex arr (2 * i + 1) == 0)
+    [0 .. wordsNeeded (width @n) - 1]
 
 -- | Returns 'Prelude.True' if every position is 'True' or 'False'.
-isAllDetermined :: BelnapVec -> Bool
-isAllDetermined bv =
+isAllDetermined :: forall n. (KnownNat n) => BelnapVec n -> Bool
+isAllDetermined (BelnapVec arr) =
   all
     ( \i ->
         let mask = if i + 1 == nw then tm else maxBound
-         in bv.words ! (2 * i) `xor` bv.words ! (2 * i + 1) == mask
+         in VS.unsafeIndex arr (2 * i) `xor` VS.unsafeIndex arr (2 * i + 1) == mask
     )
     [0 .. nw - 1]
   where
-    nw = wordsNeeded bv.width
-    tm = tailMask bv.width
+    nw = wordsNeeded (width @n)
+    tm = tailMask (width @n)
 
 -- | Returns 'Prelude.True' if every position is 'True'.
-isAllTrue :: BelnapVec -> Bool
-isAllTrue bv =
+isAllTrue :: forall n. (KnownNat n) => BelnapVec n -> Bool
+isAllTrue (BelnapVec arr) =
   all
     ( \i ->
         let mask = if i + 1 == nw then tm else maxBound
-         in bv.words ! (2 * i) == mask && bv.words ! (2 * i + 1) == 0
+         in VS.unsafeIndex arr (2 * i) == mask && VS.unsafeIndex arr (2 * i + 1) == 0
     )
     [0 .. nw - 1]
   where
-    nw = wordsNeeded bv.width
-    tm = tailMask bv.width
+    nw = wordsNeeded (width @n)
+    tm = tailMask (width @n)
 
 -- | Returns 'Prelude.True' if every position is 'False'.
-isAllFalse :: BelnapVec -> Bool
-isAllFalse bv =
+isAllFalse :: forall n. (KnownNat n) => BelnapVec n -> Bool
+isAllFalse (BelnapVec arr) =
   all
     ( \i ->
         let mask = if i + 1 == nw then tm else maxBound
-         in bv.words ! (2 * i) == 0 && bv.words ! (2 * i + 1) == mask
+         in VS.unsafeIndex arr (2 * i) == 0 && VS.unsafeIndex arr (2 * i + 1) == mask
     )
     [0 .. nw - 1]
   where
-    nw = wordsNeeded bv.width
-    tm = tailMask bv.width
+    nw = wordsNeeded (width @n)
+    tm = tailMask (width @n)
 
 -- BelnapVec counts
 
 -- | Count positions where the value is 'True'.
-countTrue :: BelnapVec -> Int
-countTrue bv =
+countTrue :: forall n. (KnownNat n) => BelnapVec n -> Int
+countTrue (BelnapVec arr) =
   sum
-    [ popCount (bv.words ! (2 * i) .&. complement (bv.words ! (2 * i + 1)))
-    | i <- [0 .. nw - 1]
+    [ popCount (VS.unsafeIndex arr (2 * i) .&. complement (VS.unsafeIndex arr (2 * i + 1)))
+    | i <- [0 .. wordsNeeded (width @n) - 1]
     ]
-  where
-    nw = wordsNeeded bv.width
 
 -- | Count positions where the value is 'False'.
-countFalse :: BelnapVec -> Int
-countFalse bv =
+countFalse :: forall n. (KnownNat n) => BelnapVec n -> Int
+countFalse (BelnapVec arr) =
   sum
-    [ popCount (complement (bv.words ! (2 * i)) .&. bv.words ! (2 * i + 1))
-    | i <- [0 .. nw - 1]
+    [ popCount (complement (VS.unsafeIndex arr (2 * i)) .&. VS.unsafeIndex arr (2 * i + 1))
+    | i <- [0 .. wordsNeeded (width @n) - 1]
     ]
-  where
-    nw = wordsNeeded bv.width
 
 -- | Count positions where the value is 'Both'.
-countBoth :: BelnapVec -> Int
-countBoth bv =
+countBoth :: forall n. (KnownNat n) => BelnapVec n -> Int
+countBoth (BelnapVec arr) =
   sum
-    [ popCount (bv.words ! (2 * i) .&. bv.words ! (2 * i + 1))
-    | i <- [0 .. nw - 1]
+    [ popCount (VS.unsafeIndex arr (2 * i) .&. VS.unsafeIndex arr (2 * i + 1))
+    | i <- [0 .. wordsNeeded (width @n) - 1]
     ]
-  where
-    nw = wordsNeeded bv.width
 
 -- | Count positions where the value is 'Unknown'.
-countUnknown :: BelnapVec -> Int
-countUnknown bv = bv.width - countTrue bv - countFalse bv - countBoth bv
+countUnknown :: forall n. (KnownNat n) => BelnapVec n -> Int
+countUnknown bv = width @n - countTrue bv - countFalse bv - countBoth bv
