@@ -26,10 +26,6 @@ module Hbt.Attic.Belnap
   , isContradicted
   , toBool
 
-    -- * Newtype wrappers
-  , AsTruth (..)
-  , AsKnowledge (..)
-
     -- * Fin type
   , Finite
   , getFinite
@@ -58,7 +54,6 @@ module Hbt.Attic.Belnap
   , vecConsensus
 
     -- * BelnapVec resize
-  , truncate
   , resize
 
     -- * BelnapVec queries
@@ -72,6 +67,10 @@ module Hbt.Attic.Belnap
   , countFalse
   , countBoth
   , countUnknown
+
+    -- * Newtype wrappers
+  , AsTruth (..)
+  , AsKnowledge (..)
   )
 where
 
@@ -84,7 +83,7 @@ import Data.Vector.Unboxed.Sized qualified as VS
 import Data.Word (Word64, Word8)
 import GHC.Records (HasField (..))
 import GHC.TypeNats (Div, KnownNat, Nat, natVal, type (*), type (+), type (<=))
-import Prelude hiding (False, True, truncate)
+import Prelude hiding (False, True)
 import Prelude qualified
 
 -- Scalar type
@@ -141,9 +140,9 @@ belnapOr (MkBelnap a) (MkBelnap b) =
 merge :: Belnap -> Belnap -> Belnap
 merge (MkBelnap a) (MkBelnap b) = MkBelnap $ a .|. b
 
--- | Belnap implication: @implies a b = belnapOr (belnapNot a) b@.
+-- | Belnap implication: @implies a = belnapOr (belnapNot a)@.
 implies :: Belnap -> Belnap -> Belnap
-implies a b = belnapOr (belnapNot a) b
+implies a = belnapOr (belnapNot a)
 
 -- | Knowledge-ordering meet: keep only information that both sources agree on.
 consensus :: Belnap -> Belnap -> Belnap
@@ -168,60 +167,6 @@ toBool :: Belnap -> Maybe Bool
 toBool True = Just Prelude.True
 toBool False = Just Prelude.False
 toBool _ = Nothing
-
--- Newtype wrappers
-
--- | Wraps a value for the truth-ordering lattice.
--- For 'Belnap': meet = 'belnapAnd', join = 'belnapOr', bottom = 'False', top = 'True'.
--- For 'BelnapVec': meet = 'vecAnd', join = 'vecOr'.
-newtype AsTruth a = AsTruth {getTruth :: a}
-  deriving stock (Eq, Ord, Show)
-
-instance Lattice (AsTruth Belnap) where
-  AsTruth a \/ AsTruth b = AsTruth (belnapOr a b)
-  AsTruth a /\ AsTruth b = AsTruth (belnapAnd a b)
-
-instance BoundedJoinSemiLattice (AsTruth Belnap) where
-  bottom = AsTruth False
-
-instance BoundedMeetSemiLattice (AsTruth Belnap) where
-  top = AsTruth True
-
-instance Lattice (AsTruth (BelnapVec n)) where
-  AsTruth a \/ AsTruth b = AsTruth (vecOr a b)
-  AsTruth a /\ AsTruth b = AsTruth (vecAnd a b)
-
-instance (KnownNat n) => BoundedJoinSemiLattice (AsTruth (BelnapVec n)) where
-  bottom = AsTruth allFalse
-
-instance (KnownNat n) => BoundedMeetSemiLattice (AsTruth (BelnapVec n)) where
-  top = AsTruth allTrue
-
--- | Wraps a value for the knowledge-ordering lattice.
--- For 'Belnap': meet = 'consensus', join = 'merge', bottom = 'Unknown', top = 'Both'.
--- For 'BelnapVec': meet = 'vecConsensus', join = 'vecMerge'.
-newtype AsKnowledge a = AsKnowledge {getKnowledge :: a}
-  deriving stock (Eq, Ord, Show)
-
-instance Lattice (AsKnowledge Belnap) where
-  AsKnowledge a \/ AsKnowledge b = AsKnowledge (merge a b)
-  AsKnowledge a /\ AsKnowledge b = AsKnowledge (consensus a b)
-
-instance BoundedJoinSemiLattice (AsKnowledge Belnap) where
-  bottom = AsKnowledge Unknown
-
-instance BoundedMeetSemiLattice (AsKnowledge Belnap) where
-  top = AsKnowledge Both
-
-instance Lattice (AsKnowledge (BelnapVec n)) where
-  AsKnowledge a \/ AsKnowledge b = AsKnowledge (vecMerge a b)
-  AsKnowledge a /\ AsKnowledge b = AsKnowledge (vecConsensus a b)
-
-instance (KnownNat n) => BoundedJoinSemiLattice (AsKnowledge (BelnapVec n)) where
-  bottom = AsKnowledge mkBelnapVec
-
-instance (KnownNat n) => BoundedMeetSemiLattice (AsKnowledge (BelnapVec n)) where
-  top = AsKnowledge allBoth
 
 -- Fin type
 
@@ -289,7 +234,7 @@ bitPlanes (MkBelnap bits) =
 filled :: forall n. (KnownNat n) => Belnap -> BelnapVec n
 filled fill =
   let (posW, negW) = bitPlanes fill
-   in maskTail $ BelnapVec $ VS.generate $ \fi ->
+   in maskTail . BelnapVec . VS.generate $ \fi ->
         if even (getFinite fi) then posW else negW
 
 -- BelnapVec construction
@@ -345,7 +290,7 @@ set fi (MkBelnap bits) (BelnapVec arr) =
 -- | Element-wise Belnap NOT.
 vecNot :: (KnownNat n) => BelnapVec n -> BelnapVec n
 vecNot (BelnapVec arr) =
-  BelnapVec $ VS.generate $ \fi ->
+  BelnapVec . VS.generate $ \fi ->
     let i = fromIntegral (getFinite fi) :: Int
      in VS.unsafeIndex arr (i `xor` 1)
 
@@ -370,9 +315,9 @@ vecAnd = vecBinop (.&.) (.|.)
 vecOr :: BelnapVec n -> BelnapVec n -> BelnapVec n
 vecOr = vecBinop (.|.) (.&.)
 
--- | Element-wise Belnap implication: @vecImplies a b = vecOr (vecNot a) b@.
+-- | Element-wise Belnap implication: @vecImplies a = vecOr (vecNot a)@.
 vecImplies :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
-vecImplies a b = vecOr (vecNot a) b
+vecImplies a = vecOr (vecNot a)
 
 -- | Element-wise knowledge-ordering join (merge).
 vecMerge :: BelnapVec n -> BelnapVec n -> BelnapVec n
@@ -385,35 +330,11 @@ vecConsensus = vecBinop (.&.) (.&.)
 -- BelnapVec resize
 
 -- | Truncate or extend to @n@ elements (unknown-filled), from @m@-wide source.
-truncate :: forall m n. (KnownNat m, KnownNat n) => BelnapVec m -> BelnapVec n
-truncate (BelnapVec srcArr) = maskTail $ BelnapVec $ VS.generate $ \fi ->
+resize :: forall m n. (KnownNat m, KnownNat n) => BelnapVec m -> BelnapVec n
+resize (BelnapVec arr) = maskTail . BelnapVec . VS.generate $ \fi ->
   let i = fromIntegral (getFinite fi) :: Int
-   in if i < srcWords then VS.unsafeIndex srcArr i else 0
-  where
-    srcWords = 2 * wordsNeeded (natInt @m)
-
--- | Resize to @n@ elements, filling new positions with @fill@.
--- Shrinks (discarding elements) when @n <= m@.
-resize :: forall m n. (KnownNat m, KnownNat n) => Belnap -> BelnapVec m -> BelnapVec n
-resize fill src
-  | natInt @n <= natInt @m = truncate src
-  | otherwise = maskTail $ BelnapVec $ VS.generate $ \fi ->
-      let i = fromIntegral (getFinite fi) :: Int
-          isPos = even i
-          wordPairIdx = i `div` 2
-       in if i < srcWords
-            then
-              let base = VS.unsafeIndex srcArr i
-                  highMask = complement (tailMask (natInt @m))
-               in if isKnown fill && wordPairIdx == srcNw - 1 && highMask /= 0
-                    then base .|. (if isPos then posW .&. highMask else negW .&. highMask)
-                    else base
-            else if isPos then posW else negW
-  where
-    BelnapVec srcArr = src
-    srcNw = wordsNeeded (natInt @m)
-    srcWords = 2 * srcNw
-    (posW, negW) = bitPlanes fill
+      arrWords = VS.length arr
+   in if i < arrWords then VS.unsafeIndex arr i else 0
 
 -- BelnapVec queries
 
@@ -492,3 +413,57 @@ countBoth (BelnapVec arr) =
 -- | Count positions where the value is 'Unknown'.
 countUnknown :: forall n. (KnownNat n) => BelnapVec n -> Int
 countUnknown bv = natInt @n - countTrue bv - countFalse bv - countBoth bv
+
+-- Newtype wrappers
+
+-- | Wraps a value for the truth-ordering lattice.
+-- For 'Belnap': meet = 'belnapAnd', join = 'belnapOr', bottom = 'False', top = 'True'.
+-- For 'BelnapVec': meet = 'vecAnd', join = 'vecOr'.
+newtype AsTruth a = AsTruth {getTruth :: a}
+  deriving stock (Eq, Ord, Show)
+
+instance Lattice (AsTruth Belnap) where
+  AsTruth a \/ AsTruth b = AsTruth (belnapOr a b)
+  AsTruth a /\ AsTruth b = AsTruth (belnapAnd a b)
+
+instance BoundedJoinSemiLattice (AsTruth Belnap) where
+  bottom = AsTruth False
+
+instance BoundedMeetSemiLattice (AsTruth Belnap) where
+  top = AsTruth True
+
+instance Lattice (AsTruth (BelnapVec n)) where
+  AsTruth a \/ AsTruth b = AsTruth (vecOr a b)
+  AsTruth a /\ AsTruth b = AsTruth (vecAnd a b)
+
+instance (KnownNat n) => BoundedJoinSemiLattice (AsTruth (BelnapVec n)) where
+  bottom = AsTruth allFalse
+
+instance (KnownNat n) => BoundedMeetSemiLattice (AsTruth (BelnapVec n)) where
+  top = AsTruth allTrue
+
+-- | Wraps a value for the knowledge-ordering lattice.
+-- For 'Belnap': meet = 'consensus', join = 'merge', bottom = 'Unknown', top = 'Both'.
+-- For 'BelnapVec': meet = 'vecConsensus', join = 'vecMerge'.
+newtype AsKnowledge a = AsKnowledge {getKnowledge :: a}
+  deriving stock (Eq, Ord, Show)
+
+instance Lattice (AsKnowledge Belnap) where
+  AsKnowledge a \/ AsKnowledge b = AsKnowledge (merge a b)
+  AsKnowledge a /\ AsKnowledge b = AsKnowledge (consensus a b)
+
+instance BoundedJoinSemiLattice (AsKnowledge Belnap) where
+  bottom = AsKnowledge Unknown
+
+instance BoundedMeetSemiLattice (AsKnowledge Belnap) where
+  top = AsKnowledge Both
+
+instance Lattice (AsKnowledge (BelnapVec n)) where
+  AsKnowledge a \/ AsKnowledge b = AsKnowledge (vecMerge a b)
+  AsKnowledge a /\ AsKnowledge b = AsKnowledge (vecConsensus a b)
+
+instance (KnownNat n) => BoundedJoinSemiLattice (AsKnowledge (BelnapVec n)) where
+  bottom = AsKnowledge mkBelnapVec
+
+instance (KnownNat n) => BoundedMeetSemiLattice (AsKnowledge (BelnapVec n)) where
+  top = AsKnowledge allBoth

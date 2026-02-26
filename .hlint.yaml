@@ -8,13 +8,15 @@
     ]
 
 - group: { name: future, enabled: true }
-- group: { name: extra, enabled: true }
+- group: { name: dollar, enabled: true }
 
 - extensions:
     - default: false
     - name:
         - AllowAmbiguousTypes
+        - BinaryLiterals
         - DeriveAnyClass
+        - NoStarIsType
         - OverloadedStrings
         - PatternSynonyms
         - RequiredTypeArguments

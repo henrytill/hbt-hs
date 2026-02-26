@@ -236,81 +236,29 @@ vecCountsTests =
         , assertEqual "count unknown" 6 (Belnap.countUnknown v)
         ]
 
-vecResizeTests :: Test
-vecResizeTests =
+vecTruncateTests :: Test
+vecTruncateTests =
   group
     "vec resize"
-    [ let v = Belnap.resize Belnap.Unknown (Belnap.allTrue :: BelnapVec 10) :: BelnapVec 100
+    [ let v = Belnap.resize (Belnap.allTrue :: BelnapVec 100) :: BelnapVec 100
        in group
-            "grow with Unknown fill"
+            "same width is no-op"
             [ assertEqual "width" 100 v.width
-            , assertEqual "count true" 10 (Belnap.countTrue v)
-            , assertEqual "count unknown" 90 (Belnap.countUnknown v)
+            , assertBool "still all true" (Belnap.isAllTrue v)
             ]
-    , let v = Belnap.resize Belnap.Both (Belnap.allTrue :: BelnapVec 10) :: BelnapVec 100
+    , let v = Belnap.resize (Belnap.allTrue :: BelnapVec 200) :: BelnapVec 65
        in group
-            "grow with Both fill"
-            [ assertEqual "width" 100 v.width
-            , assertEqual "count true" 10 (Belnap.countTrue v)
-            , assertEqual "count both" 90 (Belnap.countBoth v)
+            "shrink across word boundary"
+            [ assertEqual "width" 65 v.width
+            , assertBool "all true after shrink" (Belnap.isAllTrue v)
+            , assertEqual "count true" 65 (Belnap.countTrue v)
             ]
-    , let v = Belnap.resize Belnap.False (Belnap.allTrue :: BelnapVec 10) :: BelnapVec 100
-       in group
-            "grow with False fill"
-            [ assertEqual "width" 100 v.width
-            , assertEqual "count true" 10 (Belnap.countTrue v)
-            , assertEqual "count false" 90 (Belnap.countFalse v)
-            ]
-    , let v = Belnap.resize Belnap.True (Belnap.mkBelnapVec :: BelnapVec 10) :: BelnapVec 100
-       in group
-            "grow with True fill"
-            [ assertEqual "width" 100 v.width
-            , assertEqual "count unknown" 10 (Belnap.countUnknown v)
-            , assertEqual "count true" 90 (Belnap.countTrue v)
-            ]
-    , let v = Belnap.resize Belnap.True (Belnap.allFalse :: BelnapVec 60) :: BelnapVec 200
+    , let v = Belnap.resize (Belnap.allFalse :: BelnapVec 60) :: BelnapVec 200
        in group
             "grow across word boundary"
             [ assertEqual "width" 200 v.width
             , assertEqual "count false" 60 (Belnap.countFalse v)
-            , assertEqual "count true" 140 (Belnap.countTrue v)
-            ]
-    , let v = Belnap.resize Belnap.False (Belnap.allTrue :: BelnapVec 100) :: BelnapVec 10
-       in group
-            "shrink"
-            [ assertEqual "width" 10 v.width
-            , assertBool "still all true after shrink" (Belnap.isAllTrue v)
-            ]
-    , let v = Belnap.resize Belnap.True (Belnap.mkBelnapVec :: BelnapVec 0) :: BelnapVec 64
-       in group
-            "grow from empty with True"
-            [ assertEqual "width" 64 v.width
-            , assertBool "is all true" (Belnap.isAllTrue v)
-            ]
-    , let v = Belnap.resize Belnap.False (Belnap.mkBelnapVec :: BelnapVec 0) :: BelnapVec 100
-       in group
-            "grow from empty with False"
-            [ assertEqual "width" 100 v.width
-            , assertBool "is all false" (Belnap.isAllFalse v)
-            ]
-    ]
-
-vecTruncateTests :: Test
-vecTruncateTests =
-  group
-    "vec truncate"
-    [ let v = Belnap.truncate (Belnap.allTrue :: BelnapVec 100) :: BelnapVec 100
-       in group
-            "truncate to same width is no-op"
-            [ assertEqual "width" 100 v.width
-            , assertBool "still all true" (Belnap.isAllTrue v)
-            ]
-    , let v = Belnap.truncate (Belnap.allTrue :: BelnapVec 200) :: BelnapVec 65
-       in group
-            "truncate across word boundary"
-            [ assertEqual "width" 65 v.width
-            , assertBool "all true after truncate" (Belnap.isAllTrue v)
-            , assertEqual "count true" 65 (Belnap.countTrue v)
+            , assertEqual "count unknown" 140 (Belnap.countUnknown v)
             ]
     ]
 
@@ -472,7 +420,6 @@ allTests =
     , vecIsConsistentTests
     , vecIsAllDeterminedTests
     , vecCountsTests
-    , vecResizeTests
     , vecTruncateTests
     , latticeLawTests "AsTruth" asTruthVariants
     , latticeLawTests "AsKnowledge" asKnowledgeVariants
