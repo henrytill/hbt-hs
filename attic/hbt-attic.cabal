@@ -43,7 +43,6 @@ library
         finite-typelits ^>=0.2.1.0,
         ghc-typelits-knownnat ^>=0.7.12,
         lattices ^>=2.2.1,
-        vector ^>=0.13.2.0,
         vector-sized ^>=1.6.1
 
 test-suite hbt-attic-test
