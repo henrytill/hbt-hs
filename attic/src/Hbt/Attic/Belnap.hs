@@ -187,7 +187,7 @@ instance BoundedJoinSemiLattice (AsTruth Belnap) where
 instance BoundedMeetSemiLattice (AsTruth Belnap) where
   top = AsTruth True
 
-instance (KnownNat n) => Lattice (AsTruth (BelnapVec n)) where
+instance Lattice (AsTruth (BelnapVec n)) where
   AsTruth a \/ AsTruth b = AsTruth (vecOr a b)
   AsTruth a /\ AsTruth b = AsTruth (vecAnd a b)
 
@@ -213,7 +213,7 @@ instance BoundedJoinSemiLattice (AsKnowledge Belnap) where
 instance BoundedMeetSemiLattice (AsKnowledge Belnap) where
   top = AsKnowledge Both
 
-instance (KnownNat n) => Lattice (AsKnowledge (BelnapVec n)) where
+instance Lattice (AsKnowledge (BelnapVec n)) where
   AsKnowledge a \/ AsKnowledge b = AsKnowledge (vecMerge a b)
   AsKnowledge a /\ AsKnowledge b = AsKnowledge (vecConsensus a b)
 
@@ -350,25 +350,24 @@ vecNot (BelnapVec arr) =
      in VS.unsafeIndex arr (i `xor` 1)
 
 vecBinop ::
-  (KnownNat n) =>
   (Word64 -> Word64 -> Word64) ->
   (Word64 -> Word64 -> Word64) ->
   BelnapVec n ->
   BelnapVec n ->
   BelnapVec n
 vecBinop posOp negOp (BelnapVec a) (BelnapVec b) =
-  BelnapVec $ VS.generate $ \fi ->
-    let i = fromIntegral (getFinite fi) :: Int
-     in if even i
-          then posOp (VS.unsafeIndex a i) (VS.unsafeIndex b i)
-          else negOp (VS.unsafeIndex a i) (VS.unsafeIndex b i)
+  BelnapVec $
+    VS.izipWith
+      (\fi x y -> if even (getFinite fi) then posOp x y else negOp x y)
+      a
+      b
 
 -- | Element-wise Belnap AND.
-vecAnd :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
+vecAnd :: BelnapVec n -> BelnapVec n -> BelnapVec n
 vecAnd = vecBinop (.&.) (.|.)
 
 -- | Element-wise Belnap OR.
-vecOr :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
+vecOr :: BelnapVec n -> BelnapVec n -> BelnapVec n
 vecOr = vecBinop (.|.) (.&.)
 
 -- | Element-wise Belnap implication: @vecImplies a b = vecOr (vecNot a) b@.
@@ -376,11 +375,11 @@ vecImplies :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
 vecImplies a b = vecOr (vecNot a) b
 
 -- | Element-wise knowledge-ordering join (merge).
-vecMerge :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
+vecMerge :: BelnapVec n -> BelnapVec n -> BelnapVec n
 vecMerge = vecBinop (.|.) (.|.)
 
 -- | Element-wise knowledge-ordering meet (consensus).
-vecConsensus :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
+vecConsensus :: BelnapVec n -> BelnapVec n -> BelnapVec n
 vecConsensus = vecBinop (.&.) (.&.)
 
 -- BelnapVec resize
