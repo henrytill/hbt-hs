@@ -264,8 +264,8 @@ tailMask n =
   let r = n .&. bitsMask
    in if r == 0 then maxBound else (1 `shiftL` r) - 1
 
-width :: forall n. (KnownNat n) => Int
-width = fromIntegral (natVal (Proxy @n))
+natInt :: forall n. (KnownNat n) => Int
+natInt = fromIntegral (natVal (Proxy @n))
 
 -- | Zero out unused high bits in the tail word pair.
 maskTail :: forall n. (KnownNat n) => BelnapVec n -> BelnapVec n
@@ -275,8 +275,8 @@ maskTail bv@(BelnapVec arr)
       let base = 2 * (nw - 1)
        in BelnapVec $ VS.unsafeAccum (.&.) arr [(base, m), (base + 1, m)]
   where
-    nw = wordsNeeded (width @n)
-    m = tailMask (width @n)
+    nw = wordsNeeded (natInt @n)
+    m = tailMask (natInt @n)
 
 -- | Decompose a 'Belnap' value into its pos-plane and neg-plane fill words.
 bitPlanes :: Belnap -> (Word64, Word64)
@@ -391,13 +391,13 @@ truncate (BelnapVec srcArr) = maskTail $ BelnapVec $ VS.generate $ \fi ->
   let i = fromIntegral (getFinite fi) :: Int
    in if i < srcWords then VS.unsafeIndex srcArr i else 0
   where
-    srcWords = 2 * wordsNeeded (width @m)
+    srcWords = 2 * wordsNeeded (natInt @m)
 
 -- | Resize to @n@ elements, filling new positions with @fill@.
 -- Shrinks (discarding elements) when @n <= m@.
 resize :: forall m n. (KnownNat m, KnownNat n) => Belnap -> BelnapVec m -> BelnapVec n
 resize fill src
-  | width @n <= width @m = truncate src
+  | natInt @n <= natInt @m = truncate src
   | otherwise = maskTail $ BelnapVec $ VS.generate $ \fi ->
       let i = fromIntegral (getFinite fi) :: Int
           isPos = even i
@@ -405,14 +405,14 @@ resize fill src
        in if i < srcWords
             then
               let base = VS.unsafeIndex srcArr i
-                  highMask = complement (tailMask (width @m))
+                  highMask = complement (tailMask (natInt @m))
                in if isKnown fill && wordPairIdx == srcNw - 1 && highMask /= 0
                     then base .|. (if isPos then posW .&. highMask else negW .&. highMask)
                     else base
             else if isPos then posW else negW
   where
     BelnapVec srcArr = src
-    srcNw = wordsNeeded (width @m)
+    srcNw = wordsNeeded (natInt @m)
     srcWords = 2 * srcNw
     (posW, negW) = bitPlanes fill
 
@@ -423,7 +423,7 @@ isConsistent :: forall n. (KnownNat n) => BelnapVec n -> Bool
 isConsistent (BelnapVec arr) =
   all
     (\i -> VS.unsafeIndex arr (2 * i) .&. VS.unsafeIndex arr (2 * i + 1) == 0)
-    [0 .. wordsNeeded (width @n) - 1]
+    [0 .. wordsNeeded (natInt @n) - 1]
 
 -- | Returns 'Prelude.True' if every position is 'True' or 'False'.
 isAllDetermined :: forall n. (KnownNat n) => BelnapVec n -> Bool
@@ -435,8 +435,8 @@ isAllDetermined (BelnapVec arr) =
     )
     [0 .. nw - 1]
   where
-    nw = wordsNeeded (width @n)
-    tm = tailMask (width @n)
+    nw = wordsNeeded (natInt @n)
+    tm = tailMask (natInt @n)
 
 -- | Returns 'Prelude.True' if every position is 'True'.
 isAllTrue :: forall n. (KnownNat n) => BelnapVec n -> Bool
@@ -448,8 +448,8 @@ isAllTrue (BelnapVec arr) =
     )
     [0 .. nw - 1]
   where
-    nw = wordsNeeded (width @n)
-    tm = tailMask (width @n)
+    nw = wordsNeeded (natInt @n)
+    tm = tailMask (natInt @n)
 
 -- | Returns 'Prelude.True' if every position is 'False'.
 isAllFalse :: forall n. (KnownNat n) => BelnapVec n -> Bool
@@ -461,8 +461,8 @@ isAllFalse (BelnapVec arr) =
     )
     [0 .. nw - 1]
   where
-    nw = wordsNeeded (width @n)
-    tm = tailMask (width @n)
+    nw = wordsNeeded (natInt @n)
+    tm = tailMask (natInt @n)
 
 -- BelnapVec counts
 
@@ -471,7 +471,7 @@ countTrue :: forall n. (KnownNat n) => BelnapVec n -> Int
 countTrue (BelnapVec arr) =
   sum
     [ popCount (VS.unsafeIndex arr (2 * i) .&. complement (VS.unsafeIndex arr (2 * i + 1)))
-    | i <- [0 .. wordsNeeded (width @n) - 1]
+    | i <- [0 .. wordsNeeded (natInt @n) - 1]
     ]
 
 -- | Count positions where the value is 'False'.
@@ -479,7 +479,7 @@ countFalse :: forall n. (KnownNat n) => BelnapVec n -> Int
 countFalse (BelnapVec arr) =
   sum
     [ popCount (complement (VS.unsafeIndex arr (2 * i)) .&. VS.unsafeIndex arr (2 * i + 1))
-    | i <- [0 .. wordsNeeded (width @n) - 1]
+    | i <- [0 .. wordsNeeded (natInt @n) - 1]
     ]
 
 -- | Count positions where the value is 'Both'.
@@ -487,9 +487,9 @@ countBoth :: forall n. (KnownNat n) => BelnapVec n -> Int
 countBoth (BelnapVec arr) =
   sum
     [ popCount (VS.unsafeIndex arr (2 * i) .&. VS.unsafeIndex arr (2 * i + 1))
-    | i <- [0 .. wordsNeeded (width @n) - 1]
+    | i <- [0 .. wordsNeeded (natInt @n) - 1]
     ]
 
 -- | Count positions where the value is 'Unknown'.
 countUnknown :: forall n. (KnownNat n) => BelnapVec n -> Int
-countUnknown bv = width @n - countTrue bv - countFalse bv - countBoth bv
+countUnknown bv = natInt @n - countTrue bv - countFalse bv - countBoth bv
