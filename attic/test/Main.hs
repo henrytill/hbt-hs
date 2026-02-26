@@ -6,7 +6,7 @@ import Algebra.Lattice (BoundedJoinSemiLattice (..), BoundedMeetSemiLattice (..)
 import Control.Monad (unless)
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
-import GHC.TypeNats (KnownNat, natVal)
+import GHC.TypeLits (KnownNat, natVal)
 import Hbt.Attic.Belnap (AsKnowledge (..), AsTruth (..), Belnap, BelnapVec)
 import Hbt.Attic.Belnap qualified as Belnap
 import System.Exit (exitFailure)

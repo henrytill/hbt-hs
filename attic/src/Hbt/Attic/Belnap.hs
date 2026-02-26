@@ -83,7 +83,7 @@ import Data.Vector.Unboxed.Sized (Vector)
 import Data.Vector.Unboxed.Sized qualified as VS
 import Data.Word (Word64, Word8)
 import GHC.Records (HasField (..))
-import GHC.TypeNats (Div, KnownNat, Nat, natVal, type (*), type (+), type (<=))
+import GHC.TypeLits (Div, KnownNat, Nat, natVal, type (*), type (+), type (<=))
 import Prelude hiding (False, True)
 import Prelude qualified
 
