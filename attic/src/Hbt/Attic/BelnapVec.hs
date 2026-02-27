@@ -282,7 +282,7 @@ countBoth = getSum . foldMapWordPairs (\_ pos neg -> Sum (popCount (pos .&. neg)
 
 -- | Count positions where the value is 'Unknown'.
 countUnknown :: forall n. (KnownNat n) => BelnapVec n -> Int
-countUnknown bv = natInt @n - countTrue bv - countFalse bv - countBoth bv
+countUnknown = getSum . foldMapWordPairs (\m pos neg -> Sum (popCount (complement (pos .|. neg) .&. m)))
 
 -- Lattice instances
 
