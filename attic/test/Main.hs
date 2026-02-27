@@ -36,8 +36,7 @@ scalarNotTests =
 
 scalarAndTests :: Test
 scalarAndTests =
-  let -- Full 4x4 truth table per Wikipedia B4; rows/columns: N, T, F, B
-      expected =
+  let expected =
         [ [Belnap.Unknown, Belnap.Unknown, Belnap.False, Belnap.False]
         , [Belnap.Unknown, Belnap.True, Belnap.False, Belnap.Both]
         , [Belnap.False, Belnap.False, Belnap.False, Belnap.False]
@@ -55,8 +54,7 @@ scalarAndTests =
 
 scalarOrTests :: Test
 scalarOrTests =
-  let -- Full 4x4 truth table per Wikipedia B4; rows/columns: N, T, F, B
-      expected =
+  let expected =
         [ [Belnap.Unknown, Belnap.True, Belnap.Unknown, Belnap.True]
         , [Belnap.True, Belnap.True, Belnap.True, Belnap.True]
         , [Belnap.Unknown, Belnap.True, Belnap.False, Belnap.Both]
@@ -74,8 +72,7 @@ scalarOrTests =
 
 scalarMergeTests :: Test
 scalarMergeTests =
-  let -- Full 4x4 truth table; rows/columns: N, T, F, B
-      expected =
+  let expected =
         [ [Belnap.Unknown, Belnap.True, Belnap.False, Belnap.Both]
         , [Belnap.True, Belnap.True, Belnap.Both, Belnap.Both]
         , [Belnap.False, Belnap.Both, Belnap.False, Belnap.Both]
@@ -93,8 +90,7 @@ scalarMergeTests =
 
 scalarConsensusTests :: Test
 scalarConsensusTests =
-  let -- Full 4x4 truth table; rows/columns: N, T, F, B
-      expected =
+  let expected =
         [ [Belnap.Unknown, Belnap.Unknown, Belnap.Unknown, Belnap.Unknown]
         , [Belnap.Unknown, Belnap.True, Belnap.Unknown, Belnap.True]
         , [Belnap.Unknown, Belnap.Unknown, Belnap.False, Belnap.False]

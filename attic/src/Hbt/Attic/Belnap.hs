@@ -1,6 +1,7 @@
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE PatternSynonyms #-}
 
+-- | Scalar Belnap four-valued logic type and operations.
 module Hbt.Attic.Belnap
   ( -- * Scalar type
     Belnap
@@ -39,30 +40,37 @@ import Data.Word (Word8)
 import Prelude hiding (False, True, and, not, or)
 import Prelude qualified
 
--- Scalar type
-
 -- | A single Belnap truth value.
 --
 -- Uses a 'Word8' with the encoding @(neg_bit \`shiftL\` 1) .|. pos_bit@:
 --
--- > | pos | neg | bits | variant |
--- > |-----|-----|------|---------|
--- > | 0   | 0   | 0b00 | Unknown |
--- > | 1   | 0   | 0b01 | True    |
--- > | 0   | 1   | 0b10 | False   |
--- > | 1   | 1   | 0b11 | Both    |
+-- +-----+-----+------+---------+
+-- | pos | neg | bits | variant |
+-- +=====+=====+======+=========+
+-- | 0   | 0   | 0b00 | Unknown |
+-- +-----+-----+------+---------+
+-- | 1   | 0   | 0b01 | True    |
+-- +-----+-----+------+---------+
+-- | 0   | 1   | 0b10 | False   |
+-- +-----+-----+------+---------+
+-- | 1   | 1   | 0b11 | Both    |
+-- +-----+-----+------+---------+
 newtype Belnap = MkBelnap Word8
   deriving stock (Eq, Ord, Show)
 
+-- | No information: neither positive nor negative evidence.
 pattern Unknown :: Belnap
 pattern Unknown = MkBelnap 0b00
 
+-- | Positive evidence only.
 pattern True :: Belnap
 pattern True = MkBelnap 0b01
 
+-- | Negative evidence only.
 pattern False :: Belnap
 pattern False = MkBelnap 0b10
 
+-- | Contradictory evidence: both positive and negative.
 pattern Both :: Belnap
 pattern Both = MkBelnap 0b11
 
@@ -76,9 +84,7 @@ unsafeToBits (MkBelnap w) = w
 unsafeFromBits :: Word8 -> Belnap
 unsafeFromBits = MkBelnap
 
--- Scalar operations
-
--- | Belnap logical NOT: swaps True<->False, leaves Unknown and Both unchanged.
+-- | Belnap logical NOT: swaps 'True' and 'False'; leaves 'Unknown' and 'Both' unchanged.
 not :: Belnap -> Belnap
 not (MkBelnap a) =
   MkBelnap $ ((a .&. 1) `shiftL` 1) .|. ((a `shiftR` 1) .&. 1)
@@ -109,8 +115,6 @@ implies a = or (not a)
 consensus :: Belnap -> Belnap -> Belnap
 consensus (MkBelnap a) (MkBelnap b) = MkBelnap (a .&. b)
 
--- Scalar queries
-
 -- | Returns 'Prelude.True' if this value carries any information (not 'Unknown').
 isKnown :: Belnap -> Bool
 isKnown (MkBelnap a) = a /= 0
@@ -129,11 +133,7 @@ toBool True = Just Prelude.True
 toBool False = Just Prelude.False
 toBool _ = Nothing
 
--- Newtype wrappers
-
 -- | Wraps a value for the truth-ordering lattice.
--- For 'Belnap': meet = 'and', join = 'or', bottom = 'False', top = 'True'.
--- For 'BelnapVec': meet = 'and', join = 'or'.
 newtype AsTruth a = AsTruth {getTruth :: a}
   deriving stock (Eq, Ord, Show)
 
@@ -148,8 +148,6 @@ instance BoundedMeetSemiLattice (AsTruth Belnap) where
   top = AsTruth True
 
 -- | Wraps a value for the knowledge-ordering lattice.
--- For 'Belnap': meet = 'consensus', join = 'merge', bottom = 'Unknown', top = 'Both'.
--- For 'BelnapVec': meet = 'consensus', join = 'merge'.
 newtype AsKnowledge a = AsKnowledge {getKnowledge :: a}
   deriving stock (Eq, Ord, Show)
 

@@ -3,8 +3,9 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# OPTIONS_GHC -fplugin GHC.TypeLits.KnownNat.Solver #-}
 
+-- | Packed bitvector of Belnap values with bulk operations.
 module Hbt.Attic.BelnapVec
-  ( -- * Fin type
+  ( -- * Finite type
     Finite
   , getFinite
   , packFinite
@@ -13,17 +14,17 @@ module Hbt.Attic.BelnapVec
     -- * Bitvector type
   , BelnapVec
 
-    -- * BelnapVec construction
+    -- * Construction
   , empty
   , allTrue
   , allFalse
   , allBoth
 
-    -- * BelnapVec scalar access
+    -- * Scalar access
   , get
   , set
 
-    -- * BelnapVec bulk operations
+    -- * Bulk operations
   , not
   , and
   , or
@@ -31,16 +32,16 @@ module Hbt.Attic.BelnapVec
   , merge
   , consensus
 
-    -- * BelnapVec resize
+    -- * Resize
   , resize
 
-    -- * BelnapVec queries
+    -- * Queries
   , isConsistent
   , isAllDetermined
   , isAllTrue
   , isAllFalse
 
-    -- * BelnapVec counts
+    -- * Counts
   , countTrue
   , countFalse
   , countBoth
@@ -62,16 +63,12 @@ import Hbt.Attic.Belnap (AsKnowledge (..), AsTruth (..), Belnap, unsafeFromBits,
 import Hbt.Attic.Belnap qualified as Belnap
 import Prelude hiding (False, True, and, not, or)
 
--- Fin type
-
 -- | Compile-time index literal: @fin \@i@ produces @Finite n@ when @(i + 1) <= n@.
 fin :: forall i n. (KnownNat i, KnownNat n, (i + 1) <= n) => Finite n
 fin = natToFinite (Proxy @i)
 
--- BelnapVec type
-
--- | Storage size in 'Word64' words for a 'BelnapVec' of @n@ elements.
--- Two bitplanes (pos, neg) interleaved, each needing @ceil(n\/64)@ words.
+-- | Storage size in 'Word64' words for a 't:BelnapVec' of @n@ elements.
+-- Two bitplanes (pos, neg) interleaved, each needing @ceil(n/64)@ words.
 type StorageSize n = 2 * Div (n + 63) 64
 
 -- | Packed Belnap bitvector: two-bitplane interleaved representation.
@@ -84,8 +81,6 @@ newtype BelnapVec (n :: Nat) = BelnapVec (Vector (StorageSize n) Word64)
 
 instance (KnownNat n) => HasField "width" (BelnapVec n) Int where
   getField _ = fromIntegral (natVal (Proxy @n))
-
--- Internal helpers
 
 bitsLog2 :: Int
 bitsLog2 = 6
@@ -127,25 +122,21 @@ filled fill =
    in maskTail . BelnapVec . VS.generate $ \fi ->
         if even (getFinite fi) then posW else negW
 
--- BelnapVec construction
-
--- | Create a vector of @n@ elements, all 'Unknown'.
+-- | Create a vector of @n@ elements, all 'Hbt.Attic.Belnap.Unknown'.
 empty :: (KnownNat n) => BelnapVec n
 empty = BelnapVec (VS.replicate 0)
 
--- | Create a vector of @n@ elements, all 'True'.
+-- | Create a vector of @n@ elements, all 'Hbt.Attic.Belnap.True'.
 allTrue :: (KnownNat n) => BelnapVec n
 allTrue = filled Belnap.True
 
--- | Create a vector of @n@ elements, all 'False'.
+-- | Create a vector of @n@ elements, all 'Hbt.Attic.Belnap.False'.
 allFalse :: (KnownNat n) => BelnapVec n
 allFalse = filled Belnap.False
 
--- | Create a vector of @n@ elements, all 'Both'.
+-- | Create a vector of @n@ elements, all 'Hbt.Attic.Belnap.Both'.
 allBoth :: (KnownNat n) => BelnapVec n
 allBoth = filled Belnap.Both
-
--- BelnapVec scalar access
 
 -- | Read element at index @fi@.
 get :: Finite n -> BelnapVec n -> Belnap
@@ -174,8 +165,6 @@ set fi (unsafeToBits -> bits) (BelnapVec arr) =
           (\old new -> (old .&. bitMask) .|. new)
           arr
           [(base, posBit), (base + 1, negBit)]
-
--- BelnapVec bulk operations
 
 -- | Element-wise Belnap NOT.
 not :: (KnownNat n) => BelnapVec n -> BelnapVec n
@@ -213,20 +202,16 @@ merge = vecBinop (.|.) (.|.)
 consensus :: BelnapVec n -> BelnapVec n -> BelnapVec n
 consensus = vecBinop (.&.) (.&.)
 
--- BelnapVec resize
-
--- | Truncate or extend to @n@ elements (unknown-filled), from @m@-wide source.
+-- | Truncate or extend to @n@ elements ('Hbt.Attic.Belnap.Unknown'-filled), from @m@-wide source.
 resize :: forall m n. (KnownNat m, KnownNat n) => BelnapVec m -> BelnapVec n
 resize (BelnapVec arr) = maskTail . BelnapVec . VS.generate $ \fi ->
   let i = fromIntegral (getFinite fi) :: Int
       arrWords = VS.length arr
    in if i < arrWords then VS.unsafeIndex arr i else 0
 
--- BelnapVec folds
-
 -- | Fold over word pairs, supplying @(mask, pos_word, neg_word)@ to @f@ for
 -- each pair.  The mask is 'maxBound' for full words and 'tailMask' for the
--- final partial word; callers that do not need it may ignore it with @\_@.
+-- final partial word; callers that do not need it may ignore it with @_@.
 foldMapWordPairs ::
   forall n m.
   (KnownNat n, Monoid m) =>
@@ -248,43 +233,37 @@ foldMapWordPairs f (BelnapVec arr) =
     lastPair = VS.length arr - 2
     tm = tailMask (natInt @n)
 
--- BelnapVec queries
-
--- | Returns 'Prelude.True' if no position is 'Both'.
+-- | Returns 'Prelude.True' if no position is 'Hbt.Attic.Belnap.Both'.
 isConsistent :: forall n. (KnownNat n) => BelnapVec n -> Bool
 isConsistent = getAll . foldMapWordPairs (\_ pos neg -> All (pos .&. neg == 0))
 
--- | Returns 'Prelude.True' if every position is 'True' or 'False'.
+-- | Returns 'Prelude.True' if every position is 'Hbt.Attic.Belnap.True' or 'Hbt.Attic.Belnap.False'.
 isAllDetermined :: forall n. (KnownNat n) => BelnapVec n -> Bool
 isAllDetermined = getAll . foldMapWordPairs (\m pos neg -> All (pos `xor` neg == m))
 
--- | Returns 'Prelude.True' if every position is 'True'.
+-- | Returns 'Prelude.True' if every position is 'Hbt.Attic.Belnap.True'.
 isAllTrue :: forall n. (KnownNat n) => BelnapVec n -> Bool
 isAllTrue = getAll . foldMapWordPairs (\m pos neg -> All (pos .&. m == m && neg .&. m == 0))
 
--- | Returns 'Prelude.True' if every position is 'False'.
+-- | Returns 'Prelude.True' if every position is 'Hbt.Attic.Belnap.False'.
 isAllFalse :: forall n. (KnownNat n) => BelnapVec n -> Bool
 isAllFalse = getAll . foldMapWordPairs (\m pos neg -> All (pos .&. m == 0 && neg .&. m == m))
 
--- BelnapVec counts
-
--- | Count positions where the value is 'True'.
+-- | Count positions where the value is 'Hbt.Attic.Belnap.True'.
 countTrue :: forall n. (KnownNat n) => BelnapVec n -> Int
 countTrue = getSum . foldMapWordPairs (\_ pos neg -> Sum (popCount (pos .&. complement neg)))
 
--- | Count positions where the value is 'False'.
+-- | Count positions where the value is 'Hbt.Attic.Belnap.False'.
 countFalse :: forall n. (KnownNat n) => BelnapVec n -> Int
 countFalse = getSum . foldMapWordPairs (\_ pos neg -> Sum (popCount (complement pos .&. neg)))
 
--- | Count positions where the value is 'Both'.
+-- | Count positions where the value is 'Hbt.Attic.Belnap.Both'.
 countBoth :: forall n. (KnownNat n) => BelnapVec n -> Int
 countBoth = getSum . foldMapWordPairs (\_ pos neg -> Sum (popCount (pos .&. neg)))
 
--- | Count positions where the value is 'Unknown'.
+-- | Count positions where the value is 'Hbt.Attic.Belnap.Unknown'.
 countUnknown :: forall n. (KnownNat n) => BelnapVec n -> Int
 countUnknown = getSum . foldMapWordPairs (\m pos neg -> Sum (popCount (complement (pos .|. neg) .&. m)))
-
--- Lattice instances
 
 instance Lattice (AsTruth (BelnapVec n)) where
   AsTruth a \/ AsTruth b = AsTruth (or a b)
