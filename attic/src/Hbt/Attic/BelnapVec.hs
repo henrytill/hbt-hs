@@ -59,7 +59,7 @@ import Data.Vector.Unboxed.Sized qualified as VS
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import GHC.TypeLits (Div, KnownNat, Nat, natVal, type (*), type (+), type (<=))
-import Hbt.Attic.Belnap (AsKnowledge (..), AsTruth (..), Belnap, unsafeFromBits, unsafeToBits)
+import Hbt.Attic.Belnap (AsKnowledge (..), AsTruth (..), Belnap)
 import Hbt.Attic.Belnap qualified as Belnap
 import Prelude hiding (False, True, and, not, or)
 
@@ -110,7 +110,7 @@ maskTail bv@(BelnapVec arr)
 
 -- | Decompose a 'Belnap' value into its pos-plane and neg-plane fill words.
 bitPlanes :: Belnap -> (Word64, Word64)
-bitPlanes (unsafeToBits -> bits) =
+bitPlanes (Belnap.unsafeToBits -> bits) =
   ( if bits .&. 1 /= 0 then maxBound else 0
   , if (bits `shiftR` 1) .&. 1 /= 0 then maxBound else 0
   )
@@ -147,11 +147,11 @@ get fi (BelnapVec arr) =
       posW = VS.unsafeIndex arr (2 * w)
       negW = VS.unsafeIndex arr (2 * w + 1)
       bitsW = (((negW `shiftR` b) .&. 1) `shiftL` 1) .|. ((posW `shiftR` b) .&. 1) :: Word64
-   in unsafeFromBits (fromIntegral bitsW)
+   in Belnap.unsafeFromBits (fromIntegral bitsW)
 
 -- | Write element at index @fi@.
 set :: Finite n -> Belnap -> BelnapVec n -> BelnapVec n
-set fi (unsafeToBits -> bits) (BelnapVec arr) =
+set fi (Belnap.unsafeToBits -> bits) (BelnapVec arr) =
   let i = fromIntegral (getFinite fi) :: Int
       w = i `shiftR` bitsLog2
       b = i .&. bitsMask
