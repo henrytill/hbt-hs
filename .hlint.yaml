@@ -25,4 +25,3 @@
         - ViewPatterns
 
 - ignore: { name: "Use lambda-case" }
-- ignore: { name: "Use drop1" }
