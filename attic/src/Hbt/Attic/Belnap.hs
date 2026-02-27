@@ -89,14 +89,34 @@ not :: Belnap -> Belnap
 not (MkBelnap a) =
   MkBelnap $ ((a .&. 1) `shiftL` 1) .|. ((a `shiftR` 1) .&. 1)
 
--- | Belnap logical AND: pos = pos_a & pos_b, neg = neg_a | neg_b.
+-- | Belnap logical AND.
+--
+-- \[
+-- \begin{array}{r|cccc}
+--   \text{and} & U & T & F & B \\ \hline
+--   U & U & U & F & F \\
+--   T & U & T & F & B \\
+--   F & F & F & F & F \\
+--   B & F & B & F & B
+-- \end{array}
+-- \]
 and :: Belnap -> Belnap -> Belnap
 and (MkBelnap a) (MkBelnap b) =
   let rPos = (a .&. 1) .&. (b .&. 1)
       rNeg = ((a `shiftR` 1) .&. 1) .|. ((b `shiftR` 1) .&. 1)
    in MkBelnap $ (rNeg `shiftL` 1) .|. rPos
 
--- | Belnap logical OR: pos = pos_a | pos_b, neg = neg_a & neg_b.
+-- | Belnap logical OR.
+--
+-- \[
+-- \begin{array}{r|cccc}
+--   \text{or} & U & T & F & B \\ \hline
+--   U & U & T & U & T \\
+--   T & T & T & T & T \\
+--   F & U & T & F & B \\
+--   B & T & T & B & B
+-- \end{array}
+-- \]
 or :: Belnap -> Belnap -> Belnap
 or (MkBelnap a) (MkBelnap b) =
   let rPos = (a .&. 1) .|. (b .&. 1)
@@ -104,6 +124,16 @@ or (MkBelnap a) (MkBelnap b) =
    in MkBelnap $ (rNeg `shiftL` 1) .|. rPos
 
 -- | Knowledge-ordering join: combine observations from independent sources.
+--
+-- \[
+-- \begin{array}{r|cccc}
+--   \text{merge} & U & T & F & B \\ \hline
+--   U & U & T & F & B \\
+--   T & T & T & B & B \\
+--   F & F & B & F & B \\
+--   B & B & B & B & B
+-- \end{array}
+-- \]
 merge :: Belnap -> Belnap -> Belnap
 merge (MkBelnap a) (MkBelnap b) = MkBelnap $ a .|. b
 
@@ -112,6 +142,16 @@ implies :: Belnap -> Belnap -> Belnap
 implies a = or (not a)
 
 -- | Knowledge-ordering meet: keep only information that both sources agree on.
+--
+-- \[
+-- \begin{array}{r|cccc}
+--   \text{consensus} & U & T & F & B \\ \hline
+--   U & U & U & U & U \\
+--   T & U & T & U & T \\
+--   F & U & U & F & F \\
+--   B & U & T & F & B
+-- \end{array}
+-- \]
 consensus :: Belnap -> Belnap -> Belnap
 consensus (MkBelnap a) (MkBelnap b) = MkBelnap (a .&. b)
 
