@@ -7,8 +7,10 @@ import Control.Monad (unless)
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import GHC.TypeLits (KnownNat, natVal)
-import Hbt.Attic.Belnap (AsKnowledge (..), AsTruth (..), Belnap, BelnapVec)
+import Hbt.Attic.Belnap (AsKnowledge (..), AsTruth (..), Belnap)
 import Hbt.Attic.Belnap qualified as Belnap
+import Hbt.Attic.BelnapVec (BelnapVec)
+import Hbt.Attic.BelnapVec qualified as BelnapVec
 import System.Exit (exitFailure)
 import Test.Dwergaz
 import Test.QuickCheck (Arbitrary (..), Gen, Property, elements, forAll, isSuccess, quickCheckResult, vectorOf, (===))
@@ -17,8 +19,8 @@ variants :: [Belnap]
 variants = [Belnap.Unknown, Belnap.True, Belnap.False, Belnap.Both]
 
 -- Helper: construct a Finite n from an Int (panics if out of bounds)
-fi :: (KnownNat n) => Int -> Belnap.Finite n
-fi = fromJust . Belnap.packFinite . fromIntegral
+fi :: (KnownNat n) => Int -> BelnapVec.Finite n
+fi = fromJust . BelnapVec.packFinite . fromIntegral
 
 -- Scalar tests
 
@@ -26,10 +28,10 @@ scalarNotTests :: Test
 scalarNotTests =
   group
     "scalar not"
-    [ assertEqual "not True = False" Belnap.False (Belnap.belnapNot Belnap.True)
-    , assertEqual "not False = True" Belnap.True (Belnap.belnapNot Belnap.False)
-    , assertEqual "not Unknown = Unknown" Belnap.Unknown (Belnap.belnapNot Belnap.Unknown)
-    , assertEqual "not Both = Both" Belnap.Both (Belnap.belnapNot Belnap.Both)
+    [ assertEqual "not True = False" Belnap.False (Belnap.not Belnap.True)
+    , assertEqual "not False = True" Belnap.True (Belnap.not Belnap.False)
+    , assertEqual "not Unknown = Unknown" Belnap.Unknown (Belnap.not Belnap.Unknown)
+    , assertEqual "not Both = Both" Belnap.Both (Belnap.not Belnap.Both)
     ]
 
 scalarAndTests :: Test
@@ -45,7 +47,7 @@ scalarAndTests =
         [ assertEqual
             (show a ++ " AND " ++ show b)
             (expected !! i !! j)
-            (Belnap.belnapAnd a b)
+            (Belnap.and a b)
         | (i, a) <- zip [0 ..] variants
         , (j, b) <- zip [0 ..] variants
         ]
@@ -64,7 +66,7 @@ scalarOrTests =
         [ assertEqual
             (show a ++ " OR " ++ show b)
             (expected !! i !! j)
-            (Belnap.belnapOr a b)
+            (Belnap.or a b)
         | (i, a) <- zip [0 ..] variants
         , (j, b) <- zip [0 ..] variants
         ]
@@ -134,131 +136,131 @@ scalarQueryTests =
 
 vecGetSetTests :: Test
 vecGetSetTests =
-  let v0 = Belnap.mkBelnapVec :: BelnapVec 4
-      v1 = Belnap.set (fi 0) Belnap.Unknown v0
-      v2 = Belnap.set (fi 1) Belnap.True v1
-      v3 = Belnap.set (fi 2) Belnap.False v2
-      v4 = Belnap.set (fi 3) Belnap.Both v3
+  let v0 = BelnapVec.empty :: BelnapVec 4
+      v1 = BelnapVec.set (fi 0) Belnap.Unknown v0
+      v2 = BelnapVec.set (fi 1) Belnap.True v1
+      v3 = BelnapVec.set (fi 2) Belnap.False v2
+      v4 = BelnapVec.set (fi 3) Belnap.Both v3
    in group
         "vec get/set all four values"
-        [ assertEqual "get 0 = Unknown" Belnap.Unknown (Belnap.get (fi 0) v4)
-        , assertEqual "get 1 = True" Belnap.True (Belnap.get (fi 1) v4)
-        , assertEqual "get 2 = False" Belnap.False (Belnap.get (fi 2) v4)
-        , assertEqual "get 3 = Both" Belnap.Both (Belnap.get (fi 3) v4)
+        [ assertEqual "get 0 = Unknown" Belnap.Unknown (BelnapVec.get (fi 0) v4)
+        , assertEqual "get 1 = True" Belnap.True (BelnapVec.get (fi 1) v4)
+        , assertEqual "get 2 = False" Belnap.False (BelnapVec.get (fi 2) v4)
+        , assertEqual "get 3 = Both" Belnap.Both (BelnapVec.get (fi 3) v4)
         ]
 
 vecBulkAndTests :: Test
 vecBulkAndTests =
-  let a = Belnap.allTrue :: BelnapVec 64
-      b = Belnap.allFalse :: BelnapVec 64
-      c = Belnap.vecAnd a b
+  let a = BelnapVec.allTrue :: BelnapVec 64
+      b = BelnapVec.allFalse :: BelnapVec 64
+      c = BelnapVec.and a b
    in group
         "vec bulk AND"
-        [assertBool "allTrue AND allFalse = allFalse" (Belnap.isAllFalse c)]
+        [assertBool "allTrue AND allFalse = allFalse" (BelnapVec.isAllFalse c)]
 
 vecBulkOrTests :: Test
 vecBulkOrTests =
-  let a = Belnap.allFalse :: BelnapVec 64
-      b = Belnap.allTrue :: BelnapVec 64
-      c = Belnap.vecOr a b
+  let a = BelnapVec.allFalse :: BelnapVec 64
+      b = BelnapVec.allTrue :: BelnapVec 64
+      c = BelnapVec.or a b
    in group
         "vec bulk OR"
-        [assertBool "allFalse OR allTrue = allTrue" (Belnap.isAllTrue c)]
+        [assertBool "allFalse OR allTrue = allTrue" (BelnapVec.isAllTrue c)]
 
 vecBulkNotTests :: Test
 vecBulkNotTests =
-  let a = Belnap.allTrue :: BelnapVec 100
-      b = Belnap.vecNot a
-      c = Belnap.vecNot b
+  let a = BelnapVec.allTrue :: BelnapVec 100
+      b = BelnapVec.not a
+      c = BelnapVec.not b
    in group
         "vec bulk NOT"
-        [ assertBool "not allTrue = allFalse" (Belnap.isAllFalse b)
-        , assertBool "not (not allTrue) = allTrue" (Belnap.isAllTrue c)
+        [ assertBool "not allTrue = allFalse" (BelnapVec.isAllFalse b)
+        , assertBool "not (not allTrue) = allTrue" (BelnapVec.isAllTrue c)
         ]
 
 vecBulkMergeTests :: Test
 vecBulkMergeTests =
-  let a = Belnap.allTrue :: BelnapVec 64
-      b = Belnap.allFalse :: BelnapVec 64
-      c = Belnap.vecMerge a b
+  let a = BelnapVec.allTrue :: BelnapVec 64
+      b = BelnapVec.allFalse :: BelnapVec 64
+      c = BelnapVec.merge a b
    in group
         "vec bulk merge"
-        [ assertEqual "count both" 64 (Belnap.countBoth c)
-        , assertEqual "count true" 0 (Belnap.countTrue c)
-        , assertEqual "count false" 0 (Belnap.countFalse c)
-        , assertEqual "count unknown" 0 (Belnap.countUnknown c)
+        [ assertEqual "count both" 64 (BelnapVec.countBoth c)
+        , assertEqual "count true" 0 (BelnapVec.countTrue c)
+        , assertEqual "count false" 0 (BelnapVec.countFalse c)
+        , assertEqual "count unknown" 0 (BelnapVec.countUnknown c)
         ]
 
 vecIsConsistentTests :: Test
 vecIsConsistentTests =
-  let consistent1 = Belnap.allTrue :: BelnapVec 64
+  let consistent1 = BelnapVec.allTrue :: BelnapVec 64
       consistent2 =
-        Belnap.set
+        BelnapVec.set
           (fi 1)
           Belnap.False
-          (Belnap.set (fi 0) Belnap.True (Belnap.mkBelnapVec :: BelnapVec 10))
-      inconsistent = Belnap.set (fi 2) Belnap.Both consistent2
+          (BelnapVec.set (fi 0) Belnap.True (BelnapVec.empty :: BelnapVec 10))
+      inconsistent = BelnapVec.set (fi 2) Belnap.Both consistent2
    in group
         "vec is consistent"
-        [ assertBool "allTrue is consistent" (Belnap.isConsistent consistent1)
-        , assertBool "True/False mix is consistent" (Belnap.isConsistent consistent2)
-        , assertBool "vector with Both is not consistent" (not (Belnap.isConsistent inconsistent))
+        [ assertBool "allTrue is consistent" (BelnapVec.isConsistent consistent1)
+        , assertBool "True/False mix is consistent" (BelnapVec.isConsistent consistent2)
+        , assertBool "vector with Both is not consistent" (not (BelnapVec.isConsistent inconsistent))
         ]
 
 vecIsAllDeterminedTests :: Test
 vecIsAllDeterminedTests =
-  let v0 = Belnap.mkBelnapVec :: BelnapVec 4
-      v1 = Belnap.set (fi 0) Belnap.True v0
-      v2 = Belnap.set (fi 1) Belnap.False v1
-      v3 = Belnap.set (fi 2) Belnap.True v2
-      vDet = Belnap.set (fi 3) Belnap.False v3
-      vUnk = Belnap.set (fi 3) Belnap.Unknown v3
-      vBoth = Belnap.set (fi 3) Belnap.Both v3
+  let v0 = BelnapVec.empty :: BelnapVec 4
+      v1 = BelnapVec.set (fi 0) Belnap.True v0
+      v2 = BelnapVec.set (fi 1) Belnap.False v1
+      v3 = BelnapVec.set (fi 2) Belnap.True v2
+      vDet = BelnapVec.set (fi 3) Belnap.False v3
+      vUnk = BelnapVec.set (fi 3) Belnap.Unknown v3
+      vBoth = BelnapVec.set (fi 3) Belnap.Both v3
    in group
         "vec is all determined"
-        [ assertBool "True/False mix is all determined" (Belnap.isAllDetermined vDet)
-        , assertBool "Unknown makes it not all determined" (not (Belnap.isAllDetermined vUnk))
-        , assertBool "Both makes it not all determined" (not (Belnap.isAllDetermined vBoth))
+        [ assertBool "True/False mix is all determined" (BelnapVec.isAllDetermined vDet)
+        , assertBool "Unknown makes it not all determined" (not (BelnapVec.isAllDetermined vUnk))
+        , assertBool "Both makes it not all determined" (not (BelnapVec.isAllDetermined vBoth))
         ]
 
 vecCountsTests :: Test
 vecCountsTests =
-  let v0 = Belnap.mkBelnapVec :: BelnapVec 10
-      v1 = Belnap.set (fi 0) Belnap.True v0
-      v2 = Belnap.set (fi 1) Belnap.True v1
-      v3 = Belnap.set (fi 2) Belnap.False v2
-      v = Belnap.set (fi 3) Belnap.Both v3
+  let v0 = BelnapVec.empty :: BelnapVec 10
+      v1 = BelnapVec.set (fi 0) Belnap.True v0
+      v2 = BelnapVec.set (fi 1) Belnap.True v1
+      v3 = BelnapVec.set (fi 2) Belnap.False v2
+      v = BelnapVec.set (fi 3) Belnap.Both v3
    in group
         "vec counts"
-        [ assertEqual "count true" 2 (Belnap.countTrue v)
-        , assertEqual "count false" 1 (Belnap.countFalse v)
-        , assertEqual "count both" 1 (Belnap.countBoth v)
-        , assertEqual "count unknown" 6 (Belnap.countUnknown v)
+        [ assertEqual "count true" 2 (BelnapVec.countTrue v)
+        , assertEqual "count false" 1 (BelnapVec.countFalse v)
+        , assertEqual "count both" 1 (BelnapVec.countBoth v)
+        , assertEqual "count unknown" 6 (BelnapVec.countUnknown v)
         ]
 
 vecTruncateTests :: Test
 vecTruncateTests =
   group
     "vec resize"
-    [ let v = Belnap.resize (Belnap.allTrue :: BelnapVec 100) :: BelnapVec 100
+    [ let v = BelnapVec.resize (BelnapVec.allTrue :: BelnapVec 100) :: BelnapVec 100
        in group
             "same width is no-op"
             [ assertEqual "width" 100 v.width
-            , assertBool "still all true" (Belnap.isAllTrue v)
+            , assertBool "still all true" (BelnapVec.isAllTrue v)
             ]
-    , let v = Belnap.resize (Belnap.allTrue :: BelnapVec 200) :: BelnapVec 65
+    , let v = BelnapVec.resize (BelnapVec.allTrue :: BelnapVec 200) :: BelnapVec 65
        in group
             "shrink across word boundary"
             [ assertEqual "width" 65 v.width
-            , assertBool "all true after shrink" (Belnap.isAllTrue v)
-            , assertEqual "count true" 65 (Belnap.countTrue v)
+            , assertBool "all true after shrink" (BelnapVec.isAllTrue v)
+            , assertEqual "count true" 65 (BelnapVec.countTrue v)
             ]
-    , let v = Belnap.resize (Belnap.allFalse :: BelnapVec 60) :: BelnapVec 200
+    , let v = BelnapVec.resize (BelnapVec.allFalse :: BelnapVec 60) :: BelnapVec 200
        in group
             "grow across word boundary"
             [ assertEqual "width" 200 v.width
-            , assertEqual "count false" 60 (Belnap.countFalse v)
-            , assertEqual "count unknown" 140 (Belnap.countUnknown v)
+            , assertEqual "count false" 60 (BelnapVec.countFalse v)
+            , assertEqual "count unknown" 140 (BelnapVec.countUnknown v)
             ]
     ]
 
@@ -354,8 +356,8 @@ genBelnapVec = do
   values <- vectorOf w (elements variants)
   pure $
     foldl
-      (\v (i, b) -> maybe v (\idx -> Belnap.set idx b v) (Belnap.packFinite (fromIntegral i)))
-      Belnap.mkBelnapVec
+      (\v (i, b) -> maybe v (\idx -> BelnapVec.set idx b v) (BelnapVec.packFinite (fromIntegral i)))
+      BelnapVec.empty
       (zip [0 :: Int ..] values)
 
 instance (KnownNat n) => Arbitrary (BelnapVec n) where

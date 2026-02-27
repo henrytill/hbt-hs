@@ -34,6 +34,7 @@ library
     exposed-modules:
         Hbt.Attic
         Hbt.Attic.Belnap
+        Hbt.Attic.BelnapVec
     -- other-modules:
     -- other-extensions:
     hs-source-dirs:   src
