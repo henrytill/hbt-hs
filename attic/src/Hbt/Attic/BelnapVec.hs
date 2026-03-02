@@ -67,6 +67,9 @@ import Prelude hiding (False, True, and, not, or)
 fin :: forall i n. (KnownNat i, KnownNat n, (i + 1) <= n) => Finite n
 fin = natToFinite (Proxy @i)
 
+natInt :: forall n. (KnownNat n) => Int
+natInt = fromIntegral (natVal (Proxy @n))
+
 -- | Storage size in 'Word64' words for a 't:BelnapVec' of @n@ elements.
 -- Two bitplanes (pos, neg) interleaved, each needing @ceil(n/64)@ words.
 type StorageSize n = 2 * Div (n + 63) 64
@@ -80,7 +83,7 @@ newtype BelnapVec (n :: Nat) = BelnapVec (Vector (StorageSize n) Word64)
   deriving stock (Eq, Show)
 
 instance (KnownNat n) => HasField "width" (BelnapVec n) Int where
-  getField _ = fromIntegral (natVal (Proxy @n))
+  getField _ = natInt @n
 
 bitsLog2 :: Int
 bitsLog2 = 6
@@ -94,9 +97,6 @@ tailMask :: Int -> Word64
 tailMask n =
   let r = n .&. bitsMask
    in if r == 0 then maxBound else (1 `shiftL` r) - 1
-
-natInt :: forall n. (KnownNat n) => Int
-natInt = fromIntegral (natVal (Proxy @n))
 
 -- | Zero out unused high bits in the tail word pair.
 maskTail :: forall n. (KnownNat n) => BelnapVec n -> BelnapVec n
