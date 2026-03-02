@@ -55,7 +55,7 @@ import Data.Finite (Finite, getFinite, natToFinite, packFinite)
 import Data.Monoid (All (..), Sum (..))
 import Data.Proxy (Proxy (..))
 import Data.Vector.Unboxed.Sized (Vector)
-import Data.Vector.Unboxed.Sized qualified as VS
+import Data.Vector.Unboxed.Sized qualified as Vector
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import GHC.TypeLits (Div, KnownNat, Nat, natVal, type (*), type (+), type (<=))
@@ -103,8 +103,8 @@ maskTail :: forall n. (KnownNat n) => BelnapVec n -> BelnapVec n
 maskTail bv@(BelnapVec arr)
   | m == maxBound = bv
   | otherwise =
-      let base = VS.length arr - 2
-       in BelnapVec $ VS.unsafeAccum (.&.) arr [(base, m), (base + 1, m)]
+      let base = Vector.length arr - 2
+       in BelnapVec $ Vector.unsafeAccum (.&.) arr [(base, m), (base + 1, m)]
   where
     m = tailMask (natInt @n)
 
@@ -119,12 +119,12 @@ bitPlanes (Belnap.unsafeToBits -> bits) =
 filled :: forall n. (KnownNat n) => Belnap -> BelnapVec n
 filled fill =
   let (posW, negW) = bitPlanes fill
-   in maskTail . BelnapVec . VS.generate $ \fi ->
+   in maskTail . BelnapVec . Vector.generate $ \fi ->
         if even (getFinite fi) then posW else negW
 
 -- | Create a vector of @n@ elements, all 'Hbt.Attic.Belnap.Unknown'.
 empty :: (KnownNat n) => BelnapVec n
-empty = BelnapVec (VS.replicate 0)
+empty = BelnapVec (Vector.replicate 0)
 
 -- | Create a vector of @n@ elements, all 'Hbt.Attic.Belnap.True'.
 allTrue :: (KnownNat n) => BelnapVec n
@@ -144,8 +144,8 @@ get fi (BelnapVec arr) =
   let i = fromIntegral (getFinite fi) :: Int
       w = i `shiftR` bitsLog2
       b = i .&. bitsMask
-      posW = VS.unsafeIndex arr (2 * w)
-      negW = VS.unsafeIndex arr (2 * w + 1)
+      posW = Vector.unsafeIndex arr (2 * w)
+      negW = Vector.unsafeIndex arr (2 * w + 1)
       bitsW = (((negW `shiftR` b) .&. 1) `shiftL` 1) .|. ((posW `shiftR` b) .&. 1) :: Word64
    in Belnap.unsafeFromBits (fromIntegral bitsW)
 
@@ -161,7 +161,7 @@ set fi (Belnap.unsafeToBits -> bits) (BelnapVec arr) =
       negBit = ((bitsW `shiftR` 1) .&. 1) `shiftL` b
       base = 2 * w
    in BelnapVec $
-        VS.unsafeAccum
+        Vector.unsafeAccum
           (\old new -> (old .&. bitMask) .|. new)
           arr
           [(base, posBit), (base + 1, negBit)]
@@ -169,9 +169,9 @@ set fi (Belnap.unsafeToBits -> bits) (BelnapVec arr) =
 -- | Element-wise Belnap NOT.
 not :: (KnownNat n) => BelnapVec n -> BelnapVec n
 not (BelnapVec arr) =
-  BelnapVec . VS.generate $ \fi ->
+  BelnapVec . Vector.generate $ \fi ->
     let i = fromIntegral (getFinite fi) :: Int
-     in VS.unsafeIndex arr (i `xor` 1)
+     in Vector.unsafeIndex arr (i `xor` 1)
 
 vecBinop ::
   (Word64 -> Word64 -> Word64) ->
@@ -180,7 +180,7 @@ vecBinop ::
   BelnapVec n ->
   BelnapVec n
 vecBinop posOp negOp (BelnapVec a) (BelnapVec b) =
-  BelnapVec $ VS.izipWith (\fi x y -> if even (getFinite fi) then posOp x y else negOp x y) a b
+  BelnapVec $ Vector.izipWith (\fi x y -> if even (getFinite fi) then posOp x y else negOp x y) a b
 
 -- | Element-wise Belnap AND.
 and :: BelnapVec n -> BelnapVec n -> BelnapVec n
@@ -204,10 +204,10 @@ consensus = vecBinop (.&.) (.&.)
 
 -- | Truncate or extend to @n@ elements ('Hbt.Attic.Belnap.Unknown'-filled), from @m@-wide source.
 resize :: forall m n. (KnownNat m, KnownNat n) => BelnapVec m -> BelnapVec n
-resize (BelnapVec arr) = maskTail . BelnapVec . VS.generate $ \fi ->
+resize (BelnapVec arr) = maskTail . BelnapVec . Vector.generate $ \fi ->
   let i = fromIntegral (getFinite fi) :: Int
-      arrWords = VS.length arr
-   in if i < arrWords then VS.unsafeIndex arr i else 0
+      arrWords = Vector.length arr
+   in if i < arrWords then Vector.unsafeIndex arr i else 0
 
 -- | Fold over word pairs, supplying @(mask, pos_word, neg_word)@ to @f@ for
 -- each pair.  The mask is 'maxBound' for full words and 'tailMask' for the
@@ -224,13 +224,13 @@ foldMapWordPairs f (BelnapVec arr) =
         acc
           <> f
             (if i == lastPair then tm else maxBound)
-            (VS.unsafeIndex arr i)
-            (VS.unsafeIndex arr (i + 1))
+            (Vector.unsafeIndex arr i)
+            (Vector.unsafeIndex arr (i + 1))
     )
     mempty
     [0, 2 .. lastPair]
   where
-    lastPair = VS.length arr - 2
+    lastPair = Vector.length arr - 2
     tm = tailMask (natInt @n)
 
 -- | Returns 'Prelude.True' if no position is 'Hbt.Attic.Belnap.Both'.
