@@ -56,7 +56,7 @@ import Prelude qualified
 -- | 1   | 1   | 0b11 | Both    |
 -- +-----+-----+------+---------+
 newtype Belnap = MkBelnap Word8
-  deriving stock (Eq, Ord, Show)
+  deriving stock (Eq, Show)
 
 -- | No information: neither positive nor negative evidence.
 pattern Unknown :: Belnap
