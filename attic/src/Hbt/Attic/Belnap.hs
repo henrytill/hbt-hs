@@ -93,7 +93,7 @@ not (MkBelnap a) =
 --
 -- \[
 -- \begin{array}{r|cccc}
---   \text{and} & U & T & F & B \\ \hline
+--     & U & T & F & B \\ \hline
 --   U & U & U & F & F \\
 --   T & U & T & F & B \\
 --   F & F & F & F & F \\
@@ -110,7 +110,7 @@ and (MkBelnap a) (MkBelnap b) =
 --
 -- \[
 -- \begin{array}{r|cccc}
---   \text{or} & U & T & F & B \\ \hline
+--     & U & T & F & B \\ \hline
 --   U & U & T & U & T \\
 --   T & T & T & T & T \\
 --   F & U & T & F & B \\
@@ -127,7 +127,7 @@ or (MkBelnap a) (MkBelnap b) =
 --
 -- \[
 -- \begin{array}{r|cccc}
---   \text{merge} & U & T & F & B \\ \hline
+--     & U & T & F & B \\ \hline
 --   U & U & T & F & B \\
 --   T & T & T & B & B \\
 --   F & F & B & F & B \\
@@ -145,7 +145,7 @@ implies a = or (not a)
 --
 -- \[
 -- \begin{array}{r|cccc}
---   \text{consensus} & U & T & F & B \\ \hline
+--     & U & T & F & B \\ \hline
 --   U & U & U & U & U \\
 --   T & U & T & U & T \\
 --   F & U & U & F & F \\
