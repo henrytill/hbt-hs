@@ -139,7 +139,7 @@ merge (MkBelnap a) (MkBelnap b) = MkBelnap $ a .|. b
 
 -- | Belnap implication: @implies a = or (not a)@.
 implies :: Belnap -> Belnap -> Belnap
-implies a = or (not a)
+implies = or . not
 
 -- | Knowledge-ordering meet: keep only information that both sources agree on.
 --
@@ -174,29 +174,29 @@ toBool False = Just Prelude.False
 toBool _ = Nothing
 
 -- | Wraps a value for the truth-ordering lattice.
-newtype AsTruth a = AsTruth {getTruth :: a}
+newtype AsTruth a = MkAsTruth {getTruth :: a}
   deriving stock (Eq, Show)
 
 instance Lattice (AsTruth Belnap) where
-  AsTruth a \/ AsTruth b = AsTruth (or a b)
-  AsTruth a /\ AsTruth b = AsTruth (and a b)
+  MkAsTruth a \/ MkAsTruth b = MkAsTruth $ or a b
+  MkAsTruth a /\ MkAsTruth b = MkAsTruth $ and a b
 
 instance BoundedJoinSemiLattice (AsTruth Belnap) where
-  bottom = AsTruth False
+  bottom = MkAsTruth False
 
 instance BoundedMeetSemiLattice (AsTruth Belnap) where
-  top = AsTruth True
+  top = MkAsTruth True
 
 -- | Wraps a value for the knowledge-ordering lattice.
-newtype AsKnowledge a = AsKnowledge {getKnowledge :: a}
+newtype AsKnowledge a = MkAsKnowledge {getKnowledge :: a}
   deriving stock (Eq, Show)
 
 instance Lattice (AsKnowledge Belnap) where
-  AsKnowledge a \/ AsKnowledge b = AsKnowledge (merge a b)
-  AsKnowledge a /\ AsKnowledge b = AsKnowledge (consensus a b)
+  MkAsKnowledge a \/ MkAsKnowledge b = MkAsKnowledge $ merge a b
+  MkAsKnowledge a /\ MkAsKnowledge b = MkAsKnowledge $ consensus a b
 
 instance BoundedJoinSemiLattice (AsKnowledge Belnap) where
-  bottom = AsKnowledge Unknown
+  bottom = MkAsKnowledge Unknown
 
 instance BoundedMeetSemiLattice (AsKnowledge Belnap) where
-  top = AsKnowledge Both
+  top = MkAsKnowledge Both

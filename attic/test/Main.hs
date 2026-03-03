@@ -339,10 +339,10 @@ boundedLawTests label vs =
     ]
 
 asTruthVariants :: [AsTruth Belnap]
-asTruthVariants = map AsTruth variants
+asTruthVariants = map MkAsTruth variants
 
 asKnowledgeVariants :: [AsKnowledge Belnap]
-asKnowledgeVariants = map AsKnowledge variants
+asKnowledgeVariants = map MkAsKnowledge variants
 
 -- QuickCheck properties for BelnapVec instance laws
 
@@ -388,10 +388,10 @@ vecBoundedQCProps label wrap =
 
 quickCheckProps :: [(String, Property)]
 quickCheckProps =
-  vecLatticeQCProps "BelnapVec AsTruth" AsTruth
-    ++ vecLatticeQCProps "BelnapVec AsKnowledge" AsKnowledge
-    ++ vecBoundedQCProps "BelnapVec AsTruth" AsTruth
-    ++ vecBoundedQCProps "BelnapVec AsKnowledge" AsKnowledge
+  vecLatticeQCProps "BelnapVec AsTruth" MkAsTruth
+    ++ vecLatticeQCProps "BelnapVec AsKnowledge" MkAsKnowledge
+    ++ vecBoundedQCProps "BelnapVec AsTruth" MkAsTruth
+    ++ vecBoundedQCProps "BelnapVec AsKnowledge" MkAsKnowledge
 
 runQuickCheckProps :: [(String, Property)] -> IO Bool
 runQuickCheckProps props = do

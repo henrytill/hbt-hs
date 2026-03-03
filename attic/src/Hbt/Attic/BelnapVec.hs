@@ -79,7 +79,7 @@ type StorageSize n = 2 * Div (n + 63) 64
 -- Layout: @[pos_0, neg_0, pos_1, neg_1, ...]@ where each word covers 64 positions.
 -- Element @i@ lives in word pair @i \`shiftR\` 6@, at bit @i .&. 63@.
 -- Unused high bits in the last word pair are always zero.
-newtype BelnapVec (n :: Nat) = BelnapVec (Vector (StorageSize n) Word64)
+newtype BelnapVec (n :: Nat) = MkBelnapVec (Vector (StorageSize n) Word64)
   deriving stock (Eq, Show)
 
 instance (KnownNat n) => HasField "width" (BelnapVec n) Int where
@@ -100,11 +100,11 @@ tailMask n =
 
 -- | Zero out unused high bits in the tail word pair.
 maskTail :: forall n. (KnownNat n) => BelnapVec n -> BelnapVec n
-maskTail bv@(BelnapVec arr)
+maskTail bv@(MkBelnapVec arr)
   | m == maxBound = bv
   | otherwise =
       let base = Vector.length arr - 2
-       in BelnapVec $ Vector.unsafeAccum (.&.) arr [(base, m), (base + 1, m)]
+       in MkBelnapVec $ Vector.unsafeAccum (.&.) arr [(base, m), (base + 1, m)]
   where
     m = tailMask (natInt @n)
 
@@ -119,12 +119,12 @@ bitPlanes (Belnap.unsafeToBits -> bits) =
 filled :: forall n. (KnownNat n) => Belnap -> BelnapVec n
 filled fill =
   let (posW, negW) = bitPlanes fill
-   in maskTail . BelnapVec . Vector.generate $ \fi ->
+   in maskTail . MkBelnapVec . Vector.generate $ \fi ->
         if even (getFinite fi) then posW else negW
 
 -- | Create a vector of @n@ elements, all 'Hbt.Attic.Belnap.Unknown'.
 empty :: (KnownNat n) => BelnapVec n
-empty = BelnapVec (Vector.replicate 0)
+empty = MkBelnapVec (Vector.replicate 0)
 
 -- | Create a vector of @n@ elements, all 'Hbt.Attic.Belnap.True'.
 allTrue :: (KnownNat n) => BelnapVec n
@@ -140,7 +140,7 @@ allBoth = filled Belnap.Both
 
 -- | Read element at index @fi@.
 get :: Finite n -> BelnapVec n -> Belnap
-get fi (BelnapVec arr) =
+get fi (MkBelnapVec arr) =
   let i = fromIntegral (getFinite fi) :: Int
       w = i `shiftR` bitsLog2
       b = i .&. bitsMask
@@ -151,7 +151,7 @@ get fi (BelnapVec arr) =
 
 -- | Write element at index @fi@.
 set :: Finite n -> Belnap -> BelnapVec n -> BelnapVec n
-set fi (Belnap.unsafeToBits -> bits) (BelnapVec arr) =
+set fi (Belnap.unsafeToBits -> bits) (MkBelnapVec arr) =
   let i = fromIntegral (getFinite fi) :: Int
       w = i `shiftR` bitsLog2
       b = i .&. bitsMask
@@ -160,7 +160,7 @@ set fi (Belnap.unsafeToBits -> bits) (BelnapVec arr) =
       posBit = (bitsW .&. 1) `shiftL` b
       negBit = ((bitsW `shiftR` 1) .&. 1) `shiftL` b
       base = 2 * w
-   in BelnapVec $
+   in MkBelnapVec $
         Vector.unsafeAccum
           (\old new -> (old .&. bitMask) .|. new)
           arr
@@ -168,8 +168,8 @@ set fi (Belnap.unsafeToBits -> bits) (BelnapVec arr) =
 
 -- | Element-wise Belnap NOT.
 not :: (KnownNat n) => BelnapVec n -> BelnapVec n
-not (BelnapVec arr) =
-  BelnapVec . Vector.generate $ \fi ->
+not (MkBelnapVec arr) =
+  MkBelnapVec . Vector.generate $ \fi ->
     let i = fromIntegral (getFinite fi) :: Int
      in Vector.unsafeIndex arr (i `xor` 1)
 
@@ -179,8 +179,8 @@ vecBinop ::
   BelnapVec n ->
   BelnapVec n ->
   BelnapVec n
-vecBinop posOp negOp (BelnapVec a) (BelnapVec b) =
-  BelnapVec $ Vector.izipWith (\fi x y -> if even (getFinite fi) then posOp x y else negOp x y) a b
+vecBinop posOp negOp (MkBelnapVec a) (MkBelnapVec b) =
+  MkBelnapVec $ Vector.izipWith (\fi x y -> if even (getFinite fi) then posOp x y else negOp x y) a b
 
 -- | Element-wise Belnap AND.
 and :: BelnapVec n -> BelnapVec n -> BelnapVec n
@@ -204,7 +204,7 @@ consensus = vecBinop (.&.) (.&.)
 
 -- | Truncate or extend to @n@ elements ('Hbt.Attic.Belnap.Unknown'-filled), from @m@-wide source.
 resize :: forall m n. (KnownNat m, KnownNat n) => BelnapVec m -> BelnapVec n
-resize (BelnapVec arr) = maskTail . BelnapVec . Vector.generate $ \fi ->
+resize (MkBelnapVec arr) = maskTail . MkBelnapVec . Vector.generate $ \fi ->
   let i = fromIntegral (getFinite fi) :: Int
       arrWords = Vector.length arr
    in if i < arrWords then Vector.unsafeIndex arr i else 0
@@ -218,7 +218,7 @@ foldMapWordPairs ::
   (Word64 -> Word64 -> Word64 -> m) ->
   BelnapVec n ->
   m
-foldMapWordPairs f (BelnapVec arr) =
+foldMapWordPairs f (MkBelnapVec arr) =
   foldl'
     ( \acc i ->
         acc
@@ -266,21 +266,21 @@ countUnknown :: forall n. (KnownNat n) => BelnapVec n -> Int
 countUnknown = getSum . foldMapWordPairs (\m pos neg -> Sum (popCount (complement (pos .|. neg) .&. m)))
 
 instance Lattice (AsTruth (BelnapVec n)) where
-  AsTruth a \/ AsTruth b = AsTruth (or a b)
-  AsTruth a /\ AsTruth b = AsTruth (and a b)
+  MkAsTruth a \/ MkAsTruth b = MkAsTruth $ or a b
+  MkAsTruth a /\ MkAsTruth b = MkAsTruth $ and a b
 
 instance (KnownNat n) => BoundedJoinSemiLattice (AsTruth (BelnapVec n)) where
-  bottom = AsTruth allFalse
+  bottom = MkAsTruth allFalse
 
 instance (KnownNat n) => BoundedMeetSemiLattice (AsTruth (BelnapVec n)) where
-  top = AsTruth allTrue
+  top = MkAsTruth allTrue
 
 instance Lattice (AsKnowledge (BelnapVec n)) where
-  AsKnowledge a \/ AsKnowledge b = AsKnowledge (merge a b)
-  AsKnowledge a /\ AsKnowledge b = AsKnowledge (consensus a b)
+  MkAsKnowledge a \/ MkAsKnowledge b = MkAsKnowledge $ merge a b
+  MkAsKnowledge a /\ MkAsKnowledge b = MkAsKnowledge $ consensus a b
 
 instance (KnownNat n) => BoundedJoinSemiLattice (AsKnowledge (BelnapVec n)) where
-  bottom = AsKnowledge empty
+  bottom = MkAsKnowledge empty
 
 instance (KnownNat n) => BoundedMeetSemiLattice (AsKnowledge (BelnapVec n)) where
-  top = AsKnowledge allBoth
+  top = MkAsKnowledge allBoth
