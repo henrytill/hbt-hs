@@ -175,7 +175,7 @@ toBool _ = Nothing
 
 -- | Wraps a value for the truth-ordering lattice.
 newtype AsTruth a = AsTruth {getTruth :: a}
-  deriving stock (Eq, Ord, Show)
+  deriving stock (Eq, Show)
 
 instance Lattice (AsTruth Belnap) where
   AsTruth a \/ AsTruth b = AsTruth (or a b)
@@ -189,7 +189,7 @@ instance BoundedMeetSemiLattice (AsTruth Belnap) where
 
 -- | Wraps a value for the knowledge-ordering lattice.
 newtype AsKnowledge a = AsKnowledge {getKnowledge :: a}
-  deriving stock (Eq, Ord, Show)
+  deriving stock (Eq, Show)
 
 instance Lattice (AsKnowledge Belnap) where
   AsKnowledge a \/ AsKnowledge b = AsKnowledge (merge a b)
