@@ -10,6 +10,7 @@ import Control.Monad.State.Strict (StateT (..))
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as Char8
 import Data.Char qualified as Char
+import Data.Some (Some (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
@@ -29,29 +30,29 @@ data Error
   deriving stock (Show)
   deriving anyclass (Exception)
 
-data ParseState = MkParseState
-  { collection :: Collection
+data ParseState s = MkParseState
+  { collection :: Collection s
   , posts :: [Post]
   }
   deriving stock (Eq, Show)
 
-empty :: ParseState
+empty :: ParseState s
 empty =
   MkParseState
     { collection = Collection.empty
     , posts = []
     }
 
-collection :: Lens' ParseState Collection
-collection f s = (\c -> s {collection = c}) <$> f s.collection
+collection :: Lens' (ParseState s) (Collection s)
+collection f st = (\c -> st {collection = c}) <$> f st.collection
 
-posts :: Lens' ParseState [Post]
-posts f s = (\p -> s {posts = p}) <$> f s.posts
+posts :: Lens' (ParseState s) [Post]
+posts f st = (\p -> st {posts = p}) <$> f st.posts
 
-newtype PinboardM a = MkPinboardM (StateT ParseState IO a)
-  deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
+newtype PinboardM s a = MkPinboardM (StateT (ParseState s) IO a)
+  deriving newtype (Functor, Applicative, Monad, MonadState (ParseState s), MonadIO, MonadThrow)
 
-runPinboardM :: PinboardM a -> ParseState -> IO (a, ParseState)
+runPinboardM :: PinboardM s a -> ParseState s -> IO (a, ParseState s)
 runPinboardM (MkPinboardM m) = runStateT m
 
 toLower :: ByteString -> ByteString
@@ -80,11 +81,11 @@ createPostFromAttrs attrs = do
     then throwIO (ParseError "missing required attribute: href")
     else pure accumulated
 
-handleContent :: Xeno.Content -> PinboardM ()
+handleContent :: Xeno.Content -> PinboardM s ()
 handleContent (Xeno.Element node) = handleNode node
 handleContent _ = pure () -- Ignore text and CDATA
 
-handleNode :: Xeno.Node -> PinboardM ()
+handleNode :: Xeno.Node -> PinboardM s ()
 handleNode node = do
   let nodeName = Text.decodeUtf8 (Xeno.name node)
   case nodeName of
@@ -95,7 +96,7 @@ handleNode node = do
     _ -> pure ()
   mapM_ handleContent (Xeno.contents node)
 
-processNode :: Xeno.Node -> PinboardM Collection
+processNode :: Xeno.Node -> PinboardM s (Collection s)
 processNode rootNode = do
   handleNode rootNode
   collectedPosts <- use posts
@@ -103,11 +104,11 @@ processNode rootNode = do
   collection .= result
   use collection
 
-parse :: (HasCallStack) => Text -> IO Collection
+parse :: (HasCallStack) => Text -> IO (Some Collection)
 parse input
-  | Text.null (Text.strip input) = pure Collection.empty
+  | Text.null (Text.strip input) = pure (Some Collection.empty)
   | otherwise = do
       let inputBytes = Text.encodeUtf8 input
       rootNode <- either (throwIO . XenoError) pure (Xeno.parse inputBytes)
       (ret, _) <- runPinboardM (processNode rootNode) empty
-      pure ret
+      pure (Some ret)

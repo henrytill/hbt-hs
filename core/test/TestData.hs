@@ -15,12 +15,15 @@ import Data.List (sort)
 import Data.List.Split qualified as Split
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Some (Some, withSome)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Text.Encoding.Error qualified as Text.Error
 import Data.Yaml qualified as Yaml
 import Hbt (Flow (..), Format (..), SFlow (..), formatWith, parseWith)
+import Hbt.Collection (Collection, CollectionRepr)
+import Hbt.Collection qualified as Collection
 import System.Directory (listDirectory)
 import System.FilePath (splitExtensions, (</>))
 import Test.Dwergaz
@@ -101,19 +104,22 @@ discoverInput = discover SFrom inputDir
 discoverOutput :: Format To -> IO [TestCase To]
 discoverOutput = discover STo outputDir
 
+toCollRepr :: Some Collection -> CollectionRepr
+toCollRepr s = withSome s Collection.toRepr
+
 testParser :: TestCase From -> IO Test
 testParser testCase = testIO testCase.stem $ do
-  expected <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expected)
-  actual <- parseWith testCase.format testCase.input
-  pure (assertEqual testCase.stem expected actual)
+  expectedSome <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expected)
+  actualSome <- parseWith testCase.format testCase.input
+  pure (assertEqual testCase.stem (toCollRepr expectedSome) (toCollRepr actualSome))
 
 testFormatter :: Format From -> TestCase To -> IO Test
 testFormatter inputFormat testCase = testIO testCase.stem $ do
-  parsed <- parseWith inputFormat testCase.input
-  formatted <- formatWith testCase.format parsed
-  actualReparsed <- parseWith inputFormat formatted
-  expectedReparsed <- parseWith inputFormat testCase.expected
-  pure (assertEqual testCase.stem expectedReparsed actualReparsed)
+  parsedSome <- parseWith inputFormat testCase.input
+  formatted <- withSome parsedSome (formatWith testCase.format)
+  actualSome <- parseWith inputFormat formatted
+  expectedSome <- parseWith inputFormat testCase.expected
+  pure (assertEqual testCase.stem (toCollRepr expectedSome) (toCollRepr actualSome))
 
 parserTests :: String -> [TestCase From] -> IO Test
 parserTests groupName testCases = do

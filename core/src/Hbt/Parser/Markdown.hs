@@ -13,6 +13,7 @@ import Control.Monad.State.Class (gets)
 import Control.Monad.State.Strict (StateT (..))
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
+import Data.Some (Some (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Lazy qualified as LazyText
@@ -37,18 +38,18 @@ data Error
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
-data ParseState = MkParseState
-  { collection :: Collection
+data ParseState s = MkParseState
+  { collection :: Collection s
   , maybeURI :: Maybe URI
   , maybeName :: Maybe Name
   , maybeTime :: Maybe Time
   , labels :: [Label]
-  , maybeParent :: Maybe Id
-  , parents :: [Id]
+  , maybeParent :: Maybe (Id s)
+  , parents :: [Id s]
   }
   deriving stock (Eq, Show)
 
-empty :: ParseState
+empty :: ParseState s
 empty =
   MkParseState
     { collection = Collection.empty
@@ -60,7 +61,7 @@ empty =
     , parents = []
     }
 
-toEntity :: ParseState -> Maybe Entity
+toEntity :: ParseState s -> Maybe Entity
 toEntity st =
   Entity.mkEntity
     <$> st.maybeURI
@@ -68,37 +69,37 @@ toEntity st =
     <*> pure st.maybeName
     <*> pure (Set.fromList st.labels)
 
-collection :: Lens' ParseState Collection
-collection f s = (\c -> s {collection = c}) <$> f s.collection
+collection :: Lens' (ParseState s) (Collection s)
+collection f st = (\c -> st {collection = c}) <$> f st.collection
 
-maybeURI :: Lens' ParseState (Maybe URI)
-maybeURI f s = (\u -> s {maybeURI = u}) <$> f s.maybeURI
+maybeURI :: Lens' (ParseState s) (Maybe URI)
+maybeURI f st = (\u -> st {maybeURI = u}) <$> f st.maybeURI
 
-maybeName :: Lens' ParseState (Maybe Name)
-maybeName f s = (\n -> s {maybeName = n}) <$> f s.maybeName
+maybeName :: Lens' (ParseState s) (Maybe Name)
+maybeName f st = (\n -> st {maybeName = n}) <$> f st.maybeName
 
-maybeTime :: Lens' ParseState (Maybe Time)
-maybeTime f s = (\t -> s {maybeTime = t}) <$> f s.maybeTime
+maybeTime :: Lens' (ParseState s) (Maybe Time)
+maybeTime f st = (\t -> st {maybeTime = t}) <$> f st.maybeTime
 
-labels :: Lens' ParseState [Label]
-labels f s = (\l -> s {labels = l}) <$> f s.labels
+labels :: Lens' (ParseState s) [Label]
+labels f st = (\l -> st {labels = l}) <$> f st.labels
 
-maybeParent :: Lens' ParseState (Maybe Id)
-maybeParent f s = (\p -> s {maybeParent = p}) <$> f s.maybeParent
+maybeParent :: Lens' (ParseState s) (Maybe (Id s))
+maybeParent f st = (\p -> st {maybeParent = p}) <$> f st.maybeParent
 
-parents :: Lens' ParseState [Id]
-parents f s = (\p -> s {parents = p}) <$> f s.parents
+parents :: Lens' (ParseState s) [Id s]
+parents f st = (\p -> st {parents = p}) <$> f st.parents
 
-newtype MarkdownM a = MkMarkdownM (StateT ParseState IO a)
-  deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadThrow)
+newtype MarkdownM s a = MkMarkdownM (StateT (ParseState s) IO a)
+  deriving newtype (Functor, Applicative, Monad, MonadState (ParseState s), MonadThrow)
 
-runMarkdownM :: MarkdownM a -> ParseState -> IO (a, ParseState)
+runMarkdownM :: MarkdownM s a -> ParseState s -> IO (a, ParseState s)
 runMarkdownM (MkMarkdownM m) = runStateT m
 
-liftEither :: (Exception e, HasCallStack) => Either e b -> MarkdownM b
+liftEither :: (Exception e, HasCallStack) => Either e b -> MarkdownM s b
 liftEither = either throwM pure
 
-saveEntity :: MarkdownM ()
+saveEntity :: MarkdownM s ()
 saveEntity = do
   maybeEntity <- gets toEntity
   entity <- maybe (throwM NoSaveableEntity) pure maybeEntity
@@ -132,7 +133,7 @@ textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input)
         Initial.Code t -> backtick <> Builder.fromText t <> backtick
         Initial.RawInline _ t -> Builder.fromText t
 
-extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
+extractLink :: Text -> Text -> [Inline a] -> MarkdownM s ()
 extractLink dest _title desc = do
   uri <- liftEither (URI.parse dest)
   maybeURI .= Just uri
@@ -140,14 +141,14 @@ extractLink dest _title desc = do
   when (not (Text.null linkText) && linkText /= dest) $
     maybeName .= Just (MkName linkText)
 
-handleInline :: Inline a -> MarkdownM ()
+handleInline :: Inline a -> MarkdownM s ()
 handleInline (MkInline _ (Initial.Link dest title desc)) = extractLink dest title desc >> saveEntity
 handleInline _ = pure ()
 
-processInlines :: [Inline a] -> MarkdownM ()
+processInlines :: [Inline a] -> MarkdownM s ()
 processInlines = mapM_ handleInline
 
-handleBlock :: Block a -> MarkdownM ()
+handleBlock :: Block a -> MarkdownM s ()
 handleBlock (MkBlock _ b) =
   case b of
     Initial.Plain inlines ->
@@ -171,7 +172,7 @@ handleBlock (MkBlock _ b) =
       parents %= drop1
     _ -> pure ()
 
-processBlocks :: [Block a] -> MarkdownM Collection
+processBlocks :: [Block a] -> MarkdownM s (Collection s)
 processBlocks blocks = do
   mapM_ handleBlock blocks
   use collection
@@ -179,8 +180,8 @@ processBlocks blocks = do
 parseBlocks :: String -> Text -> Either Commonmark.ParseError Blocks
 parseBlocks = Commonmark.commonmark
 
-parse :: (HasCallStack) => String -> Text -> IO Collection
+parse :: (HasCallStack) => String -> Text -> IO (Some Collection)
 parse parseName input = do
   blocks <- either (throwIO . ParseError) pure (parseBlocks parseName input)
   (ret, _) <- runMarkdownM (processBlocks blocks) empty
-  pure ret
+  pure (Some ret)

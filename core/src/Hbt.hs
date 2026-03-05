@@ -16,6 +16,7 @@ where
 
 import Data.ByteString (ByteString)
 import Data.FileEmbed qualified as FileEmbed
+import Data.Some (Some)
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import Data.Text.Lazy qualified as LazyText
@@ -62,7 +63,7 @@ toString Markdown = "markdown"
 toString HTML = "html"
 toString YAML = "yaml"
 
-parseWith :: (HasCallStack) => Format From -> Text -> IO Collection
+parseWith :: (HasCallStack) => Format From -> Text -> IO (Some Collection)
 parseWith JSON = PinboardJSON.parse
 parseWith XML = PinboardXML.parse
 parseWith Markdown = Markdown.parse "content"
@@ -71,7 +72,7 @@ parseWith HTML = HTMLParser.parse
 templateBytes :: ByteString
 templateBytes = $(FileEmbed.embedFileRelative "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache")
 
-formatWith :: Format To -> Collection -> IO Text
+formatWith :: Format To -> Collection s -> IO Text
 formatWith YAML collection =
   pure (Text.decodeUtf8 (YamlPretty.encodePretty Collection.yamlConfig collection))
 formatWith HTML collection = do

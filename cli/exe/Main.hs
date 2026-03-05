@@ -5,6 +5,7 @@ import Control.Monad (when)
 import Data.List qualified as List
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
+import Data.Some (withSome)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
@@ -147,7 +148,7 @@ detectInputFormat file = detectFromExtension SFrom (FilePath.takeExtension file)
 detectOutputFormat :: FilePath -> Maybe (Format To)
 detectOutputFormat file = detectFromExtension STo (FilePath.takeExtension file)
 
-applyMappings :: Maybe FilePath -> Collection -> IO Collection
+applyMappings :: Maybe FilePath -> Collection s -> IO (Collection s)
 applyMappings Nothing collection = pure collection
 applyMappings (Just _) _ = Exit.die "Warning: --mappings option not yet implemented"
 
@@ -155,7 +156,7 @@ writeOutput :: Maybe FilePath -> Text -> IO ()
 writeOutput Nothing content = Text.putStr content
 writeOutput (Just file) content = Text.writeFile file content
 
-printCollection :: FilePath -> Options -> Collection -> IO ()
+printCollection :: FilePath -> Options -> Collection s -> IO ()
 printCollection file opts collection
   | opts.showInfo = do
       let output = Text.pack (file ++ ": " ++ show (Collection.length collection) ++ " entities\n")
@@ -172,7 +173,11 @@ printCollection file opts collection
 processFile :: Options -> FilePath -> IO ()
 processFile opts file = do
   inputFmt <- Maybe.maybe (fail "processFile: inputFormat should be validated in main") pure opts.inputFormat
-  Text.readFile file >>= parseWith inputFmt >>= applyMappings opts.mappingsFile >>= printCollection file opts
+  content <- Text.readFile file
+  parsedSome <- parseWith inputFmt content
+  withSome parsedSome $ \coll -> do
+    coll' <- applyMappings opts.mappingsFile coll
+    printCollection file opts coll'
 
 main :: IO ()
 main = do

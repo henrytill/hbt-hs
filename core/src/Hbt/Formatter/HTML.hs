@@ -78,7 +78,7 @@ fromEntity entity =
     href = Maybe.fromMaybe mempty (URI.toText entity.uri) -- TODO
     tagsList = List.sort (coerce (Set.toList entity.labels))
 
-format :: Template -> Collection -> Text
+format :: Template -> Collection s -> Text
 format template collection = LazyText.toStrict (Microstache.renderMustache template toRender)
   where
     f e acc = fromEntity e : acc

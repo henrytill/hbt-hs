@@ -13,6 +13,7 @@ import Control.Monad.State.Strict (StateT (..))
 import Data.Coerce (coerce)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
+import Data.Some (Some (..))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Stack (HasCallStack)
@@ -56,8 +57,8 @@ data WaitingFor
   | None
   deriving stock (Eq, Show)
 
-data ParseState = MkParseState
-  { collection :: Collection
+data ParseState s = MkParseState
+  { collection :: Collection s
   , maybeDescription :: Maybe Text
   , maybeExtended :: Maybe Text
   , attributes :: [Attr]
@@ -66,7 +67,7 @@ data ParseState = MkParseState
   }
   deriving stock (Eq, Show)
 
-empty :: ParseState
+empty :: ParseState s
 empty =
   MkParseState
     { collection = Collection.empty
@@ -77,28 +78,28 @@ empty =
     , waitingFor = None
     }
 
-collection :: Lens' ParseState Collection
-collection f s = (\c -> s {collection = c}) <$> f s.collection
+collection :: Lens' (ParseState s) (Collection s)
+collection f st = (\c -> st {collection = c}) <$> f st.collection
 
-maybeDescription :: Lens' ParseState (Maybe Text)
-maybeDescription f s = (\d -> s {maybeDescription = d}) <$> f s.maybeDescription
+maybeDescription :: Lens' (ParseState s) (Maybe Text)
+maybeDescription f st = (\d -> st {maybeDescription = d}) <$> f st.maybeDescription
 
-maybeExtended :: Lens' ParseState (Maybe Text)
-maybeExtended f s = (\e -> s {maybeExtended = e}) <$> f s.maybeExtended
+maybeExtended :: Lens' (ParseState s) (Maybe Text)
+maybeExtended f st = (\e -> st {maybeExtended = e}) <$> f st.maybeExtended
 
-attributes :: Lens' ParseState [Attr]
-attributes f s = (\as -> s {attributes = as}) <$> f s.attributes
+attributes :: Lens' (ParseState s) [Attr]
+attributes f st = (\as -> st {attributes = as}) <$> f st.attributes
 
-folderStack :: Lens' ParseState [Text]
-folderStack f s = (\fs -> s {folderStack = fs}) <$> f s.folderStack
+folderStack :: Lens' (ParseState s) [Text]
+folderStack f st = (\fs -> st {folderStack = fs}) <$> f st.folderStack
 
-waitingFor :: Lens' ParseState WaitingFor
-waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
+waitingFor :: Lens' (ParseState s) WaitingFor
+waitingFor f st = (\w -> st {waitingFor = w}) <$> f st.waitingFor
 
-newtype NetscapeM a = MkNetscapeM (StateT ParseState IO a)
-  deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
+newtype NetscapeM s a = MkNetscapeM (StateT (ParseState s) IO a)
+  deriving newtype (Functor, Applicative, Monad, MonadState (ParseState s), MonadIO, MonadThrow)
 
-runNetscapeM :: NetscapeM a -> ParseState -> IO (a, ParseState)
+runNetscapeM :: NetscapeM s a -> ParseState s -> IO (a, ParseState s)
 runNetscapeM (MkNetscapeM m) = runStateT m
 
 accumulateEntity :: (HasCallStack) => Entity -> Attr -> IO Entity
@@ -130,7 +131,7 @@ accumulateEntity entity (Attr name value) =
     "feed" -> pure (entity {isFeed = Entity.mkIsFeed (value == "true")})
     _ -> pure entity
 
-createEntity :: NetscapeM Entity
+createEntity :: NetscapeM s Entity
 createEntity = do
   attrs <- use attributes
   folders <- use folderStack
@@ -147,7 +148,7 @@ createEntity = do
         then throwM (ParseError "missing required attribute: href")
         else pure finalEntity
 
-addPending :: NetscapeM ()
+addPending :: NetscapeM s ()
 addPending = do
   entity <- createEntity
   collection %= snd . Collection.upsert entity
@@ -155,7 +156,7 @@ addPending = do
   maybeDescription .= Nothing
   maybeExtended .= Nothing
 
-handle :: Token -> NetscapeM ()
+handle :: Token -> NetscapeM s ()
 handle (OpenH3 _) =
   waitingFor .= FolderName
 handle (OpenDT _) = do
@@ -188,11 +189,11 @@ handle CloseDL = do
   folderStack %= drop1
 handle _ = pure ()
 
-process :: [Token] -> NetscapeM Collection
+process :: [Token] -> NetscapeM s (Collection s)
 process tokens = forM_ tokens handle >> use collection
 
-parse :: Text -> IO Collection
+parse :: Text -> IO (Some Collection)
 parse input = do
   let tokens = parseTokens input
   (ret, _) <- runNetscapeM (process tokens) empty
-  pure ret
+  pure (Some ret)

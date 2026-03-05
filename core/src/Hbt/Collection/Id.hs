@@ -1,7 +1,8 @@
+{-# LANGUAGE RoleAnnotations #-}
+
 module Hbt.Collection.Id (Id (..)) where
 
-import Data.Aeson (FromJSON, ToJSON)
+type role Id nominal
 
-newtype Id = MkId {value :: Int}
+newtype Id s = MkId {value :: Int}
   deriving stock (Eq, Ord, Show)
-  deriving newtype (FromJSON, ToJSON)
