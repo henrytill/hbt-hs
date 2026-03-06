@@ -30,6 +30,7 @@ where
 import Control.Exception (Exception, throw)
 import Control.Monad (foldM)
 import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Kind (Type)
 import Data.List (elemIndex, sortOn)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -55,9 +56,9 @@ newtype Error = MissingEntities [Int]
 
 type role Collection nominal
 
-type Edges s = Vector (Id s)
+type Edges (s :: Type) = Vector (Id s)
 
-data Collection s = MkCollection
+data Collection (s :: Type) = MkCollection
   { nodes :: Vector Entity
   , edges :: Vector (Edges s)
   , uris :: Map URI (Id s)

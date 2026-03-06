@@ -4,7 +4,7 @@ module Hbt.Parser.Pinboard.JSON (Error (..), parse) where
 
 import Control.Exception (Exception, throwIO)
 import Data.Aeson qualified as Aeson
-import Data.Some (Some (..))
+import Data.Some (Some)
 import Data.Text (Text)
 import Data.Text.Encoding qualified as Text
 import GHC.Stack (HasCallStack)
@@ -18,5 +18,4 @@ newtype Error = ParseError String
 parse :: (HasCallStack) => Text -> IO (Some Collection)
 parse input = do
   posts <- either (throwIO . ParseError) pure (Aeson.eitherDecodeStrict (Text.encodeUtf8 input))
-  coll <- Collection.fromPosts posts
-  pure (Some coll)
+  Collection.execCollectionT (Collection.fromPosts posts)

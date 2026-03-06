@@ -10,17 +10,18 @@ import Control.Exception (Exception, throwIO)
 import Control.Monad (forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.State.Class (gets)
-import Control.Monad.State.Strict (StateT (..))
+import Control.Monad.State.Strict (evalStateT)
+import Control.Monad.Trans.Class (lift)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
-import Data.Some (Some (..))
+import Data.Some (Some)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Lazy qualified as LazyText
 import Data.Text.Lazy.Builder (Builder)
 import Data.Text.Lazy.Builder qualified as Builder
 import GHC.Stack (HasCallStack)
-import Hbt.Collection (Collection, Id)
+import Hbt.Collection (Collection, CollectionT, Id, execCollectionT)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity, Label (..), Name (..))
 import Hbt.Entity qualified as Entity
@@ -39,8 +40,7 @@ data Error
   deriving anyclass (Exception)
 
 data ParseState s = MkParseState
-  { collection :: Collection s
-  , maybeURI :: Maybe URI
+  { maybeURI :: Maybe URI
   , maybeName :: Maybe Name
   , maybeTime :: Maybe Time
   , labels :: [Label]
@@ -49,11 +49,10 @@ data ParseState s = MkParseState
   }
   deriving stock (Eq, Show)
 
-empty :: ParseState s
-empty =
+emptyParseState :: ParseState s
+emptyParseState =
   MkParseState
-    { collection = Collection.empty
-    , maybeURI = Nothing
+    { maybeURI = Nothing
     , maybeName = Nothing
     , maybeTime = Nothing
     , labels = []
@@ -68,9 +67,6 @@ toEntity st =
     <*> st.maybeTime
     <*> pure st.maybeName
     <*> pure (Set.fromList st.labels)
-
-collection :: Lens' (ParseState s) (Collection s)
-collection f st = (\c -> st {collection = c}) <$> f st.collection
 
 maybeURI :: Lens' (ParseState s) (Maybe URI)
 maybeURI f st = (\u -> st {maybeURI = u}) <$> f st.maybeURI
@@ -90,11 +86,7 @@ maybeParent f st = (\p -> st {maybeParent = p}) <$> f st.maybeParent
 parents :: Lens' (ParseState s) [Id s]
 parents f st = (\p -> st {parents = p}) <$> f st.parents
 
-newtype MarkdownM s a = MkMarkdownM (StateT (ParseState s) IO a)
-  deriving newtype (Functor, Applicative, Monad, MonadState (ParseState s), MonadThrow)
-
-runMarkdownM :: MarkdownM s a -> ParseState s -> IO (a, ParseState s)
-runMarkdownM (MkMarkdownM m) = runStateT m
+type MarkdownM s = StateT (ParseState s) (CollectionT s IO)
 
 liftEither :: (Exception e, HasCallStack) => Either e b -> MarkdownM s b
 liftEither = either throwM pure
@@ -103,11 +95,10 @@ saveEntity :: MarkdownM s ()
 saveEntity = do
   maybeEntity <- gets toEntity
   entity <- maybe (throwM NoSaveableEntity) pure maybeEntity
-  (entityId, coll) <- uses collection $ Collection.upsert entity
-  collection .= coll
+  entityId <- lift (Collection.upsert entity)
   parent <- uses parents Maybe.listToMaybe
   forM_ parent $ \p ->
-    collection %= Collection.addEdges entityId p
+    lift (Collection.addEdges entityId p)
   maybeParent .= Just entityId
   maybeURI .= Nothing
   maybeName .= Nothing
@@ -172,16 +163,10 @@ handleBlock (MkBlock _ b) =
       parents %= drop1
     _ -> pure ()
 
-processBlocks :: [Block a] -> MarkdownM s (Collection s)
-processBlocks blocks = do
-  mapM_ handleBlock blocks
-  use collection
-
 parseBlocks :: String -> Text -> Either Commonmark.ParseError Blocks
 parseBlocks = Commonmark.commonmark
 
 parse :: (HasCallStack) => String -> Text -> IO (Some Collection)
 parse parseName input = do
   blocks <- either (throwIO . ParseError) pure (parseBlocks parseName input)
-  (ret, _) <- runMarkdownM (processBlocks blocks) empty
-  pure (Some ret)
+  execCollectionT $ evalStateT (mapM_ handleBlock blocks) emptyParseState

@@ -6,18 +6,19 @@
 module Hbt.Parser.HTML (Error (..), parse) where
 
 import Control.Exception (Exception, throwIO)
-import Control.Monad (foldM, forM_, when)
+import Control.Monad (foldM, forM_, void, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.State.Strict (StateT (..))
+import Control.Monad.State.Strict (evalStateT)
+import Control.Monad.Trans.Class (lift)
 import Data.Coerce (coerce)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
-import Data.Some (Some (..))
+import Data.Some (Some)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Stack (HasCallStack)
-import Hbt.Collection (Collection)
+import Hbt.Collection (Collection, CollectionT, execCollectionT)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity (..))
 import Hbt.Entity qualified as Entity
@@ -57,9 +58,8 @@ data WaitingFor
   | None
   deriving stock (Eq, Show)
 
-data ParseState s = MkParseState
-  { collection :: Collection s
-  , maybeDescription :: Maybe Text
+data ParseState = MkParseState
+  { maybeDescription :: Maybe Text
   , maybeExtended :: Maybe Text
   , attributes :: [Attr]
   , folderStack :: [Text]
@@ -67,40 +67,32 @@ data ParseState s = MkParseState
   }
   deriving stock (Eq, Show)
 
-empty :: ParseState s
-empty =
+emptyParseState :: ParseState
+emptyParseState =
   MkParseState
-    { collection = Collection.empty
-    , maybeDescription = Nothing
+    { maybeDescription = Nothing
     , maybeExtended = Nothing
     , attributes = []
     , folderStack = []
     , waitingFor = None
     }
 
-collection :: Lens' (ParseState s) (Collection s)
-collection f st = (\c -> st {collection = c}) <$> f st.collection
-
-maybeDescription :: Lens' (ParseState s) (Maybe Text)
+maybeDescription :: Lens' ParseState (Maybe Text)
 maybeDescription f st = (\d -> st {maybeDescription = d}) <$> f st.maybeDescription
 
-maybeExtended :: Lens' (ParseState s) (Maybe Text)
+maybeExtended :: Lens' ParseState (Maybe Text)
 maybeExtended f st = (\e -> st {maybeExtended = e}) <$> f st.maybeExtended
 
-attributes :: Lens' (ParseState s) [Attr]
+attributes :: Lens' ParseState [Attr]
 attributes f st = (\as -> st {attributes = as}) <$> f st.attributes
 
-folderStack :: Lens' (ParseState s) [Text]
+folderStack :: Lens' ParseState [Text]
 folderStack f st = (\fs -> st {folderStack = fs}) <$> f st.folderStack
 
-waitingFor :: Lens' (ParseState s) WaitingFor
+waitingFor :: Lens' ParseState WaitingFor
 waitingFor f st = (\w -> st {waitingFor = w}) <$> f st.waitingFor
 
-newtype NetscapeM s a = MkNetscapeM (StateT (ParseState s) IO a)
-  deriving newtype (Functor, Applicative, Monad, MonadState (ParseState s), MonadIO, MonadThrow)
-
-runNetscapeM :: NetscapeM s a -> ParseState s -> IO (a, ParseState s)
-runNetscapeM (MkNetscapeM m) = runStateT m
+type NetscapeM s = StateT ParseState (CollectionT s IO)
 
 accumulateEntity :: (HasCallStack) => Entity -> Attr -> IO Entity
 accumulateEntity entity (Attr name value) =
@@ -131,7 +123,7 @@ accumulateEntity entity (Attr name value) =
     "feed" -> pure (entity {isFeed = Entity.mkIsFeed (value == "true")})
     _ -> pure entity
 
-createEntity :: NetscapeM s Entity
+createEntity :: (HasCallStack) => NetscapeM s Entity
 createEntity = do
   attrs <- use attributes
   folders <- use folderStack
@@ -151,7 +143,7 @@ createEntity = do
 addPending :: NetscapeM s ()
 addPending = do
   entity <- createEntity
-  collection %= snd . Collection.upsert entity
+  void (lift (Collection.upsert entity))
   attributes .= []
   maybeDescription .= Nothing
   maybeExtended .= Nothing
@@ -189,11 +181,8 @@ handle CloseDL = do
   folderStack %= drop1
 handle _ = pure ()
 
-process :: [Token] -> NetscapeM s (Collection s)
-process tokens = forM_ tokens handle >> use collection
+process :: [Token] -> NetscapeM s ()
+process tokens = forM_ tokens handle
 
 parse :: Text -> IO (Some Collection)
-parse input = do
-  let tokens = parseTokens input
-  (ret, _) <- runNetscapeM (process tokens) empty
-  pure (Some ret)
+parse input = execCollectionT $ evalStateT (process (parseTokens input)) emptyParseState

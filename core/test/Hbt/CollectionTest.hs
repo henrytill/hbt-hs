@@ -2,6 +2,8 @@
 
 module Hbt.CollectionTest (results) where
 
+import Control.Monad.State.Class (get)
+import Data.Functor.Identity (runIdentity)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -121,11 +123,14 @@ absorbEntityTests =
 
 emptyCollectionTests :: Test
 emptyCollectionTests =
-  group
-    "Empty collection"
-    [ assertBool "empty collection is null" (null empty)
-    , assertEqual "empty collection has zero length" 0 (length empty)
-    ]
+  let (isNull, len) = runIdentity $ runCollectionT $ do
+        coll <- get
+        pure (null coll, length coll)
+   in group
+        "Empty collection"
+        [ assertBool "empty collection is null" isNull
+        , assertEqual "empty collection has zero length" 0 len
+        ]
 
 insertTests :: Test
 insertTests =
@@ -135,12 +140,15 @@ insertTests =
           (Time.fromSeconds 1000)
           (Just (MkName "Test"))
           (Set.singleton (MkLabel "label"))
-      (_, collection) = insert entity empty
+      (len, isNonEmpty, maybeEntity) = runIdentity $ runCollectionT $ do
+        _ <- insert entity
+        coll <- get
+        pure (length coll, not (null coll), lookupEntity entity.uri coll)
    in group
         "Insert operations"
-        [ assertEqual "insert updates collection length" 1 (length collection)
-        , assertBool "insert makes collection non-empty" (not (null collection))
-        , assertEqual "insert allows entity lookup by URI" (Just entity) (lookupEntity entity.uri collection)
+        [ assertEqual "insert updates collection length" 1 len
+        , assertBool "insert makes collection non-empty" isNonEmpty
+        , assertEqual "insert allows entity lookup by URI" (Just entity) maybeEntity
         ]
 
 multipleInsertTests :: Test
@@ -157,13 +165,16 @@ multipleInsertTests =
           (Time.fromSeconds 2000)
           (Just (MkName "Test2"))
           (Set.singleton (MkLabel "label2"))
-      (_, collection1) = insert entity1 empty
-      (_, collection2) = insert entity2 collection1
+      (len, maybeEntity1, maybeEntity2) = runIdentity $ runCollectionT $ do
+        _ <- insert entity1
+        _ <- insert entity2
+        coll <- get
+        pure (length coll, lookupEntity entity1.uri coll, lookupEntity entity2.uri coll)
    in group
         "Multiple insert operations"
-        [ assertEqual "collection length after two inserts" 2 (length collection2)
-        , assertEqual "first entity can be retrieved" (Just entity1) (lookupEntity entity1.uri collection2)
-        , assertEqual "second entity can be retrieved" (Just entity2) (lookupEntity entity2.uri collection2)
+        [ assertEqual "collection length after two inserts" 2 len
+        , assertEqual "first entity can be retrieved" (Just entity1) maybeEntity1
+        , assertEqual "second entity can be retrieved" (Just entity2) maybeEntity2
         ]
 
 upsertTests :: Test
@@ -174,7 +185,10 @@ upsertTests =
           (Time.fromSeconds 1000)
           (Just (MkName "Test"))
           (Set.singleton (MkLabel "label"))
-      (_, newCollection) = upsert newEntity empty
+      (newLen, newMaybe) = runIdentity $ runCollectionT $ do
+        _ <- upsert newEntity
+        coll <- get
+        pure (length coll, lookupEntity newEntity.uri coll)
 
       entity1 =
         Entity.mkEntity
@@ -188,16 +202,19 @@ upsertTests =
           (Time.fromSeconds 2000)
           (Just (MkName "Test2"))
           (Set.singleton (MkLabel "label2"))
-      (_, collection1) = insert entity1 empty
-      (_, collection2) = upsert entity2 collection1
       expectedEntity = Entity.absorb entity2 entity1
+      (upsertLen, upsertMaybe) = runIdentity $ runCollectionT $ do
+        _ <- insert entity1
+        _ <- upsert entity2
+        coll <- get
+        pure (length coll, lookupEntity entity2.uri coll)
    in group
         "Upsert operations"
-        [ assertEqual "upsert of new entity updates collection length" 1 (length newCollection)
-        , assertEqual "upsert of new entity allows entity lookup" (Just newEntity) (lookupEntity newEntity.uri newCollection)
+        [ assertEqual "upsert of new entity updates collection length" 1 newLen
+        , assertEqual "upsert of new entity allows entity lookup" (Just newEntity) newMaybe
         , assertEqual "upsert of existing entity returns same URI" entity1.uri entity2.uri
-        , assertEqual "collection length remains the same after upsert" 1 (length collection2)
-        , assertEqual "entity data properly merged after upsert" (Just expectedEntity) (lookupEntity entity2.uri collection2)
+        , assertEqual "collection length remains the same after upsert" 1 upsertLen
+        , assertEqual "entity data properly merged after upsert" (Just expectedEntity) upsertMaybe
         ]
 
 edgeTests :: Test
@@ -214,28 +231,41 @@ edgeTests =
           (Time.fromSeconds 2000)
           (Just (MkName "Test2"))
           (Set.singleton (MkLabel "label2"))
-      (id1, collection1) = insert entity1 empty
-      (id2, collection2) = insert entity2 collection1
 
-      collectionWithEdge = addEdge id1 id2 collection2
-      edgesFromId1 = edgesAt id1 collectionWithEdge
-      edgesFromId2 = edgesAt id2 collectionWithEdge
+      (hasFwdEdge, hasNoBkwdEdge, fwdEdgeCount) = runIdentity $ runCollectionT $ do
+        id1 <- insert entity1
+        id2 <- insert entity2
+        addEdge id1 id2
+        coll <- get
+        let edges1 = edgesAt id1 coll
+            edges2 = edgesAt id2 coll
+        pure (Vector.elem id2 edges1, not (Vector.elem id1 edges2), Vector.length edges1)
 
-      collectionWithDuplicateEdge = addEdge id1 id2 collectionWithEdge
-      edgesFromId1AfterDuplicate = edgesAt id1 collectionWithDuplicateEdge
+      dupEdgeCount = runIdentity $ runCollectionT $ do
+        id1 <- insert entity1
+        id2 <- insert entity2
+        addEdge id1 id2
+        addEdge id1 id2
+        coll <- get
+        pure (Vector.length (edgesAt id1 coll))
 
-      collectionWithBidirectionalEdges = addEdges id1 id2 collection2
-      bidirectionalEdgesFromId1 = edgesAt id1 collectionWithBidirectionalEdges
-      bidirectionalEdgesFromId2 = edgesAt id2 collectionWithBidirectionalEdges
+      (hasBiDirFwdEdge, hasBiDirBkwdEdge) = runIdentity $ runCollectionT $ do
+        id1 <- insert entity1
+        id2 <- insert entity2
+        addEdges id1 id2
+        coll <- get
+        let edges1 = edgesAt id1 coll
+            edges2 = edgesAt id2 coll
+        pure (Vector.elem id2 edges1, Vector.elem id1 edges2)
    in group
         "Edge operations"
         [ assertBool "ids are different for edge tests" (entity1.uri /= entity2.uri)
-        , assertBool "addEdge creates forward edge" (Vector.elem id2 edgesFromId1)
-        , assertBool "addEdge doesn't create backward edge" (not (Vector.elem id1 edgesFromId2))
-        , assertEqual "addEdge creates exactly one edge" 1 (Vector.length edgesFromId1)
-        , assertEqual "duplicate addEdge doesn't create additional edges" 1 (Vector.length edgesFromId1AfterDuplicate)
-        , assertBool "addEdges creates forward edge" (Vector.elem id2 bidirectionalEdgesFromId1)
-        , assertBool "addEdges creates backward edge" (Vector.elem id1 bidirectionalEdgesFromId2)
+        , assertBool "addEdge creates forward edge" hasFwdEdge
+        , assertBool "addEdge doesn't create backward edge" hasNoBkwdEdge
+        , assertEqual "addEdge creates exactly one edge" 1 fwdEdgeCount
+        , assertEqual "duplicate addEdge doesn't create additional edges" 1 dupEdgeCount
+        , assertBool "addEdges creates forward edge" hasBiDirFwdEdge
+        , assertBool "addEdges creates backward edge" hasBiDirBkwdEdge
         ]
 
 allTests :: Test

@@ -4,18 +4,18 @@
 module Hbt.Parser.Pinboard.XML (Error (..), parse) where
 
 import Control.Exception (Exception, throwIO)
-import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.State.Strict (StateT (..))
+import Control.Monad.State.Strict (evalStateT)
+import Control.Monad.Trans.Class (lift)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as Char8
 import Data.Char qualified as Char
-import Data.Some (Some (..))
+import Data.Some (Some)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import GHC.Stack (HasCallStack)
-import Hbt.Collection (Collection)
+import Hbt.Collection (Collection, CollectionT, execCollectionT)
 import Hbt.Collection qualified as Collection
 import Hbt.Pinboard (Post (..))
 import Hbt.Pinboard qualified as Pinboard
@@ -30,30 +30,18 @@ data Error
   deriving stock (Show)
   deriving anyclass (Exception)
 
-data ParseState s = MkParseState
-  { collection :: Collection s
-  , posts :: [Post]
+data ParseState = MkParseState
+  { posts :: [Post]
   }
   deriving stock (Eq, Show)
 
-empty :: ParseState s
-empty =
-  MkParseState
-    { collection = Collection.empty
-    , posts = []
-    }
+emptyParseState :: ParseState
+emptyParseState = MkParseState {posts = []}
 
-collection :: Lens' (ParseState s) (Collection s)
-collection f st = (\c -> st {collection = c}) <$> f st.collection
-
-posts :: Lens' (ParseState s) [Post]
+posts :: Lens' ParseState [Post]
 posts f st = (\p -> st {posts = p}) <$> f st.posts
 
-newtype PinboardM s a = MkPinboardM (StateT (ParseState s) IO a)
-  deriving newtype (Functor, Applicative, Monad, MonadState (ParseState s), MonadIO, MonadThrow)
-
-runPinboardM :: PinboardM s a -> ParseState s -> IO (a, ParseState s)
-runPinboardM (MkPinboardM m) = runStateT m
+type PinboardM s = StateT ParseState (CollectionT s IO)
 
 toLower :: ByteString -> ByteString
 toLower = Char8.map Char.toLower
@@ -83,7 +71,7 @@ createPostFromAttrs attrs = do
 
 handleContent :: Xeno.Content -> PinboardM s ()
 handleContent (Xeno.Element node) = handleNode node
-handleContent _ = pure () -- Ignore text and CDATA
+handleContent _ = pure ()
 
 handleNode :: Xeno.Node -> PinboardM s ()
 handleNode node = do
@@ -96,19 +84,16 @@ handleNode node = do
     _ -> pure ()
   mapM_ handleContent (Xeno.contents node)
 
-processNode :: Xeno.Node -> PinboardM s (Collection s)
+processNode :: Xeno.Node -> PinboardM s ()
 processNode rootNode = do
   handleNode rootNode
   collectedPosts <- use posts
-  result <- liftIO (Collection.fromPosts collectedPosts)
-  collection .= result
-  use collection
+  lift (Collection.fromPosts collectedPosts)
 
 parse :: (HasCallStack) => Text -> IO (Some Collection)
 parse input
-  | Text.null (Text.strip input) = pure (Some Collection.empty)
+  | Text.null (Text.strip input) = execCollectionT (pure ())
   | otherwise = do
       let inputBytes = Text.encodeUtf8 input
       rootNode <- either (throwIO . XenoError) pure (Xeno.parse inputBytes)
-      (ret, _) <- runPinboardM (processNode rootNode) empty
-      pure (Some ret)
+      execCollectionT $ evalStateT (processNode rootNode) emptyParseState
