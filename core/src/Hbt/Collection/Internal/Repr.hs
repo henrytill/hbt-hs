@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Hbt.Collection.Repr
+module Hbt.Collection.Internal.Repr
   ( NodeRepr (..)
   , CollectionRepr (..)
   )

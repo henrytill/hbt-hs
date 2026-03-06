@@ -58,8 +58,9 @@ library
 
     hs-source-dirs:   src
     other-modules:
-        Hbt.Collection.Id
-        Hbt.Collection.Repr
+        Hbt.Collection.Internal
+        Hbt.Collection.Internal.Id
+        Hbt.Collection.Internal.Repr
         Hbt.Parser.Common
     default-language: GHC2024
     build-depends:

@@ -1,6 +1,6 @@
 {-# LANGUAGE RoleAnnotations #-}
 
-module Hbt.Collection.Id (Id (..)) where
+module Hbt.Collection.Internal.Id (Id (..)) where
 
 type role Id nominal
 
