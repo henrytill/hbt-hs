@@ -19,6 +19,7 @@ module Hbt.Collection
   , upsert
   , addEdge
   , addEdges
+  , CollectionRepr
   , toRepr
   , fromRepr
   , yamlConfig

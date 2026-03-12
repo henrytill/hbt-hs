@@ -21,8 +21,8 @@ import Data.Text.Encoding qualified as Text.Encoding
 import Data.Text.Encoding.Error qualified as Text.Error
 import Data.Yaml qualified as Yaml
 import Hbt (Flow (..), Format (..), SFlow (..), formatWith, parseWith)
+import Hbt.Collection (CollectionRepr)
 import Hbt.Collection qualified as Collection
-import Hbt.Collection.Repr (CollectionRepr)
 import System.Directory (listDirectory)
 import System.FilePath (splitExtensions, (</>))
 import Test.Dwergaz
