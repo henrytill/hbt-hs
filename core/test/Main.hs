@@ -20,7 +20,7 @@ main = do
   xmlParserCases <- discoverInput XML
   testSuites <-
     sequence
-      [ pure CollectionTest.results
+      [ CollectionTest.results
       , testResults "Hbt.Parser.HTML" <$> parserTests "HTML Parser" htmlParserCases
       , testResults "Hbt.Formatter.HTML" <$> formatterTests "HTML Formatter" HTML htmlFormatterCases
       , testResults "Hbt.Parser.Markdown" <$> parserTests "Markdown Parser" markdownParserCases

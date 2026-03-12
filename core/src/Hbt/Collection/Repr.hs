@@ -9,13 +9,12 @@ where
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Vector (Vector)
 import GHC.Generics (Generic)
-import Hbt.Collection.Id (Id)
 import Hbt.Entity (Entity)
 
 data NodeRepr = MkNodeRepr
-  { id :: Id
+  { id :: Int
   , entity :: Entity
-  , edges :: Vector Id
+  , edges :: Vector Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)

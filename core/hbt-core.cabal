@@ -46,6 +46,7 @@ library
     exposed-modules:
         Hbt
         Hbt.Collection
+        Hbt.Collection.Repr
         Hbt.Entity
         Hbt.Entity.Time
         Hbt.Entity.URI
@@ -58,8 +59,6 @@ library
 
     hs-source-dirs:   src
     other-modules:
-        Hbt.Collection.Id
-        Hbt.Collection.Repr
         Hbt.Parser.Common
     default-language: GHC2024
     build-depends:

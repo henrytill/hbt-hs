@@ -46,19 +46,21 @@ data ParseState = MkParseState
   , maybeParent :: Maybe Id
   , parents :: [Id]
   }
-  deriving stock (Eq, Show)
+  deriving stock (Eq)
 
-empty :: ParseState
-empty =
-  MkParseState
-    { collection = Collection.empty
-    , maybeURI = Nothing
-    , maybeName = Nothing
-    , maybeTime = Nothing
-    , labels = []
-    , maybeParent = Nothing
-    , parents = []
-    }
+new :: IO ParseState
+new = do
+  coll <- Collection.new
+  pure $
+    MkParseState
+      { collection = coll
+      , maybeURI = Nothing
+      , maybeName = Nothing
+      , maybeTime = Nothing
+      , labels = []
+      , maybeParent = Nothing
+      , parents = []
+      }
 
 toEntity :: ParseState -> Maybe Entity
 toEntity st =
@@ -182,5 +184,6 @@ parseBlocks = Commonmark.commonmark
 parse :: (HasCallStack) => String -> Text -> IO Collection
 parse parseName input = do
   blocks <- either (throwIO . ParseError) pure (parseBlocks parseName input)
-  (ret, _) <- runMarkdownM (processBlocks blocks) empty
+  coll <- new
+  (ret, _) <- runMarkdownM (processBlocks blocks) coll
   pure ret

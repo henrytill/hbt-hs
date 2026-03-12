@@ -33,14 +33,16 @@ data ParseState = MkParseState
   { collection :: Collection
   , posts :: [Post]
   }
-  deriving stock (Eq, Show)
+  deriving stock (Eq)
 
-empty :: ParseState
-empty =
-  MkParseState
-    { collection = Collection.empty
-    , posts = []
-    }
+new :: IO ParseState
+new = do
+  coll <- Collection.new
+  pure $
+    MkParseState
+      { collection = coll
+      , posts = []
+      }
 
 collection :: Lens' ParseState Collection
 collection f s = (\c -> s {collection = c}) <$> f s.collection
@@ -105,9 +107,10 @@ processNode rootNode = do
 
 parse :: (HasCallStack) => Text -> IO Collection
 parse input
-  | Text.null (Text.strip input) = pure Collection.empty
+  | Text.null (Text.strip input) = Collection.new
   | otherwise = do
       let inputBytes = Text.encodeUtf8 input
       rootNode <- either (throwIO . XenoError) pure (Xeno.parse inputBytes)
-      (ret, _) <- runPinboardM (processNode rootNode) empty
+      coll <- new
+      (ret, _) <- runPinboardM (processNode rootNode) coll
       pure ret

@@ -21,6 +21,8 @@ import Data.Text.Encoding qualified as Text.Encoding
 import Data.Text.Encoding.Error qualified as Text.Error
 import Data.Yaml qualified as Yaml
 import Hbt (Flow (..), Format (..), SFlow (..), formatWith, parseWith)
+import Hbt.Collection qualified as Collection
+import Hbt.Collection.Repr (CollectionRepr)
 import System.Directory (listDirectory)
 import System.FilePath (splitExtensions, (</>))
 import Test.Dwergaz
@@ -103,7 +105,8 @@ discoverOutput = discover STo outputDir
 
 testParser :: TestCase From -> IO Test
 testParser testCase = testIO testCase.stem $ do
-  expected <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expected)
+  repr <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expected) :: IO CollectionRepr
+  expected <- Collection.fromRepr repr
   actual <- parseWith testCase.format testCase.input
   pure (assertEqual testCase.stem expected actual)
 

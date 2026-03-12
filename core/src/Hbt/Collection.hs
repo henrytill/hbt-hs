@@ -3,10 +3,10 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Hbt.Collection
-  ( Id (value)
+  ( Id (index)
   , Error (..)
   , Collection
-  , empty
+  , new
   , fromPosts
   , length
   , null
@@ -27,17 +27,17 @@ where
 
 import Control.Exception (Exception, throw)
 import Control.Monad (foldM)
-import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.List (elemIndex, sortOn)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe qualified as Maybe
 import Data.Text (Text)
+import Data.Unique (Unique)
+import Data.Unique qualified as Unique
 import Data.Vector (Vector, elem, (!), (//))
 import Data.Vector qualified as Vector
 import Data.Yaml.Pretty qualified as YamlPretty
 import GHC.Stack (HasCallStack)
-import Hbt.Collection.Id (Id (..))
 import Hbt.Collection.Repr (CollectionRepr (..), NodeRepr (..))
 import Hbt.Entity (Entity (..), fromPost)
 import Hbt.Entity qualified as Entity
@@ -46,21 +46,51 @@ import Hbt.Pinboard (Post)
 import Hbt.Pinboard qualified as Pinboard
 import Prelude hiding (elem, id, length, null)
 
-newtype Error = MissingEntities [Id]
+data Error
+  = MissingEntities [Int]
+  | ForeignId Id
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
-type Edges = Vector Id
+data Id = MkId {index :: Int, owner :: Unique}
+  deriving stock (Eq)
+
+instance Show Id where
+  showsPrec _ id =
+    showString "MkId {index = "
+      . shows id.index
+      . showString ", owner = "
+      . shows (Unique.hashUnique id.owner)
+      . showChar '}'
+
+type Edges = Vector Int
 
 data Collection = MkCollection
-  { nodes :: Vector Entity
+  { tag :: Unique
+  , nodes :: Vector Entity
   , edges :: Vector Edges
-  , uris :: Map URI Id
+  , uris :: Map URI Int
   }
-  deriving stock (Eq, Show)
 
-empty :: Collection
-empty = MkCollection Vector.empty Vector.empty Map.empty
+instance Eq Collection where
+  c1 == c2 = c1.nodes == c2.nodes && c1.edges == c2.edges && c1.uris == c2.uris
+
+instance Show Collection where
+  showsPrec _ c =
+    showString "MkCollection {tag = "
+      . shows (Unique.hashUnique c.tag)
+      . showString ", nodes = "
+      . shows c.nodes
+      . showString ", edges = "
+      . shows c.edges
+      . showString ", uris = "
+      . shows c.uris
+      . showChar '}'
+
+new :: IO Collection
+new = do
+  tag <- Unique.newUnique
+  pure $ MkCollection tag Vector.empty Vector.empty Map.empty
 
 length :: Collection -> Int
 length collection = Vector.length collection.nodes
@@ -68,14 +98,19 @@ length collection = Vector.length collection.nodes
 null :: Collection -> Bool
 null collection = Vector.null collection.nodes
 
-entityAt :: Id -> Collection -> Entity
-entityAt id collection = collection.nodes ! id.value
+requireId :: (HasCallStack) => Id -> Collection -> Id
+requireId id collection
+  | id.owner == collection.tag = id
+  | otherwise = throw (ForeignId id)
 
-edgesAt :: Id -> Collection -> Edges
-edgesAt id collection = collection.edges ! id.value
+entityAt :: (HasCallStack) => Id -> Collection -> Entity
+entityAt id collection = collection.nodes ! (requireId id collection).index
+
+edgesAt :: (HasCallStack) => Id -> Collection -> Vector Id
+edgesAt id collection = Vector.map (\index -> MkId {index, owner = collection.tag}) (collection.edges ! (requireId id collection).index)
 
 lookupId :: URI -> Collection -> Maybe Id
-lookupId uri collection = Map.lookup uri collection.uris
+lookupId uri collection = fmap (\index -> MkId {index, owner = collection.tag}) (Map.lookup uri collection.uris)
 
 lookupEntity :: URI -> Collection -> Maybe Entity
 lookupEntity uri collection = do
@@ -86,12 +121,13 @@ allEntities :: Collection -> Vector Entity
 allEntities collection = collection.nodes
 
 insert :: Entity -> Collection -> (Id, Collection)
-insert entity collection = (newId, MkCollection {nodes, edges, uris})
+insert entity collection = (newId, collection {nodes, edges, uris})
   where
-    newId = MkId (Vector.length collection.nodes)
+    index = Vector.length collection.nodes
+    newId = MkId {index, owner = collection.tag}
     nodes = Vector.snoc collection.nodes entity
     edges = Vector.snoc collection.edges Vector.empty
-    uris = Map.insert entity.uri newId collection.uris
+    uris = Map.insert entity.uri index collection.uris
 
 upsert :: Entity -> Collection -> (Id, Collection)
 upsert entity collection =
@@ -102,55 +138,55 @@ upsert entity collection =
           updated = Entity.absorb entity existing
        in if updated == existing
             then (existingId, collection)
-            else (existingId, collection {nodes = collection.nodes // [(existingId.value, updated)]})
+            else (existingId, collection {nodes = collection.nodes // [(existingId.index, updated)]})
 
 accumPosts :: Collection -> Post -> IO Collection
 accumPosts coll post = fromPost post >>= \entity -> pure (snd (upsert entity coll))
 
 fromPosts :: [Post] -> IO Collection
-fromPosts posts = foldM accumPosts empty (sortOn (.time) posts)
+fromPosts posts = do
+  acc <- new
+  foldM accumPosts acc (sortOn (.time) posts)
 
 addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdge from to collection =
-  let validFrom = from.value < Vector.length collection.nodes
-      validTo = to.value < Vector.length collection.nodes
-   in case (validFrom, validTo) of
-        (False, False) -> throw (MissingEntities [from, to])
-        (False, True) -> throw (MissingEntities [from])
-        (True, False) -> throw (MissingEntities [to])
-        (True, True) ->
-          let fromEdges = edgesAt from collection
-              newFromEdges = if to `elem` fromEdges then fromEdges else Vector.snoc fromEdges to
-              edges = collection.edges // [(from.value, newFromEdges)]
-           in collection {Hbt.Collection.edges = edges} -- lame. are we allowing duplicate records fields or not GHC?
+  case (requireId from collection, requireId to collection) of
+    (from, to) ->
+      let validFrom = from.index < Vector.length collection.nodes
+          validTo = to.index < Vector.length collection.nodes
+       in case (validFrom, validTo) of
+            (False, False) -> throw (MissingEntities [from.index, to.index])
+            (False, True) -> throw (MissingEntities [from.index])
+            (True, False) -> throw (MissingEntities [to.index])
+            (True, True) ->
+              let fromEdges = collection.edges ! from.index
+                  newFromEdges = if to.index `elem` fromEdges then fromEdges else Vector.snoc fromEdges to.index
+                  edges = collection.edges // [(from.index, newFromEdges)]
+               in collection {Hbt.Collection.edges = edges} -- lame. are we allowing duplicate records fields or not GHC?
 
 addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdges from to collection = addEdge from to (addEdge to from collection)
 
-mkNodeRepr :: Collection -> Id -> Entity -> NodeRepr
-mkNodeRepr collection id entity = MkNodeRepr {id, entity, edges}
+mkNodeRepr :: Collection -> Int -> Entity -> NodeRepr
+mkNodeRepr collection index entity = MkNodeRepr {id = index, entity, edges}
   where
-    edges = edgesAt id collection
+    edges = collection.edges ! index
 
 toRepr :: Collection -> CollectionRepr
 toRepr collection = MkCollectionRepr {version, length, value}
   where
     version = "0.1.0" :: String
     length = Vector.length collection.nodes
-    value = Vector.imap (mkNodeRepr collection . MkId) collection.nodes
+    value = Vector.imap (mkNodeRepr collection) collection.nodes
 
-fromRepr :: CollectionRepr -> Collection
-fromRepr serialized = MkCollection {nodes, edges, uris}
+fromRepr :: CollectionRepr -> IO Collection
+fromRepr serialized = do
+  tag <- Unique.newUnique
+  pure $ MkCollection {tag, nodes, edges, uris}
   where
     nodes = Vector.map (.entity) serialized.value
     edges = Vector.map (.edges) serialized.value
-    uris = Map.fromList (zipWith (\entity i -> (entity.uri, MkId i)) (Vector.toList nodes) [0 ..])
-
-instance ToJSON Collection where
-  toJSON = toJSON . toRepr
-
-instance FromJSON Collection where
-  parseJSON json = fmap fromRepr (parseJSON json)
+    uris = Map.fromList (Vector.toList (Vector.imap (\i entity -> (entity.uri, i)) nodes))
 
 -- | YAML configuration that preserves field order as expected by tests
 yamlConfig :: YamlPretty.Config

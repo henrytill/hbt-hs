@@ -119,32 +119,37 @@ absorbEntityTests =
         , assertEqual "absorbEntity merges entity labels" expectedLabels absorbed.labels
         ]
 
-emptyCollectionTests :: Test
-emptyCollectionTests =
-  group
-    "Empty collection"
-    [ assertBool "empty collection is null" (null empty)
-    , assertEqual "empty collection has zero length" 0 (length empty)
-    ]
+emptyCollectionTests :: IO Test
+emptyCollectionTests = do
+  coll <- new
+  pure $
+    group
+      "Empty collection"
+      [ assertBool "empty collection is null" (null coll)
+      , assertEqual "empty collection has zero length" 0 (length coll)
+      ]
 
-insertTests :: Test
-insertTests =
+insertTests :: IO Test
+insertTests = do
+  coll <- new
   let entity =
         Entity.mkEntity
           (safeURI "https://example.com")
           (Time.fromSeconds 1000)
           (Just (MkName "Test"))
           (Set.singleton (MkLabel "label"))
-      (_, collection) = insert entity empty
-   in group
-        "Insert operations"
-        [ assertEqual "insert updates collection length" 1 (length collection)
-        , assertBool "insert makes collection non-empty" (not (null collection))
-        , assertEqual "insert allows entity lookup by URI" (Just entity) (lookupEntity entity.uri collection)
-        ]
+      (_, collection) = insert entity coll
+  pure $
+    group
+      "Insert operations"
+      [ assertEqual "insert updates collection length" 1 (length collection)
+      , assertBool "insert makes collection non-empty" (not (null collection))
+      , assertEqual "insert allows entity lookup by URI" (Just entity) (lookupEntity entity.uri collection)
+      ]
 
-multipleInsertTests :: Test
-multipleInsertTests =
+multipleInsertTests :: IO Test
+multipleInsertTests = do
+  coll <- new
   let entity1 =
         Entity.mkEntity
           (safeURI "https://example.com/1")
@@ -157,24 +162,26 @@ multipleInsertTests =
           (Time.fromSeconds 2000)
           (Just (MkName "Test2"))
           (Set.singleton (MkLabel "label2"))
-      (_, collection1) = insert entity1 empty
+      (_, collection1) = insert entity1 coll
       (_, collection2) = insert entity2 collection1
-   in group
-        "Multiple insert operations"
-        [ assertEqual "collection length after two inserts" 2 (length collection2)
-        , assertEqual "first entity can be retrieved" (Just entity1) (lookupEntity entity1.uri collection2)
-        , assertEqual "second entity can be retrieved" (Just entity2) (lookupEntity entity2.uri collection2)
-        ]
+  pure $
+    group
+      "Multiple insert operations"
+      [ assertEqual "collection length after two inserts" 2 (length collection2)
+      , assertEqual "first entity can be retrieved" (Just entity1) (lookupEntity entity1.uri collection2)
+      , assertEqual "second entity can be retrieved" (Just entity2) (lookupEntity entity2.uri collection2)
+      ]
 
-upsertTests :: Test
-upsertTests =
+upsertTests :: IO Test
+upsertTests = do
+  coll <- new
   let newEntity =
         Entity.mkEntity
           (safeURI "https://example.com")
           (Time.fromSeconds 1000)
           (Just (MkName "Test"))
           (Set.singleton (MkLabel "label"))
-      (_, newCollection) = upsert newEntity empty
+      (_, newCollection) = upsert newEntity coll
 
       entity1 =
         Entity.mkEntity
@@ -188,20 +195,22 @@ upsertTests =
           (Time.fromSeconds 2000)
           (Just (MkName "Test2"))
           (Set.singleton (MkLabel "label2"))
-      (_, collection1) = insert entity1 empty
+      (_, collection1) = insert entity1 coll
       (_, collection2) = upsert entity2 collection1
       expectedEntity = Entity.absorb entity2 entity1
-   in group
-        "Upsert operations"
-        [ assertEqual "upsert of new entity updates collection length" 1 (length newCollection)
-        , assertEqual "upsert of new entity allows entity lookup" (Just newEntity) (lookupEntity newEntity.uri newCollection)
-        , assertEqual "upsert of existing entity returns same URI" entity1.uri entity2.uri
-        , assertEqual "collection length remains the same after upsert" 1 (length collection2)
-        , assertEqual "entity data properly merged after upsert" (Just expectedEntity) (lookupEntity entity2.uri collection2)
-        ]
+  pure $
+    group
+      "Upsert operations"
+      [ assertEqual "upsert of new entity updates collection length" 1 (length newCollection)
+      , assertEqual "upsert of new entity allows entity lookup" (Just newEntity) (lookupEntity newEntity.uri newCollection)
+      , assertEqual "upsert of existing entity returns same URI" entity1.uri entity2.uri
+      , assertEqual "collection length remains the same after upsert" 1 (length collection2)
+      , assertEqual "entity data properly merged after upsert" (Just expectedEntity) (lookupEntity entity2.uri collection2)
+      ]
 
-edgeTests :: Test
-edgeTests =
+edgeTests :: IO Test
+edgeTests = do
+  coll <- new
   let entity1 =
         Entity.mkEntity
           (safeURI "https://example.com/1")
@@ -214,7 +223,7 @@ edgeTests =
           (Time.fromSeconds 2000)
           (Just (MkName "Test2"))
           (Set.singleton (MkLabel "label2"))
-      (id1, collection1) = insert entity1 empty
+      (id1, collection1) = insert entity1 coll
       (id2, collection2) = insert entity2 collection1
 
       collectionWithEdge = addEdge id1 id2 collection2
@@ -227,31 +236,25 @@ edgeTests =
       collectionWithBidirectionalEdges = addEdges id1 id2 collection2
       bidirectionalEdgesFromId1 = edgesAt id1 collectionWithBidirectionalEdges
       bidirectionalEdgesFromId2 = edgesAt id2 collectionWithBidirectionalEdges
-   in group
-        "Edge operations"
-        [ assertBool "ids are different for edge tests" (entity1.uri /= entity2.uri)
-        , assertBool "addEdge creates forward edge" (Vector.elem id2 edgesFromId1)
-        , assertBool "addEdge doesn't create backward edge" (not (Vector.elem id1 edgesFromId2))
-        , assertEqual "addEdge creates exactly one edge" 1 (Vector.length edgesFromId1)
-        , assertEqual "duplicate addEdge doesn't create additional edges" 1 (Vector.length edgesFromId1AfterDuplicate)
-        , assertBool "addEdges creates forward edge" (Vector.elem id2 bidirectionalEdgesFromId1)
-        , assertBool "addEdges creates backward edge" (Vector.elem id1 bidirectionalEdgesFromId2)
-        ]
+  pure $
+    group
+      "Edge operations"
+      [ assertBool "ids are different for edge tests" (entity1.uri /= entity2.uri)
+      , assertBool "addEdge creates forward edge" (Vector.elem id2 edgesFromId1)
+      , assertBool "addEdge doesn't create backward edge" (not (Vector.elem id1 edgesFromId2))
+      , assertEqual "addEdge creates exactly one edge" 1 (Vector.length edgesFromId1)
+      , assertEqual "duplicate addEdge doesn't create additional edges" 1 (Vector.length edgesFromId1AfterDuplicate)
+      , assertBool "addEdges creates forward edge" (Vector.elem id2 bidirectionalEdgesFromId1)
+      , assertBool "addEdges creates backward edge" (Vector.elem id1 bidirectionalEdgesFromId2)
+      ]
 
-allTests :: Test
-allTests =
-  group
-    "Hbt.Collection tests"
-    [ emptyEntityTests
-    , entityTests
-    , updateEntityTests
-    , absorbEntityTests
-    , emptyCollectionTests
-    , insertTests
-    , multipleInsertTests
-    , upsertTests
-    , edgeTests
-    ]
+allTests :: IO Test
+allTests = do
+  ioTests <- sequence [emptyCollectionTests, insertTests, multipleInsertTests, upsertTests, edgeTests]
+  pure $
+    group
+      "Hbt.Collection tests"
+      ([emptyEntityTests, entityTests, updateEntityTests, absorbEntityTests] ++ ioTests)
 
-results :: (String, Bool)
-results = testResults "Hbt.Collection" allTests
+results :: IO (String, Bool)
+results = testResults "Hbt.Collection" <$> allTests
