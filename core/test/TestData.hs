@@ -105,7 +105,7 @@ discoverOutput = discover STo outputDir
 
 testParser :: TestCase From -> IO Test
 testParser testCase = testIO testCase.stem $ do
-  repr <- Yaml.decodeThrow (Text.Encoding.encodeUtf8 testCase.expected) :: IO CollectionRepr
+  repr <- Yaml.decodeThrow @IO @CollectionRepr (Text.Encoding.encodeUtf8 testCase.expected)
   expected <- Collection.fromRepr repr
   actual <- parseWith testCase.format testCase.input
   pure (assertEqual testCase.stem expected actual)
