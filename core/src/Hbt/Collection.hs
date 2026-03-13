@@ -48,8 +48,7 @@ import Hbt.Pinboard qualified as Pinboard
 import Prelude hiding (elem, id, length, null)
 
 data Error
-  = MissingEntities [Int]
-  | ForeignId Id
+  = ForeignId Id
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
@@ -151,19 +150,14 @@ fromPosts posts = do
 
 addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdge from to collection =
-  case (requireId from collection, requireId to collection) of
-    (from, to) ->
-      let validFrom = from.index < Vector.length collection.nodes
-          validTo = to.index < Vector.length collection.nodes
-       in case (validFrom, validTo) of
-            (False, False) -> throw (MissingEntities [from.index, to.index])
-            (False, True) -> throw (MissingEntities [from.index])
-            (True, False) -> throw (MissingEntities [to.index])
-            (True, True) ->
-              let fromEdges = collection.edges ! from.index
-                  newFromEdges = if to.index `elem` fromEdges then fromEdges else Vector.snoc fromEdges to.index
-                  edges = collection.edges // [(from.index, newFromEdges)]
-               in collection {Hbt.Collection.edges = edges} -- lame. are we allowing duplicate records fields or not GHC?
+  let validFrom = requireId from collection
+      validTo = requireId to collection
+      fromEdges = collection.edges ! validFrom.index
+      newFromEdges
+        | validTo.index `elem` fromEdges = fromEdges
+        | otherwise = Vector.snoc fromEdges validTo.index
+      updates = [(validFrom.index, newFromEdges)]
+   in collection {Hbt.Collection.edges = collection.edges // updates} -- lame. are we allowing duplicate records fields or not GHC?
 
 addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdges from to collection = addEdge from to (addEdge to from collection)
