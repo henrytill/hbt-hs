@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Hbt.Collection
   ( Id (index)
@@ -163,17 +162,16 @@ addEdge from to collection =
 addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdges from to collection = addEdge from to (addEdge to from collection)
 
-mkNodeRepr :: Collection -> Int -> Entity -> NodeRepr
-mkNodeRepr collection index entity = MkNodeRepr {id = index, entity, edges}
-  where
-    edges = collection.adjacency ! index
-
 toRepr :: Collection -> CollectionRepr
-toRepr collection = MkCollectionRepr {version, length, value}
+toRepr collection =
+  MkCollectionRepr
+    { version = "0.1.0"
+    , length = Vector.length collection.nodes
+    , value = Vector.imap mkNodeRepr collection.nodes
+    }
   where
-    version = "0.1.0" :: String
-    length = Vector.length collection.nodes
-    value = Vector.imap (mkNodeRepr collection) collection.nodes
+    mkNodeRepr :: Int -> Entity -> NodeRepr
+    mkNodeRepr = flip . MkNodeRepr <*> (collection.adjacency !)
 
 fromRepr :: CollectionRepr -> IO Collection
 fromRepr serialized = do
