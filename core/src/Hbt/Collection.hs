@@ -98,16 +98,16 @@ length collection = Vector.length collection.nodes
 null :: Collection -> Bool
 null collection = Vector.null collection.nodes
 
-requireId :: (HasCallStack) => Id -> Collection -> Id
-requireId id collection
+requireId :: (HasCallStack) => Collection -> Id -> Id
+requireId collection id
   | id.owner == collection.tag = id
   | otherwise = throw (ForeignId id)
 
 entityAt :: (HasCallStack) => Id -> Collection -> Entity
-entityAt id collection = collection.nodes ! (requireId id collection).index
+entityAt id collection = collection.nodes ! (requireId collection id).index
 
 edgesAt :: (HasCallStack) => Id -> Collection -> Vector Id
-edgesAt id collection = Vector.map (MkId collection.tag) (collection.adjacency ! (requireId id collection).index)
+edgesAt id collection = Vector.map (MkId collection.tag) (collection.adjacency ! (requireId collection id).index)
 
 lookupId :: URI -> Collection -> Maybe Id
 lookupId uri collection = fmap (MkId collection.tag) (Map.lookup uri collection.uris)
@@ -150,8 +150,9 @@ fromPosts posts = do
 
 addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdge from to collection =
-  let validFrom = requireId from collection
-      validTo = requireId to collection
+  let require = requireId collection
+      validFrom = require from
+      validTo = require to
       fromEdges = collection.adjacency ! validFrom.index
       newFromEdges
         | validTo.index `elem` fromEdges = fromEdges
