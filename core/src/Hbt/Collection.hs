@@ -53,15 +53,15 @@ data Error
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
-data Id = MkId {index :: Int, owner :: Unique}
+data Id = MkId {owner :: Unique, index :: Int}
   deriving stock (Eq)
 
 instance Show Id where
   showsPrec _ id =
-    showString "MkId {index = "
-      . shows id.index
-      . showString ", owner = "
+    showString "MkId {owner = "
       . shows (Unique.hashUnique id.owner)
+      . showString ", index = "
+      . shows id.index
       . showChar '}'
 
 type Edges = Vector Int
@@ -108,10 +108,10 @@ entityAt :: (HasCallStack) => Id -> Collection -> Entity
 entityAt id collection = collection.nodes ! (requireId id collection).index
 
 edgesAt :: (HasCallStack) => Id -> Collection -> Vector Id
-edgesAt id collection = Vector.map (\index -> MkId {index, owner = collection.tag}) (collection.edges ! (requireId id collection).index)
+edgesAt id collection = Vector.map (MkId collection.tag) (collection.edges ! (requireId id collection).index)
 
 lookupId :: URI -> Collection -> Maybe Id
-lookupId uri collection = fmap (\index -> MkId {index, owner = collection.tag}) (Map.lookup uri collection.uris)
+lookupId uri collection = fmap (MkId collection.tag) (Map.lookup uri collection.uris)
 
 lookupEntity :: URI -> Collection -> Maybe Entity
 lookupEntity uri collection = do
@@ -125,7 +125,7 @@ insert :: Entity -> Collection -> (Id, Collection)
 insert entity collection = (newId, collection {nodes, edges, uris})
   where
     index = Vector.length collection.nodes
-    newId = MkId {index, owner = collection.tag}
+    newId = MkId collection.tag index
     nodes = Vector.snoc collection.nodes entity
     edges = Vector.snoc collection.edges Vector.empty
     uris = Map.insert entity.uri index collection.uris
