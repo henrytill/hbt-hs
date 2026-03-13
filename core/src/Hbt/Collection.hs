@@ -68,12 +68,12 @@ type Edges = Vector Int
 data Collection = MkCollection
   { tag :: Unique
   , nodes :: Vector Entity
-  , edges :: Vector Edges
+  , adjacency :: Vector Edges
   , uris :: Map URI Int
   }
 
 instance Eq Collection where
-  c1 == c2 = c1.nodes == c2.nodes && c1.edges == c2.edges && c1.uris == c2.uris
+  c1 == c2 = c1.nodes == c2.nodes && c1.adjacency == c2.adjacency && c1.uris == c2.uris
 
 instance Show Collection where
   showsPrec _ c =
@@ -81,8 +81,8 @@ instance Show Collection where
       . shows (Unique.hashUnique c.tag)
       . showString ", nodes = "
       . shows c.nodes
-      . showString ", edges = "
-      . shows c.edges
+      . showString ", adjacency = "
+      . shows c.adjacency
       . showString ", uris = "
       . shows c.uris
       . showChar '}'
@@ -107,7 +107,7 @@ entityAt :: (HasCallStack) => Id -> Collection -> Entity
 entityAt id collection = collection.nodes ! (requireId id collection).index
 
 edgesAt :: (HasCallStack) => Id -> Collection -> Vector Id
-edgesAt id collection = Vector.map (MkId collection.tag) (collection.edges ! (requireId id collection).index)
+edgesAt id collection = Vector.map (MkId collection.tag) (collection.adjacency ! (requireId id collection).index)
 
 lookupId :: URI -> Collection -> Maybe Id
 lookupId uri collection = fmap (MkId collection.tag) (Map.lookup uri collection.uris)
@@ -121,12 +121,12 @@ allEntities :: Collection -> Vector Entity
 allEntities collection = collection.nodes
 
 insert :: Entity -> Collection -> (Id, Collection)
-insert entity collection = (newId, collection {nodes, edges, uris})
+insert entity collection = (newId, collection {nodes, adjacency, uris})
   where
     index = Vector.length collection.nodes
     newId = MkId collection.tag index
     nodes = Vector.snoc collection.nodes entity
-    edges = Vector.snoc collection.edges Vector.empty
+    adjacency = Vector.snoc collection.adjacency Vector.empty
     uris = Map.insert entity.uri index collection.uris
 
 upsert :: Entity -> Collection -> (Id, Collection)
@@ -152,12 +152,12 @@ addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdge from to collection =
   let validFrom = requireId from collection
       validTo = requireId to collection
-      fromEdges = collection.edges ! validFrom.index
+      fromEdges = collection.adjacency ! validFrom.index
       newFromEdges
         | validTo.index `elem` fromEdges = fromEdges
         | otherwise = Vector.snoc fromEdges validTo.index
-      updates = [(validFrom.index, newFromEdges)]
-   in collection {Hbt.Collection.edges = collection.edges // updates} -- lame. are we allowing duplicate records fields or not GHC?
+      adjacency = collection.adjacency // [(validFrom.index, newFromEdges)]
+   in collection {adjacency}
 
 addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdges from to collection = addEdge from to (addEdge to from collection)
@@ -165,7 +165,7 @@ addEdges from to collection = addEdge from to (addEdge to from collection)
 mkNodeRepr :: Collection -> Int -> Entity -> NodeRepr
 mkNodeRepr collection index entity = MkNodeRepr {id = index, entity, edges}
   where
-    edges = collection.edges ! index
+    edges = collection.adjacency ! index
 
 toRepr :: Collection -> CollectionRepr
 toRepr collection = MkCollectionRepr {version, length, value}
@@ -177,10 +177,10 @@ toRepr collection = MkCollectionRepr {version, length, value}
 fromRepr :: CollectionRepr -> IO Collection
 fromRepr serialized = do
   tag <- Unique.newUnique
-  pure $ MkCollection {tag, nodes, edges, uris}
+  pure $ MkCollection {tag, nodes, adjacency, uris}
   where
     nodes = Vector.map (.entity) serialized.value
-    edges = Vector.map (.edges) serialized.value
+    adjacency = Vector.map (.edges) serialized.value
     uris = Map.fromList (Vector.toList (Vector.imap (\i entity -> (entity.uri, i)) nodes))
 
 -- | YAML configuration that preserves field order as expected by tests
