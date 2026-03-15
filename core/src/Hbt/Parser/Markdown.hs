@@ -10,7 +10,7 @@ import Control.Exception (Exception, throwIO)
 import Control.Monad (forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.State.Class (gets)
-import Control.Monad.State.Strict (StateT (..))
+import Control.Monad.State.Strict (StateT (..), execStateT)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -92,8 +92,8 @@ parents f s = (\p -> s {parents = p}) <$> f s.parents
 newtype MarkdownM a = MkMarkdownM (StateT ParseState IO a)
   deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadThrow)
 
-runMarkdownM :: MarkdownM a -> ParseState -> IO (a, ParseState)
-runMarkdownM (MkMarkdownM m) = runStateT m
+execMarkdownM :: MarkdownM a -> ParseState -> IO ParseState
+execMarkdownM (MkMarkdownM m) = execStateT m
 
 liftEither :: (Exception e, HasCallStack) => Either e b -> MarkdownM b
 liftEither = either throwM pure
@@ -171,10 +171,8 @@ handleBlock (MkBlock _ b) =
       parents %= drop1
     _ -> pure ()
 
-processBlocks :: [Block a] -> MarkdownM Collection
-processBlocks blocks = do
-  mapM_ handleBlock blocks
-  use collection
+processBlocks :: [Block a] -> MarkdownM ()
+processBlocks = mapM_ handleBlock
 
 parseBlocks :: String -> Text -> Either Commonmark.ParseError Blocks
 parseBlocks = Commonmark.commonmark
@@ -182,6 +180,6 @@ parseBlocks = Commonmark.commonmark
 parse :: (HasCallStack) => String -> Text -> IO Collection
 parse parseName input = do
   blocks <- either (throwIO . ParseError) pure (parseBlocks parseName input)
-  parseState <- mkParseState <$> Collection.new
-  (ret, _) <- runMarkdownM (processBlocks blocks) parseState
-  pure ret
+  stateInitial <- mkParseState <$> Collection.new
+  stateFinal <- execMarkdownM (processBlocks blocks) stateInitial
+  pure stateFinal.collection

@@ -6,7 +6,7 @@ module Hbt.Parser.Pinboard.XML (Error (..), parse) where
 import Control.Exception (Exception, throwIO)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.State.Strict (StateT (..))
+import Control.Monad.State.Strict (StateT (..), execStateT)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as Char8
 import Data.Char qualified as Char
@@ -47,8 +47,8 @@ posts f s = (\p -> s {posts = p}) <$> f s.posts
 newtype PinboardM a = MkPinboardM (StateT ParseState IO a)
   deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
 
-runPinboardM :: PinboardM a -> ParseState -> IO (a, ParseState)
-runPinboardM (MkPinboardM m) = runStateT m
+execPinboardM :: PinboardM a -> ParseState -> IO ParseState
+execPinboardM (MkPinboardM m) = execStateT m
 
 toLower :: ByteString -> ByteString
 toLower = Char8.map Char.toLower
@@ -91,13 +91,12 @@ handleNode node = do
     _ -> pure ()
   mapM_ handleContent (Xeno.contents node)
 
-processNode :: Xeno.Node -> PinboardM Collection
+processNode :: Xeno.Node -> PinboardM ()
 processNode rootNode = do
   handleNode rootNode
   collectedPosts <- use posts
   result <- liftIO (Collection.fromPosts collectedPosts)
   collection .= result
-  use collection
 
 parse :: (HasCallStack) => Text -> IO Collection
 parse input
@@ -105,6 +104,6 @@ parse input
   | otherwise = do
       let inputBytes = Text.encodeUtf8 input
       rootNode <- either (throwIO . XenoError) pure (Xeno.parse inputBytes)
-      parseState <- mkParseState <$> Collection.new
-      (ret, _) <- runPinboardM (processNode rootNode) parseState
-      pure ret
+      stateInitial <- mkParseState <$> Collection.new
+      stateFinal <- execPinboardM (processNode rootNode) stateInitial
+      pure stateFinal.collection

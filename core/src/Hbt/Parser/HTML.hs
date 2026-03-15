@@ -9,7 +9,7 @@ import Control.Exception (Exception, throwIO)
 import Control.Monad (foldM, forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.State.Strict (StateT (..))
+import Control.Monad.State.Strict (StateT (..), execStateT)
 import Data.Coerce (coerce)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
@@ -98,8 +98,8 @@ waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
 newtype NetscapeM a = MkNetscapeM (StateT ParseState IO a)
   deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
 
-runNetscapeM :: NetscapeM a -> ParseState -> IO (a, ParseState)
-runNetscapeM (MkNetscapeM m) = runStateT m
+execNetscapeM :: NetscapeM a -> ParseState -> IO ParseState
+execNetscapeM (MkNetscapeM m) = execStateT m
 
 accumulateEntity :: (HasCallStack) => Entity -> Attr -> IO Entity
 accumulateEntity entity (Attr name value) =
@@ -188,12 +188,12 @@ handle CloseDL = do
   folderStack %= drop1
 handle _ = pure ()
 
-process :: [Token] -> NetscapeM Collection
-process tokens = forM_ tokens handle >> use collection
+process :: [Token] -> NetscapeM ()
+process tokens = forM_ tokens handle
 
 parse :: Text -> IO Collection
 parse input = do
   let tokens = parseTokens input
-  parseState <- mkParseState <$> Collection.new
-  (ret, _) <- runNetscapeM (process tokens) parseState
-  pure ret
+  stateInitial <- mkParseState <$> Collection.new
+  stateFinal <- execNetscapeM (process tokens) stateInitial
+  pure stateFinal.collection
