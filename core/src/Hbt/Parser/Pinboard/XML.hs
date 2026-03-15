@@ -35,14 +35,8 @@ data ParseState = MkParseState
   }
   deriving stock (Eq)
 
-new :: IO ParseState
-new = do
-  coll <- Collection.new
-  pure $
-    MkParseState
-      { collection = coll
-      , posts = []
-      }
+mkParseState :: Collection -> ParseState
+mkParseState coll = MkParseState {collection = coll, posts = []}
 
 collection :: Lens' ParseState Collection
 collection f s = (\c -> s {collection = c}) <$> f s.collection
@@ -111,6 +105,6 @@ parse input
   | otherwise = do
       let inputBytes = Text.encodeUtf8 input
       rootNode <- either (throwIO . XenoError) pure (Xeno.parse inputBytes)
-      coll <- new
-      (ret, _) <- runPinboardM (processNode rootNode) coll
+      parseState <- mkParseState <$> Collection.new
+      (ret, _) <- runPinboardM (processNode rootNode) parseState
       pure ret

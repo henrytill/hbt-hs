@@ -66,18 +66,16 @@ data ParseState = MkParseState
   }
   deriving stock (Eq)
 
-new :: IO ParseState
-new = do
-  coll <- Collection.new
-  pure $
-    MkParseState
-      { collection = coll
-      , maybeDescription = Nothing
-      , maybeExtended = Nothing
-      , attributes = []
-      , folderStack = []
-      , waitingFor = None
-      }
+mkParseState :: Collection -> ParseState
+mkParseState coll =
+  MkParseState
+    { collection = coll
+    , maybeDescription = Nothing
+    , maybeExtended = Nothing
+    , attributes = []
+    , folderStack = []
+    , waitingFor = None
+    }
 
 collection :: Lens' ParseState Collection
 collection f s = (\c -> s {collection = c}) <$> f s.collection
@@ -196,6 +194,6 @@ process tokens = forM_ tokens handle >> use collection
 parse :: Text -> IO Collection
 parse input = do
   let tokens = parseTokens input
-  coll <- new
-  (ret, _) <- runNetscapeM (process tokens) coll
+  parseState <- mkParseState <$> Collection.new
+  (ret, _) <- runNetscapeM (process tokens) parseState
   pure ret
