@@ -139,13 +139,13 @@ upsert entity collection =
             then (existingId, collection)
             else (existingId, collection {nodes = collection.nodes // [(existingId.index, updated)]})
 
-accumPosts :: Collection -> Post -> IO Collection
-accumPosts coll post = fromPost post >>= \entity -> pure (snd (upsert entity coll))
-
 fromPosts :: [Post] -> IO Collection
 fromPosts posts = do
   acc <- new
   foldM accumPosts acc (sortOn (.time) posts)
+  where
+    accumPosts :: Collection -> Post -> IO Collection
+    accumPosts coll post = fromPost post >>= \entity -> pure (snd (upsert entity coll))
 
 addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdge from to collection =
