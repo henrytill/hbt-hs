@@ -6,7 +6,7 @@
 module Hbt.Parser.HTML (Error (..), parse) where
 
 import Control.Exception (Exception, throwIO)
-import Control.Monad (foldM, forM_, when)
+import Control.Monad (foldM, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.State.Strict (StateT (..), execStateT)
@@ -189,7 +189,7 @@ handle CloseDL = do
 handle _ = pure ()
 
 process :: [Token] -> NetscapeM ()
-process tokens = forM_ tokens handle
+process = mapM_ handle
 
 parse :: Text -> IO Collection
 parse input = do

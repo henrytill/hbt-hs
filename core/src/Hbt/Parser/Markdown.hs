@@ -166,7 +166,7 @@ handleBlock (MkBlock _ b) =
       currentParent <- use maybeParent
       forM_ currentParent $ \p ->
         parents %= (p :)
-      forM_ blocksList (mapM_ handleBlock)
+      mapM_ (mapM_ handleBlock) blocksList
       maybeParent .= Nothing
       parents %= drop1
     _ -> pure ()
