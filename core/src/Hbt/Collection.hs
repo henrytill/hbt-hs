@@ -160,7 +160,7 @@ addEdge from to collection =
    in collection {adjacency}
 
 addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
-addEdges from to collection = addEdge from to (addEdge to from collection)
+addEdges from to = addEdge from to . addEdge to from
 
 toRepr :: Collection -> CollectionRepr
 toRepr collection =
