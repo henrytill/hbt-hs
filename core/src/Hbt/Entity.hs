@@ -41,7 +41,6 @@ import Hbt.Entity.URI (URI)
 import Hbt.Entity.URI qualified as URI
 import Hbt.Pinboard (Post (..))
 import Hbt.Pinboard qualified as Pinboard
-import Prelude hiding (id)
 
 newtype Name = MkName {unName :: Text}
   deriving stock (Eq, Ord, Show)
@@ -193,11 +192,11 @@ absorb other existing
   | otherwise = existing
 
 nonEmpty :: Text -> Maybe Text
-nonEmpty t =
-  let stripped = Text.strip t
-   in if Text.null stripped
-        then Nothing
-        else Just stripped
+nonEmpty t
+  | let stripped = Text.strip t
+  , not $ Text.null stripped =
+      Just stripped
+  | otherwise = Nothing
 
 toLabel :: Text -> Maybe Label
 toLabel t = nonEmpty t <&> MkLabel

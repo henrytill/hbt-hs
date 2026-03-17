@@ -27,8 +27,7 @@ import URI.ByteString (Absolute, URIParseError, URIRef)
 import URI.ByteString qualified as URI
 import Prelude hiding (null)
 
-data Error
-  = InvalidURI URIParseError Text
+data Error = InvalidURI URIParseError Text
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
@@ -46,17 +45,17 @@ null :: URI -> Bool
 null = (==) empty
 
 translate :: Text -> Text
-translate uriText =
-  let (beforeQuery, afterQuery) = Text.breakOn "?" uriText
-   in if Text.null afterQuery
-        then uriText
-        else beforeQuery <> Text.replace ";" "&" afterQuery
+translate uriText
+  | let (beforeQuery, afterQuery) = Text.breakOn "?" uriText
+  , not $ Text.null afterQuery =
+      beforeQuery <> Text.replace ";" "&" afterQuery
+  | otherwise = uriText
 
 normalizeURI :: URIRef Absolute -> URIRef Absolute
 normalizeURI uri
   | URI.schemeBS (URI.uriScheme uri) `elem` ["http", "https"]
   , URI.uriPath uri == mempty
-  , Maybe.isJust (URI.uriAuthority uri) =
+  , Maybe.isJust $ URI.uriAuthority uri =
       uri {URI.uriPath = "/"}
   | otherwise = uri
 

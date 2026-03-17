@@ -2,8 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Hbt.Collection
-  ( Id (index)
-  , Error (..)
+  ( Error (..)
+  , Id
   , Collection
   , new
   , fromPosts
@@ -46,8 +46,7 @@ import Hbt.Pinboard (Post)
 import Hbt.Pinboard qualified as Pinboard
 import Prelude hiding (elem, id, length, null)
 
-data Error
-  = ForeignId Id
+newtype Error = ForeignId Id
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
@@ -132,12 +131,12 @@ upsert :: Entity -> Collection -> (Id, Collection)
 upsert entity collection =
   case lookupId entity.uri collection of
     Nothing -> insert entity collection
-    Just existingId ->
-      let existing = entityAt existingId collection
-          updated = Entity.absorb entity existing
-       in if updated == existing
-            then (existingId, collection)
-            else (existingId, collection {nodes = collection.nodes // [(existingId.index, updated)]})
+    Just existingId
+      | updated == existing -> (existingId, collection)
+      | otherwise -> (existingId, collection {nodes = collection.nodes // [(existingId.index, updated)]})
+      where
+        existing = entityAt existingId collection
+        updated = Entity.absorb entity existing
 
 fromPosts :: [Post] -> IO Collection
 fromPosts posts = do
@@ -148,16 +147,16 @@ fromPosts posts = do
     accumPosts coll post = fromPost post >>= \entity -> pure (snd (upsert entity coll))
 
 addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
-addEdge from to collection =
-  let require = requireId collection
-      validFrom = require from
-      validTo = require to
-      fromEdges = collection.adjacency ! validFrom.index
-      newFromEdges
-        | validTo.index `elem` fromEdges = fromEdges
-        | otherwise = Vector.snoc fromEdges validTo.index
-      adjacency = collection.adjacency // [(validFrom.index, newFromEdges)]
-   in collection {adjacency}
+addEdge from to collection = collection {adjacency}
+  where
+    require = requireId collection
+    validFrom = require from
+    validTo = require to
+    fromEdges = collection.adjacency ! validFrom.index
+    newFromEdges
+      | validTo.index `elem` fromEdges = fromEdges
+      | otherwise = Vector.snoc fromEdges validTo.index
+    adjacency = collection.adjacency // [(validFrom.index, newFromEdges)]
 
 addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdges from to = addEdge from to . addEdge to from

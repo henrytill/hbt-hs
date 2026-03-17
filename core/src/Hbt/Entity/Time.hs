@@ -22,8 +22,7 @@ import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Time.Clock.POSIX qualified as POSIX
 import Data.Time.Format qualified as Format
 
-newtype Error
-  = InvalidTime Text
+newtype Error = InvalidTime Text
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
