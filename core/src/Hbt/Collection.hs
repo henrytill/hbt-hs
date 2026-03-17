@@ -147,16 +147,14 @@ fromPosts posts = do
     accumPosts coll post = fromPost post >>= \entity -> pure (snd (upsert entity coll))
 
 addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
-addEdge from to collection = collection {adjacency}
+addEdge from to collection
+  | validTo.index `elem` fromEdges = collection
+  | otherwise = collection {adjacency}
   where
-    require = requireId collection
-    validFrom = require from
-    validTo = require to
+    validFrom = requireId collection from
+    validTo = requireId collection to
     fromEdges = collection.adjacency ! validFrom.index
-    newFromEdges
-      | validTo.index `elem` fromEdges = fromEdges
-      | otherwise = Vector.snoc fromEdges validTo.index
-    adjacency = collection.adjacency // [(validFrom.index, newFromEdges)]
+    adjacency = collection.adjacency // [(validFrom.index, Vector.snoc fromEdges validTo.index)]
 
 addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdges from to = addEdge from to . addEdge to from
