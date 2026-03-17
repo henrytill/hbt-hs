@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Hbt.Parser.Pinboard.XML (Error (..), parse) where
 
@@ -54,20 +55,18 @@ toLower :: ByteString -> ByteString
 toLower = Char8.map Char.toLower
 
 accumulatePost :: Post -> (ByteString, ByteString) -> Post
-accumulatePost post (attrKey, attrValue) =
-  let key = toLower attrKey
-      value = Text.decodeUtf8 attrValue
-   in case key of
-        "href" -> post {href = value}
-        "description" -> post {description = Just value}
-        "extended" -> post {extended = Just value}
-        "time" -> post {time = value}
-        "tag" -> post {tags = Pinboard.mkTags value}
-        "meta" -> post {meta = Just value}
-        "hash" -> post {hash = Just value}
-        "shared" | value == "yes" -> post {shared = Pinboard.True}
-        "toread" | value == "yes" -> post {toread = Pinboard.True}
-        _ -> post
+accumulatePost post (toLower -> key, Text.decodeUtf8 -> value) =
+  case key of
+    "href" -> post {href = value}
+    "description" -> post {description = Just value}
+    "extended" -> post {extended = Just value}
+    "time" -> post {time = value}
+    "tag" -> post {tags = Pinboard.mkTags value}
+    "meta" -> post {meta = Just value}
+    "hash" -> post {hash = Just value}
+    "shared" | value == "yes" -> post {shared = Pinboard.True}
+    "toread" | value == "yes" -> post {toread = Pinboard.True}
+    _ -> post
 
 createPostFromAttrs :: (HasCallStack) => [(ByteString, ByteString)] -> IO Post
 createPostFromAttrs attrs = do
@@ -82,8 +81,7 @@ handleContent _ = pure () -- Ignore text and CDATA
 
 handleNode :: Xeno.Node -> PinboardM ()
 handleNode node = do
-  let nodeName = Text.decodeUtf8 (Xeno.name node)
-  case nodeName of
+  case Text.decodeUtf8 (Xeno.name node) of
     "post" -> do
       let attrs = Xeno.attributes node
       post <- liftIO (createPostFromAttrs attrs)

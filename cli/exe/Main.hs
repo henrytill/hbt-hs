@@ -188,15 +188,16 @@ main = do
       printUsage
       Exit.die "Error: input file required"
     [file] ->
-      let inputFormat = opts.inputFormat <|> detectInputFormat file
-          outputFormat = opts.outputFormat <|> (opts.outputFile >>= detectOutputFormat)
-          opts' = opts {inputFormat, outputFormat}
-          hasAnalysisFlag = opts.showInfo || opts.listTags
-       in case (inputFormat, outputFormat) of
-            (Nothing, _) -> Exit.die ("Error: no parser for file: " ++ file)
-            (Just _, Just _) -> processFile opts' file
-            (Just _, Nothing) | hasAnalysisFlag -> processFile opts' file
-            (Just _, Nothing) -> Exit.die "Error: Must specify an output format (-t), output file with known extension (-o), or analysis flag (--info, --list-tags)"
+      case (inputFormat, outputFormat) of
+        (Nothing, _) -> Exit.die ("Error: no parser for file: " ++ file)
+        (Just _, Just _) -> processFile opts' file
+        (Just _, Nothing) | hasAnalysisFlag -> processFile opts' file
+        (Just _, Nothing) -> Exit.die "Error: Must specify an output format (-t), output file with known extension (-o), or analysis flag (--info, --list-tags)"
+      where
+        inputFormat = opts.inputFormat <|> detectInputFormat file
+        outputFormat = opts.outputFormat <|> (opts.outputFile >>= detectOutputFormat)
+        opts' = opts {inputFormat, outputFormat}
+        hasAnalysisFlag = opts.showInfo || opts.listTags
     (_ : _ : _) -> do
       printUsage
       Exit.die "Error: exactly one input file required"
