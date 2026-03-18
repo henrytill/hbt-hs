@@ -86,8 +86,7 @@ unsafeFromBits = MkBelnap
 
 -- | Belnap logical NOT: swaps 'True' and 'False'; leaves 'Unknown' and 'Both' unchanged.
 not :: Belnap -> Belnap
-not (MkBelnap a) =
-  MkBelnap $ ((a .&. 1) `shiftL` 1) .|. ((a `shiftR` 1) .&. 1)
+not (MkBelnap a) = MkBelnap $ ((a .&. 1) `shiftL` 1) .|. ((a `shiftR` 1) .&. 1)
 
 -- | Belnap logical AND.
 --
@@ -101,10 +100,10 @@ not (MkBelnap a) =
 -- \end{array}
 -- \]
 and :: Belnap -> Belnap -> Belnap
-and (MkBelnap a) (MkBelnap b) =
-  let rPos = (a .&. 1) .&. (b .&. 1)
-      rNeg = ((a `shiftR` 1) .&. 1) .|. ((b `shiftR` 1) .&. 1)
-   in MkBelnap $ (rNeg `shiftL` 1) .|. rPos
+and (MkBelnap a) (MkBelnap b) = MkBelnap $ (rNeg `shiftL` 1) .|. rPos
+  where
+    rPos = (a .&. 1) .&. (b .&. 1)
+    rNeg = ((a `shiftR` 1) .&. 1) .|. ((b `shiftR` 1) .&. 1)
 
 -- | Belnap logical OR.
 --
@@ -118,10 +117,10 @@ and (MkBelnap a) (MkBelnap b) =
 -- \end{array}
 -- \]
 or :: Belnap -> Belnap -> Belnap
-or (MkBelnap a) (MkBelnap b) =
-  let rPos = (a .&. 1) .|. (b .&. 1)
-      rNeg = ((a `shiftR` 1) .&. 1) .&. ((b `shiftR` 1) .&. 1)
-   in MkBelnap $ (rNeg `shiftL` 1) .|. rPos
+or (MkBelnap a) (MkBelnap b) = MkBelnap $ (rNeg `shiftL` 1) .|. rPos
+  where
+    rPos = (a .&. 1) .|. (b .&. 1)
+    rNeg = ((a `shiftR` 1) .&. 1) .&. ((b `shiftR` 1) .&. 1)
 
 -- | Knowledge-ordering join: combine observations from independent sources.
 --

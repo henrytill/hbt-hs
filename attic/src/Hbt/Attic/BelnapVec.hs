@@ -94,19 +94,20 @@ bitsMask = (1 `shiftL` bitsLog2) - 1
 -- | Mask for valid bits in the last word.  Returns 'maxBound' when @n@ is a
 -- multiple of 64 (all bits in the last word are valid).
 tailMask :: Int -> Word64
-tailMask n =
-  let r = n .&. bitsMask
-   in if r == 0 then maxBound else (1 `shiftL` r) - 1
+tailMask n
+  | r == 0 = maxBound
+  | otherwise = (1 `shiftL` r) - 1
+  where
+    r = n .&. bitsMask
 
 -- | Zero out unused high bits in the tail word pair.
 maskTail :: forall n. (KnownNat n) => BelnapVec n -> BelnapVec n
 maskTail bv@(MkBelnapVec arr)
   | m == maxBound = bv
-  | otherwise =
-      let base = Vector.length arr - 2
-       in MkBelnapVec $ Vector.unsafeAccum (.&.) arr [(base, m), (base + 1, m)]
+  | otherwise = MkBelnapVec $ Vector.unsafeAccum (.&.) arr [(base, m), (base + 1, m)]
   where
     m = tailMask (natInt @n)
+    base = Vector.length arr - 2
 
 -- | Decompose a 'Belnap' value into its pos-plane and neg-plane fill words.
 bitPlanes :: Belnap -> (Word64, Word64)
@@ -117,10 +118,9 @@ bitPlanes (Belnap.unsafeToBits -> bits) =
 
 -- | Create a vector with every element set to the given value.
 filled :: forall n. (KnownNat n) => Belnap -> BelnapVec n
-filled fill =
-  let (posW, negW) = bitPlanes fill
-   in maskTail . MkBelnapVec . Vector.generate $ \fi ->
-        if even (getFinite fi) then posW else negW
+filled (bitPlanes -> (posW, negW)) =
+  maskTail . MkBelnapVec . Vector.generate $ \fi ->
+    if even (getFinite fi) then posW else negW
 
 -- | Create a vector of @n@ elements, all 'Hbt.Attic.Belnap.Unknown'.
 empty :: (KnownNat n) => BelnapVec n
@@ -140,31 +140,32 @@ allBoth = filled Belnap.Both
 
 -- | Read element at index @fi@.
 get :: Finite n -> BelnapVec n -> Belnap
-get fi (MkBelnapVec arr) =
-  let i = fromIntegral (getFinite fi) :: Int
-      w = i `shiftR` bitsLog2
-      b = i .&. bitsMask
-      posW = Vector.unsafeIndex arr (2 * w)
-      negW = Vector.unsafeIndex arr (2 * w + 1)
-      bitsW = (((negW `shiftR` b) .&. 1) `shiftL` 1) .|. ((posW `shiftR` b) .&. 1) :: Word64
-   in Belnap.unsafeFromBits (fromIntegral bitsW)
+get fi (MkBelnapVec arr) = Belnap.unsafeFromBits (fromIntegral bitsW)
+  where
+    i = fromIntegral (getFinite fi) :: Int
+    w = i `shiftR` bitsLog2
+    b = i .&. bitsMask
+    posW = Vector.unsafeIndex arr (2 * w)
+    negW = Vector.unsafeIndex arr (2 * w + 1)
+    bitsW = (((negW `shiftR` b) .&. 1) `shiftL` 1) .|. ((posW `shiftR` b) .&. 1) :: Word64
 
 -- | Write element at index @fi@.
 set :: Finite n -> Belnap -> BelnapVec n -> BelnapVec n
 set fi (Belnap.unsafeToBits -> bits) (MkBelnapVec arr) =
-  let i = fromIntegral (getFinite fi) :: Int
-      w = i `shiftR` bitsLog2
-      b = i .&. bitsMask
-      bitMask = complement (1 `shiftL` b) :: Word64
-      bitsW = fromIntegral bits :: Word64
-      posBit = (bitsW .&. 1) `shiftL` b
-      negBit = ((bitsW `shiftR` 1) .&. 1) `shiftL` b
-      base = 2 * w
-   in MkBelnapVec $
-        Vector.unsafeAccum
-          (\old new -> (old .&. bitMask) .|. new)
-          arr
-          [(base, posBit), (base + 1, negBit)]
+  MkBelnapVec $
+    Vector.unsafeAccum
+      (\old new -> (old .&. bitMask) .|. new)
+      arr
+      [(base, posBit), (base + 1, negBit)]
+  where
+    i = fromIntegral (getFinite fi) :: Int
+    w = i `shiftR` bitsLog2
+    b = i .&. bitsMask
+    bitMask = complement (1 `shiftL` b) :: Word64
+    bitsW = fromIntegral bits :: Word64
+    posBit = (bitsW .&. 1) `shiftL` b
+    negBit = ((bitsW `shiftR` 1) .&. 1) `shiftL` b
+    base = 2 * w
 
 -- | Element-wise Belnap NOT.
 not :: (KnownNat n) => BelnapVec n -> BelnapVec n
@@ -206,8 +207,9 @@ consensus = vecBinop (.&.) (.&.)
 resize :: forall m n. (KnownNat m, KnownNat n) => BelnapVec m -> BelnapVec n
 resize (MkBelnapVec arr) = maskTail . MkBelnapVec . Vector.generate $ \fi ->
   let i = fromIntegral (getFinite fi) :: Int
-      arrWords = Vector.length arr
    in if i < arrWords then Vector.unsafeIndex arr i else 0
+  where
+    arrWords = Vector.length arr
 
 -- | Fold over word pairs, supplying @(mask, pos_word, neg_word)@ to @f@ for
 -- each pair.  The mask is 'maxBound' for full words and 'tailMask' for the
