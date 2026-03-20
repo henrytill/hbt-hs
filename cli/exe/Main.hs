@@ -61,7 +61,7 @@ formatLens STo f opts = (\x -> opts {outputFormat = x}) <$> f opts.outputFormat
 setFormat :: SFlow f -> String -> Options -> Options
 setFormat sflow str opts =
   case parseFormatFlow sflow str of
-    Nothing -> error (formatErrorFlow sflow str)
+    Nothing -> error $ formatErrorFlow sflow str
     Just fmt -> set (formatLens sflow) (Just fmt) opts
 
 mkLabel :: SFlow f -> String
@@ -69,7 +69,7 @@ mkLabel SFrom = "Input"
 mkLabel STo = "Output"
 
 supportedFormats :: SFlow f -> [String]
-supportedFormats sflow = map toString (allConstructors sflow)
+supportedFormats = map toString . allConstructors
 
 generateFormatHelp :: SFlow f -> String
 generateFormatHelp sflow = mkLabel sflow ++ " format (" ++ formats ++ ")"
@@ -119,7 +119,7 @@ printUsage :: IO ()
 printUsage = do
   prog <- Environment.getProgName
   let header = "Usage: " ++ prog ++ " [OPTIONS] FILE\n\nProcess bookmark files in various formats\n\nOptions:"
-  putStrLn (usageInfo header options)
+  putStrLn $ usageInfo header options
 
 parseOptions :: [String] -> IO (Options, [String])
 parseOptions argv =
@@ -142,10 +142,10 @@ detectFromExtension STo ".yml" = Just YAML
 detectFromExtension STo _ = Nothing
 
 detectInputFormat :: FilePath -> Maybe (Format From)
-detectInputFormat file = detectFromExtension SFrom (FilePath.takeExtension file)
+detectInputFormat = detectFromExtension SFrom . FilePath.takeExtension
 
 detectOutputFormat :: FilePath -> Maybe (Format To)
-detectOutputFormat file = detectFromExtension STo (FilePath.takeExtension file)
+detectOutputFormat = detectFromExtension STo . FilePath.takeExtension
 
 applyMappings :: Maybe FilePath -> Collection -> IO Collection
 applyMappings Nothing collection = pure collection
@@ -158,11 +158,11 @@ writeOutput (Just file) content = Text.writeFile file content
 printCollection :: FilePath -> Options -> Collection -> IO ()
 printCollection file opts collection
   | opts.showInfo = do
-      let output = Text.pack (file ++ ": " ++ show (Collection.length collection) ++ " entities\n")
+      let output = Text.pack $ file ++ ": " ++ show (Collection.length collection) ++ " entities\n"
       writeOutput opts.outputFile output
   | opts.listTags = do
       let allLabels = foldMap (.labels) (Vector.toList (Collection.allEntities collection))
-      let tagsOutput = Text.unlines (map (.unLabel) (Set.toAscList allLabels))
+      let tagsOutput = Text.unlines $ map (.unLabel) (Set.toAscList allLabels)
       writeOutput opts.outputFile tagsOutput
   | Just fmt <- opts.outputFormat =
       formatWith fmt collection >>= writeOutput opts.outputFile
@@ -189,14 +189,14 @@ main = do
       Exit.die "Error: input file required"
     [file] ->
       case (inputFormat, outputFormat) of
-        (Nothing, _) -> Exit.die ("Error: no parser for file: " ++ file)
-        (Just _, Just _) -> processFile opts' file
-        (Just _, Nothing) | hasAnalysisFlag -> processFile opts' file
+        (Nothing, _) -> Exit.die $ "Error: no parser for file: " ++ file
+        (Just _, Just _) -> processFile optsWithFormats file
+        (Just _, Nothing) | hasAnalysisFlag -> processFile optsWithFormats file
         (Just _, Nothing) -> Exit.die "Error: Must specify an output format (-t), output file with known extension (-o), or analysis flag (--info, --list-tags)"
       where
         inputFormat = opts.inputFormat <|> detectInputFormat file
         outputFormat = opts.outputFormat <|> (opts.outputFile >>= detectOutputFormat)
-        opts' = opts {inputFormat, outputFormat}
+        optsWithFormats = opts {inputFormat, outputFormat}
         hasAnalysisFlag = opts.showInfo || opts.listTags
     (_ : _ : _) -> do
       printUsage
