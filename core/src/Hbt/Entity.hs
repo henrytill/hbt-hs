@@ -203,18 +203,18 @@ toLabel t = nonEmpty t <&> MkLabel
 
 fromPost :: (HasCallStack) => Post -> IO Entity
 fromPost post = do
-  uri <- either throwIO pure (URI.parse post.href)
-  time <- either throwIO pure (Time.parseRFC3339 post.time)
+  uri <- either throwIO pure $ URI.parse post.href
+  time <- either throwIO pure $ Time.parseRFC3339 post.time
   let name = post.description >>= nonEmpty <&> MkName
   pure
     MkEntity
       { uri
       , updatedAt = Set.singleton time
       , names = maybe Set.empty Set.singleton name
-      , labels = Set.fromList (Maybe.mapMaybe toLabel post.tags.unTags)
+      , labels = Set.fromList $ Maybe.mapMaybe toLabel post.tags.unTags
       , isFeed = mkIsFeed False
-      , shared = mkShared (Pinboard.toBool post.shared)
-      , toRead = mkToRead (Pinboard.toBool post.toread)
-      , extended = Maybe.maybeToList (post.extended >>= nonEmpty <&> MkExtended)
+      , shared = mkShared $ Pinboard.toBool post.shared
+      , toRead = mkToRead $ Pinboard.toBool post.toread
+      , extended = Maybe.maybeToList $ post.extended >>= nonEmpty <&> MkExtended
       , lastVisitedAt = MkLastVisitedAt Nothing
       }

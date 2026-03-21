@@ -121,9 +121,8 @@ accumulateEntity entity (Attr name value) =
        in pure (entity {lastVisitedAt})
     "tags" ->
       let tagList = Text.splitOn "," value
-          newLabels = Set.fromList (coerce (filter (/= "toread") tagList))
           toRead = entity.toRead <> if "toread" `elem` tagList then Entity.mkToRead True else mempty
-          labels = Set.union entity.labels newLabels
+          labels = Set.union entity.labels (Set.fromList (coerce (filter (/= "toread") tagList)))
        in pure (entity {labels, toRead})
     "private" -> pure (entity {shared = Entity.mkShared (value /= "1")})
     "toread" -> pure (entity {toRead = Entity.mkToRead (value == "1")})
@@ -137,15 +136,14 @@ createEntity = do
   name <- use maybeDescription
   ext <- use maybeExtended
   let startEntity = Entity.empty
-  accumulated <- liftIO (foldM accumulateEntity startEntity attrs)
+  accumulated <- liftIO $ foldM accumulateEntity startEntity attrs
   let names = maybe Set.empty (Set.singleton . Entity.MkName) name
-      folderLabels = Set.fromList (coerce (reverse folders))
-      allLabels = Set.unions [accumulated.labels, folderLabels]
+      labels = Set.unions [accumulated.labels, Set.fromList (coerce (reverse folders))]
       extended = Maybe.maybeToList (fmap Entity.MkExtended ext)
-      finalEntity = accumulated {names, labels = allLabels, extended}
-   in if URI.null finalEntity.uri
+      entity = accumulated {names, labels, extended}
+   in if URI.null entity.uri
         then throwM (ParseError "missing required attribute: href")
-        else pure finalEntity
+        else pure entity
 
 addPending :: NetscapeM ()
 addPending = do

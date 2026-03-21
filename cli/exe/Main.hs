@@ -172,7 +172,10 @@ printCollection file opts collection
 processFile :: Options -> FilePath -> IO ()
 processFile opts file = do
   inputFmt <- Maybe.maybe (fail "processFile: inputFormat should be validated in main") pure opts.inputFormat
-  Text.readFile file >>= parseWith inputFmt >>= applyMappings opts.mappingsFile >>= printCollection file opts
+  Text.readFile file
+    >>= parseWith inputFmt
+    >>= applyMappings opts.mappingsFile
+    >>= printCollection file opts
 
 main :: IO ()
 main = do

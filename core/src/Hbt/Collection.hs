@@ -46,10 +46,6 @@ import Hbt.Pinboard (Post)
 import Hbt.Pinboard qualified as Pinboard
 import Prelude hiding (elem, id, length, null)
 
-newtype Error = ForeignId Id
-  deriving stock (Eq, Show)
-  deriving anyclass (Exception)
-
 data Id = MkId {owner :: Unique, index :: Int}
   deriving stock (Eq)
 
@@ -60,6 +56,10 @@ instance Show Id where
       . showString ", index = "
       . shows id.index
       . showChar '}'
+
+newtype Error = ForeignId Id
+  deriving stock (Eq, Show)
+  deriving anyclass (Exception)
 
 type Edges = Vector Int
 
@@ -113,7 +113,7 @@ lookupId uri collection = fmap (MkId collection.tag) (Map.lookup uri collection.
 lookupEntity :: URI -> Collection -> Maybe Entity
 lookupEntity uri collection = do
   id <- lookupId uri collection
-  pure (entityAt id collection)
+  pure $ entityAt id collection
 
 allEntities :: Collection -> Vector Entity
 allEntities collection = collection.nodes
@@ -133,10 +133,11 @@ upsert entity collection =
     Nothing -> insert entity collection
     Just existingId
       | updated == existing -> (existingId, collection)
-      | otherwise -> (existingId, collection {nodes = collection.nodes // [(existingId.index, updated)]})
+      | otherwise -> (existingId, collection {nodes})
       where
         existing = entityAt existingId collection
         updated = Entity.absorb entity existing
+        nodes = collection.nodes // [(existingId.index, updated)]
 
 fromPosts :: [Post] -> IO Collection
 fromPosts posts = do
@@ -144,7 +145,7 @@ fromPosts posts = do
   foldM accumPosts acc (sortOn (.time) posts)
   where
     accumPosts :: Collection -> Post -> IO Collection
-    accumPosts coll post = fromPost post >>= \entity -> pure (snd (upsert entity coll))
+    accumPosts coll post = fromPost post >>= pure . snd . flip upsert coll
 
 addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdge from to collection
@@ -177,7 +178,7 @@ fromRepr serialized = do
   where
     nodes = Vector.map (.entity) serialized.value
     adjacency = Vector.map (.edges) serialized.value
-    uris = Map.fromList (Vector.toList (Vector.imap (\i entity -> (entity.uri, i)) nodes))
+    uris = Map.fromList . Vector.toList $ Vector.imap (\i entity -> (entity.uri, i)) nodes
 
 -- | YAML configuration that preserves field order as expected by tests
 yamlConfig :: YamlPretty.Config
