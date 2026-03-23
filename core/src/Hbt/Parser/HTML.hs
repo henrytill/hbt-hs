@@ -138,11 +138,11 @@ createEntity = do
   let startEntity = Entity.empty
   accumulated <- liftIO $ foldM accumulateEntity startEntity attrs
   let names = maybe Set.empty (Set.singleton . Entity.MkName) name
-      labels = Set.unions [accumulated.labels, Set.fromList (coerce (reverse folders))]
-      extended = Maybe.maybeToList (fmap Entity.MkExtended ext)
+      labels = Set.unions [accumulated.labels, Set.fromList . coerce $ reverse folders]
+      extended = Maybe.maybeToList $ fmap Entity.MkExtended ext
       entity = accumulated {names, labels, extended}
    in if URI.null entity.uri
-        then throwM (ParseError "missing required attribute: href")
+        then throwM $ ParseError "missing required attribute: href"
         else pure entity
 
 addPending :: NetscapeM ()

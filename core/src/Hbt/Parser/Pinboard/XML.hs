@@ -84,7 +84,7 @@ handleNode node = do
   case Text.decodeUtf8 (Xeno.name node) of
     "post" -> do
       let attrs = Xeno.attributes node
-      post <- liftIO (createPostFromAttrs attrs)
+      post <- liftIO $ createPostFromAttrs attrs
       posts %= (post :)
     _ -> pure ()
   mapM_ handleContent (Xeno.contents node)
@@ -93,12 +93,12 @@ processNode :: Xeno.Node -> PinboardM ()
 processNode rootNode = do
   handleNode rootNode
   collectedPosts <- use posts
-  result <- liftIO (Collection.fromPosts collectedPosts)
+  result <- liftIO $ Collection.fromPosts collectedPosts
   collection .= result
 
 parse :: (HasCallStack) => Text -> IO Collection
 parse input
-  | Text.null (Text.strip input) = Collection.new
+  | Text.null $ Text.strip input = Collection.new
   | otherwise = do
       let inputBytes = Text.encodeUtf8 input
       rootNode <- either (throwIO . XenoError) pure (Xeno.parse inputBytes)

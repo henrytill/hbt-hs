@@ -74,8 +74,8 @@ templateBytes = $(FileEmbed.embedFileRelative "src/Hbt/Formatter/HTML/netscape_b
 formatWith :: Format To -> Collection -> IO Text
 formatWith YAML collection = do
   let repr = Collection.toRepr collection
-  pure (Text.decodeUtf8 (YamlPretty.encodePretty Collection.yamlConfig repr))
+  pure . Text.decodeUtf8 $ YamlPretty.encodePretty Collection.yamlConfig repr
 formatWith HTML collection = do
-  let templateText = LazyText.fromStrict (Text.decodeUtf8 templateBytes)
+  let templateText = LazyText.fromStrict $ Text.decodeUtf8 templateBytes
   template <- either (fail . show) pure (Microstache.compileMustacheText "netscape_bookmarks" templateText)
-  pure (HTMLFormatter.format template collection)
+  pure $ HTMLFormatter.format template collection

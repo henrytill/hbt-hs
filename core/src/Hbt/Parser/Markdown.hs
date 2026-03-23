@@ -112,7 +112,7 @@ saveEntity = do
   maybeName .= Nothing
 
 textFromInlines :: [Inline a] -> Text
-textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input))
+textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
   where
     backtick :: Builder
     backtick = Builder.singleton '`'
@@ -134,7 +134,7 @@ textFromInlines input = LazyText.toStrict (Builder.toLazyText (foldMap go input)
 
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
 extractLink dest _title desc = do
-  uri <- liftEither (URI.parse dest)
+  uri <- liftEither $ URI.parse dest
   maybeURI .= Just uri
   let linkText = textFromInlines desc
   when (not (Text.null linkText) && linkText /= dest) $
