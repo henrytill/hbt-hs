@@ -40,29 +40,29 @@ instance Bounded Time where
   maxBound = fromSeconds maxBound
 
 toText :: Time -> Text
-toText (MkTime posixTime) = Text.pack (show (round posixTime :: Int64))
+toText (MkTime posixTime) = Text.pack . show $ round @_ @Int64 posixTime
 
 instance ToJSON Time where
   toJSON = toJSON . toText
 
 instance FromJSON Time where
-  parseJSON json = fmap fromSeconds (parseJSON json)
+  parseJSON = fmap fromSeconds . parseJSON
 
 parse :: Text -> Either Error Time
 parse s =
   case Format.parseTimeM @Maybe True Format.defaultTimeLocale "%B %e, %Y" (Text.unpack s) of
-    Nothing -> Left (InvalidTime s)
-    Just utcTime -> Right (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
+    Nothing -> Left $ InvalidTime s
+    Just utcTime -> Right . MkTime $ POSIX.utcTimeToPOSIXSeconds utcTime
 
 parseRFC3339 :: Text -> Either Error Time
 parseRFC3339 s =
   case Format.parseTimeM @Maybe True Format.defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" (Text.unpack s) of
-    Nothing -> Left (InvalidTime s)
-    Just utcTime -> Right (MkTime (POSIX.utcTimeToPOSIXSeconds utcTime))
+    Nothing -> Left $ InvalidTime s
+    Just utcTime -> Right . MkTime $ POSIX.utcTimeToPOSIXSeconds utcTime
 
 parseTimestamp :: Text -> Maybe Time
 parseTimestamp s =
   case Read.decimal s of
     Left {} -> Nothing
-    Right (i, rest) | Text.null rest -> Just (MkTime (fromInteger i))
+    Right (i, rest) | Text.null rest -> Just . MkTime $ fromInteger i
     Right {} -> Nothing
