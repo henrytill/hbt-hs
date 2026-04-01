@@ -57,7 +57,6 @@ import Data.Proxy (Proxy (..))
 import Data.Vector.Unboxed.Sized (Vector)
 import Data.Vector.Unboxed.Sized qualified as Vector
 import Data.Word (Word64)
-import GHC.Records (HasField (..))
 import GHC.TypeLits (Div, KnownNat, Nat, natVal, type (*), type (+), type (<=))
 import Hbt.Attic.Belnap (AsKnowledge (..), AsTruth (..), Belnap)
 import Hbt.Attic.Belnap qualified as Belnap
@@ -81,9 +80,6 @@ type StorageSize n = 2 * Div (n + 63) 64
 -- Unused high bits in the last word pair are always zero.
 newtype BelnapVec (n :: Nat) = MkBelnapVec (Vector (StorageSize n) Word64)
   deriving stock (Eq, Show)
-
-instance (KnownNat n) => HasField "width" (BelnapVec n) Int where
-  getField _ = natInt @n
 
 bitsLog2 :: Int
 bitsLog2 = 6

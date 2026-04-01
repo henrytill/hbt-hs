@@ -241,21 +241,18 @@ vecTruncateTests =
     [ let v = BelnapVec.resize (BelnapVec.allTrue :: BelnapVec 100) :: BelnapVec 100
        in group
             "same width is no-op"
-            [ assertEqual "width" 100 v.width
-            , assertBool "still all true" (BelnapVec.isAllTrue v)
+            [ assertBool "still all true" (BelnapVec.isAllTrue v)
             ]
     , let v = BelnapVec.resize (BelnapVec.allTrue :: BelnapVec 200) :: BelnapVec 65
        in group
             "shrink across word boundary"
-            [ assertEqual "width" 65 v.width
-            , assertBool "all true after shrink" (BelnapVec.isAllTrue v)
+            [ assertBool "all true after shrink" (BelnapVec.isAllTrue v)
             , assertEqual "count true" 65 (BelnapVec.countTrue v)
             ]
     , let v = BelnapVec.resize (BelnapVec.allFalse :: BelnapVec 60) :: BelnapVec 200
        in group
             "grow across word boundary"
-            [ assertEqual "width" 200 v.width
-            , assertEqual "count false" 60 (BelnapVec.countFalse v)
+            [ assertEqual "count false" 60 (BelnapVec.countFalse v)
             , assertEqual "count unknown" 140 (BelnapVec.countUnknown v)
             ]
     ]
