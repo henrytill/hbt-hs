@@ -64,10 +64,10 @@ import Prelude hiding (False, True, and, not, or)
 
 -- | Compile-time index literal: @fin \@i@ produces @Finite n@ when @(i + 1) <= n@.
 fin :: forall i n. (KnownNat i, KnownNat n, (i + 1) <= n) => Finite n
-fin = natToFinite (Proxy @i)
+fin = natToFinite $ Proxy @i
 
 natInt :: forall n. (KnownNat n) => Int
-natInt = fromIntegral (natVal (Proxy @n))
+natInt = fromIntegral . natVal $ Proxy @n
 
 -- | Storage size in 'Word64' words for a 't:BelnapVec' of @n@ elements.
 -- Two bitplanes (pos, neg) interleaved, each needing @ceil(n/64)@ words.
@@ -114,13 +114,15 @@ bitPlanes (Belnap.unsafeToBits -> bits) =
 
 -- | Create a vector with every element set to the given value.
 filled :: forall n. (KnownNat n) => Belnap -> BelnapVec n
-filled (bitPlanes -> (posW, negW)) =
-  maskTail . MkBelnapVec . Vector.generate $ \fi ->
-    if even (getFinite fi) then posW else negW
+filled (bitPlanes -> (posW, negW)) = maskTail . MkBelnapVec $ Vector.generate gf
+  where
+    gf fi
+      | even (getFinite fi) = posW
+      | otherwise = negW
 
 -- | Create a vector of @n@ elements, all 'Hbt.Attic.Belnap.Unknown'.
 empty :: (KnownNat n) => BelnapVec n
-empty = MkBelnapVec (Vector.replicate 0)
+empty = MkBelnapVec $ Vector.replicate 0
 
 -- | Create a vector of @n@ elements, all 'Hbt.Attic.Belnap.True'.
 allTrue :: (KnownNat n) => BelnapVec n
@@ -177,7 +179,11 @@ vecBinop ::
   BelnapVec n ->
   BelnapVec n
 vecBinop posOp negOp (MkBelnapVec a) (MkBelnapVec b) =
-  MkBelnapVec $ Vector.izipWith (\fi x y -> if even (getFinite fi) then posOp x y else negOp x y) a b
+  MkBelnapVec $ Vector.izipWith zf a b
+  where
+    zf fi x y
+      | even (getFinite fi) = posOp x y
+      | otherwise = negOp x y
 
 -- | Element-wise Belnap AND.
 and :: BelnapVec n -> BelnapVec n -> BelnapVec n
@@ -201,11 +207,14 @@ consensus = vecBinop (.&.) (.&.)
 
 -- | Truncate or extend to @n@ elements ('Hbt.Attic.Belnap.Unknown'-filled), from @m@-wide source.
 resize :: forall m n. (KnownNat m, KnownNat n) => BelnapVec m -> BelnapVec n
-resize (MkBelnapVec arr) = maskTail . MkBelnapVec . Vector.generate $ \fi ->
-  let i = fromIntegral (getFinite fi) :: Int
-   in if i < arrWords then Vector.unsafeIndex arr i else 0
+resize (MkBelnapVec arr) = maskTail . MkBelnapVec $ Vector.generate gf
   where
     arrWords = Vector.length arr
+    gf fi
+      | let i = fromIntegral (getFinite fi)
+      , i < arrWords =
+          Vector.unsafeIndex arr i
+      | otherwise = 0
 
 -- | Fold over word pairs, supplying @(mask, pos_word, neg_word)@ to @f@ for
 -- each pair.  The mask is 'maxBound' for full words and 'tailMask' for the
