@@ -66,12 +66,12 @@ type Edges = Vector Int
 data Collection = MkCollection
   { tag :: Unique
   , nodes :: Vector Entity
-  , adjacency :: Vector Edges
+  , edges :: Vector Edges
   , uris :: Map URI Int
   }
 
 instance Eq Collection where
-  c1 == c2 = c1.nodes == c2.nodes && c1.adjacency == c2.adjacency && c1.uris == c2.uris
+  c1 == c2 = c1.nodes == c2.nodes && c1.edges == c2.edges && c1.uris == c2.uris
 
 instance Show Collection where
   showsPrec _ c =
@@ -79,8 +79,8 @@ instance Show Collection where
       . shows (Unique.hashUnique c.tag)
       . showString ", nodes = "
       . shows c.nodes
-      . showString ", adjacency = "
-      . shows c.adjacency
+      . showString ", edges = "
+      . shows c.edges
       . showString ", uris = "
       . shows c.uris
       . showChar '}'
@@ -105,7 +105,7 @@ entityAt :: (HasCallStack) => Id -> Collection -> Entity
 entityAt id collection = collection.nodes ! (requireId collection id).index
 
 edgesAt :: (HasCallStack) => Id -> Collection -> Vector Id
-edgesAt id collection = Vector.map (MkId collection.tag) (collection.adjacency ! (requireId collection id).index)
+edgesAt id collection = Vector.map (MkId collection.tag) (collection.edges ! (requireId collection id).index)
 
 lookupId :: URI -> Collection -> Maybe Id
 lookupId uri collection = fmap (MkId collection.tag) (Map.lookup uri collection.uris)
@@ -119,12 +119,12 @@ allEntities :: Collection -> Vector Entity
 allEntities collection = collection.nodes
 
 insert :: Entity -> Collection -> (Id, Collection)
-insert entity collection = (newId, collection {nodes, adjacency, uris})
+insert entity collection = (newId, collection {nodes, edges, uris})
   where
     index = Vector.length collection.nodes
     newId = MkId collection.tag index
     nodes = Vector.snoc collection.nodes entity
-    adjacency = Vector.snoc collection.adjacency Vector.empty
+    edges = Vector.snoc collection.edges Vector.empty
     uris = Map.insert entity.uri index collection.uris
 
 upsert :: Entity -> Collection -> (Id, Collection)
@@ -150,12 +150,12 @@ fromPosts posts = do
 addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdge from to collection
   | validTo.index `elem` fromEdges = collection
-  | otherwise = collection {adjacency}
+  | otherwise = collection {Hbt.Collection.edges}
   where
     validFrom = requireId collection from
     validTo = requireId collection to
-    fromEdges = collection.adjacency ! validFrom.index
-    adjacency = collection.adjacency // [(validFrom.index, Vector.snoc fromEdges validTo.index)]
+    fromEdges = collection.edges ! validFrom.index
+    edges = collection.edges // [(validFrom.index, Vector.snoc fromEdges validTo.index)]
 
 addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdges from to = addEdge from to . addEdge to from
@@ -169,15 +169,15 @@ toRepr collection =
     }
   where
     mkNodeRepr :: Int -> Entity -> NodeRepr
-    mkNodeRepr = flip . MkNodeRepr <*> (collection.adjacency !)
+    mkNodeRepr = flip . MkNodeRepr <*> (collection.edges !)
 
 fromRepr :: CollectionRepr -> IO Collection
 fromRepr serialized = do
   tag <- Unique.newUnique
-  pure $ MkCollection {tag, nodes, adjacency, uris}
+  pure $ MkCollection {tag, nodes, edges, uris}
   where
     nodes = Vector.map (.entity) serialized.value
-    adjacency = Vector.map (.edges) serialized.value
+    edges = Vector.map (.edges) serialized.value
     uris = Map.fromList . Vector.toList $ Vector.imap (\i entity -> (entity.uri, i)) nodes
 
 -- | YAML configuration that preserves field order as expected by tests
