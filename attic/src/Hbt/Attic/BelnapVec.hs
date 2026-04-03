@@ -138,7 +138,7 @@ allBoth = filled Belnap.Both
 
 -- | Read element at index @fi@.
 get :: Finite n -> BelnapVec n -> Belnap
-get fi (MkBelnapVec arr) = Belnap.unsafeFromBits (fromIntegral bitsW)
+get fi (MkBelnapVec arr) = Belnap.unsafeFromBits $ fromIntegral bitsW
   where
     i = fromIntegral (getFinite fi) :: Int
     w = i `shiftR` bitsLog2
@@ -195,7 +195,7 @@ or = vecBinop (.|.) (.&.)
 
 -- | Element-wise Belnap implication: @implies a = or (not a)@.
 implies :: (KnownNat n) => BelnapVec n -> BelnapVec n -> BelnapVec n
-implies a = or (not a)
+implies = or . not
 
 -- | Element-wise knowledge-ordering join (merge).
 merge :: BelnapVec n -> BelnapVec n -> BelnapVec n
@@ -238,7 +238,7 @@ foldMapWordPairs f (MkBelnapVec arr) =
     [0, 2 .. lastPair]
   where
     lastPair = Vector.length arr - 2
-    tm = tailMask (natInt @n)
+    tm = tailMask $ natInt @n
 
 -- | Returns 'Prelude.True' if no position is 'Hbt.Attic.Belnap.Both'.
 isConsistent :: forall n. (KnownNat n) => BelnapVec n -> Bool
