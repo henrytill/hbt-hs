@@ -102,7 +102,7 @@ maskTail bv@(MkBelnapVec arr)
   | m == maxBound = bv
   | otherwise = MkBelnapVec $ Vector.unsafeAccum (.&.) arr [(base, m), (base + 1, m)]
   where
-    m = tailMask (natInt @n)
+    m = tailMask $ natInt @n
     base = Vector.length arr - 2
 
 -- | Decompose a 'Belnap' value into its pos-plane and neg-plane fill words.
@@ -114,7 +114,8 @@ bitPlanes (Belnap.unsafeToBits -> bits) =
 
 -- | Create a vector with every element set to the given value.
 filled :: forall n. (KnownNat n) => Belnap -> BelnapVec n
-filled (bitPlanes -> (posW, negW)) = maskTail . MkBelnapVec $ Vector.generate gf
+filled (bitPlanes -> (posW, negW)) =
+  maskTail . MkBelnapVec $ Vector.generate gf
   where
     gf fi
       | even (getFinite fi) = posW
