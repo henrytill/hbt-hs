@@ -141,11 +141,11 @@ upsert entity collection =
 
 fromPosts :: [Post] -> IO Collection
 fromPosts posts = do
-  acc <- new
-  foldM accumPosts acc (sortOn (.time) posts)
+  coll <- new
+  foldM accumPosts coll (sortOn (.time) posts)
   where
     accumPosts :: Collection -> Post -> IO Collection
-    accumPosts coll post = fromPost post >>= pure . snd . flip upsert coll
+    accumPosts acc post = fromPost post >>= pure . snd . flip upsert acc
 
 addEdge :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdge from to collection
