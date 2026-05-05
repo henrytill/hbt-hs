@@ -42,7 +42,7 @@ library
     build-depends:
         base >=4.20.1 && <4.23,
         finite-typelits ^>=0.2.1.0,
-        ghc-typelits-knownnat ^>=0.7.12,
+        ghc-typelits-knownnat >=0.7.12 && <0.9,
         lattices ^>=2.2.1,
         vector-sized ^>=1.6.1
 
