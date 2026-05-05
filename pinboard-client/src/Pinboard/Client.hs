@@ -121,7 +121,7 @@ managerSettings = TLS.mkManagerSettings tlsSettings Nothing
     settingClientSupported = (def @Supported) {supportedExtendedMainSecret = AllowEMS}
     tlsSettings = case def @TLSSettings of
       settings@(TLSSettingsSimple {}) -> settings {settingClientSupported}
-      TLSSettings params -> TLSSettings (params {clientSupported = settingClientSupported})
+      TLSSettings params -> TLSSettings $ params {clientSupported = settingClientSupported}
 
 runClient :: ApiToken -> IO ()
 runClient apiToken = do
