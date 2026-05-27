@@ -57,7 +57,6 @@ update :<|> get = client api
 
 newtype UpdateTime = MkUpdateTime {unUpdateTime :: UTCTime}
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (FromJSON, ToJSON)
 
 remapField :: [(String, String)] -> String -> String
 remapField mappings field
@@ -70,6 +69,13 @@ updateTimeOptions = Aeson.defaultOptions {fieldLabelModifier}
     mappings :: [(String, String)]
     mappings = [("unUpdateTime", "update_time")]
     fieldLabelModifier = remapField mappings
+
+instance FromJSON UpdateTime where
+  parseJSON = Aeson.genericParseJSON updateTimeOptions
+
+instance ToJSON UpdateTime where
+  toJSON = Aeson.genericToJSON updateTimeOptions
+  toEncoding = Aeson.genericToEncoding updateTimeOptions
 
 data Bookmark = MkBookmark
   deriving stock (Eq, Show, Generic)
