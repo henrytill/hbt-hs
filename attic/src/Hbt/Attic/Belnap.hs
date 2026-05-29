@@ -152,7 +152,7 @@ implies = or . not
 -- \end{array}
 -- \]
 consensus :: Belnap -> Belnap -> Belnap
-consensus (MkBelnap a) (MkBelnap b) = MkBelnap (a .&. b)
+consensus (MkBelnap a) (MkBelnap b) = MkBelnap $ a .&. b
 
 -- | Returns 'Prelude.True' if this value carries any information (not 'Unknown').
 isKnown :: Belnap -> Bool
