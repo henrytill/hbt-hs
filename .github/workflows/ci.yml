@@ -11,10 +11,10 @@ jobs:
   linux-flake:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: true
-      - uses: cachix/install-nix-action@v31.10.5
+      - uses: cachix/install-nix-action@v31.10.6
       - uses: cachix/cachix-action@v17
         with:
           name: henrytill
@@ -25,10 +25,10 @@ jobs:
     needs: linux-flake
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: true
-      - uses: cachix/install-nix-action@v31.10.5
+      - uses: cachix/install-nix-action@v31.10.6
       - uses: cachix/cachix-action@v17
         with:
           name: henrytill
