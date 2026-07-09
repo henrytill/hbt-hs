@@ -7,7 +7,7 @@ module Hbt.Parser.Pinboard.XML (Error (..), parse) where
 import Control.Exception (Exception, throwIO)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.State.Strict (StateT (..), execStateT)
+import Control.Monad.State.Strict (MonadState, StateT (..), execStateT)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as Char8
 import Data.Char qualified as Char
@@ -19,8 +19,8 @@ import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Pinboard (Post (..))
 import Hbt.Pinboard qualified as Pinboard
-import Lens.Family2
-import Lens.Family2.State.Strict
+import Lens.Micro
+import Lens.Micro.Mtl
 import Xeno.DOM qualified as Xeno
 import Xeno.Types (XenoException)
 

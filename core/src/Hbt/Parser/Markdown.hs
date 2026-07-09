@@ -10,7 +10,7 @@ import Control.Exception (Exception, throwIO)
 import Control.Monad (forM_, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.State.Class (gets)
-import Control.Monad.State.Strict (StateT (..), execStateT)
+import Control.Monad.State.Strict (MonadState, StateT (..), execStateT)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -27,9 +27,9 @@ import Hbt.Entity.Time (Time)
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI (URI)
 import Hbt.Entity.URI qualified as URI
-import Hbt.Parser.Common (drop1)
-import Lens.Family2
-import Lens.Family2.State.Strict
+import Hbt.Parser.Common (drop1, uses)
+import Lens.Micro
+import Lens.Micro.Mtl
 
 data Error
   = NoSaveableEntity

@@ -13,7 +13,7 @@ import Hbt (Flow (..), Format (..), SFlow (..), allInputFormats, allOutputFormat
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity (..), Label (..))
-import Lens.Family2 (Lens', set)
+import Lens.Micro (Lens', set)
 import System.Console.GetOpt
 import System.Environment qualified as Environment
 import System.Exit qualified as Exit

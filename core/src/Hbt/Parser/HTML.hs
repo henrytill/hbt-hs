@@ -9,7 +9,7 @@ import Control.Exception (Exception, throwIO)
 import Control.Monad (foldM, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.State.Strict (StateT (..), execStateT)
+import Control.Monad.State.Strict (MonadState, StateT (..), execStateT)
 import Data.Coerce (coerce)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
@@ -22,9 +22,9 @@ import Hbt.Entity (Entity (..))
 import Hbt.Entity qualified as Entity
 import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
-import Hbt.Parser.Common (drop1)
-import Lens.Family2
-import Lens.Family2.State.Strict
+import Hbt.Parser.Common (drop1, uses)
+import Lens.Micro
+import Lens.Micro.Mtl
 import Text.HTML.Parser (Attr (..), Token (..), parseTokens)
 
 newtype Error = ParseError String
