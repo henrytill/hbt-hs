@@ -4,3 +4,25 @@ packages:
   core/hbt-core.cabal
   pinboard-client/hbt-pinboard-client.cabal
   pinboard-types/hbt-pinboard-types.cabal
+
+source-repository-package
+  type: git
+  location: https://github.com/well-typed/cborg.git
+  tag: 6ef2791ca41b397a3e36c868ad3e66a0d09f19b2
+  subdir: serialise
+
+source-repository-package
+  type: git
+  location: https://github.com/well-typed/cborg.git
+  tag: 6ef2791ca41b397a3e36c868ad3e66a0d09f19b2
+  subdir: cborg
+
+if impl(ghc >=9.14)
+  allow-newer: html-parse:base
+             , serialise:time
+             , servant:base
+             , servant-client:base
+             , servant-client:time
+             , servant-client-core:base
+             , servant-client-core:template-haskell
+             , http-media:containers
