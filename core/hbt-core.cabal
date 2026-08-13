@@ -90,6 +90,7 @@ test-suite hbt-test
     hs-source-dirs:   test
     other-modules:
         Hbt.CollectionTest
+        Hbt.Formatter.HTMLTest
         TestData
         TestUtilities
 

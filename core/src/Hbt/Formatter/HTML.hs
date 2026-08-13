@@ -52,6 +52,24 @@ getLastModified entity
   | Set.null entity.updatedAt = Nothing
   | otherwise = Just (Set.findMax entity.updatedAt)
 
+-- | Escape a value destined for a double-quoted attribute.
+--
+-- The double quote delimits the value, so it has to go; the single quote is
+-- safe there, and @&apos;@ is not HTML 4.
+escapeAttribute :: Text -> Text
+escapeAttribute =
+  Text.replace "\"" "&quot;"
+    . Text.replace ">" "&gt;"
+    . Text.replace "<" "&lt;"
+    . Text.replace "&" "&amp;"
+
+-- | Escape a value destined for text content, where quotes are safe.
+escapeText :: Text -> Text
+escapeText =
+  Text.replace ">" "&gt;"
+    . Text.replace "<" "&lt;"
+    . Text.replace "&" "&amp;"
+
 stringOfBool :: Bool -> Text
 stringOfBool False = "0"
 stringOfBool True = "1"
@@ -63,16 +81,16 @@ feedOfBool True = "true"
 fromEntity :: Entity -> TemplateEntity
 fromEntity entity =
   MkTemplateEntity
-    { href
+    { href = escapeAttribute href
     , addDate = Time.toText entity.createdAt
-    , title = getFirstName href entity.names
+    , title = escapeText (getFirstName href entity.names)
     , lastModified = fmap Time.toText (getLastModified entity)
-    , tags = if null tagsList then Nothing else Just (Text.intercalate "," tagsList)
+    , tags = if null tagsList then Nothing else Just (escapeAttribute (Text.intercalate "," tagsList))
     , private = fmap (stringOfBool . not) (getShared entity.shared)
     , toRead = fmap stringOfBool (getToRead entity.toRead)
     , feed = fmap feedOfBool (getIsFeed entity.isFeed)
     , lastVisit = fmap Time.toText (getLastVisitedAt entity.lastVisitedAt)
-    , description = fmap (.unExtended) (Maybe.listToMaybe entity.extended)
+    , description = fmap (escapeText . (.unExtended)) (Maybe.listToMaybe entity.extended)
     }
   where
     href = Maybe.fromMaybe mempty (URI.toText entity.uri) -- TODO
