@@ -10,11 +10,14 @@ module TestData
 where
 
 import Control.Monad (foldM)
+import Control.Monad qualified as Monad
 import Data.ByteString qualified as BS
 import Data.List (sort)
+import Data.List qualified as List
 import Data.List.Split qualified as Split
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Maybe qualified as Maybe
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
@@ -36,20 +39,17 @@ data TestCase (f :: Flow) = MkTestCase
   }
   deriving stock (Eq, Ord, Show)
 
-type TestMap f = Map String (TestCase f)
-
 baseDir :: FilePath
 baseDir = "test" </> "data"
 
-inputDir :: Format From -> Maybe FilePath
-inputDir JSON = Just (baseDir </> "pinboard" </> "json")
-inputDir XML = Just (baseDir </> "pinboard" </> "xml")
-inputDir Markdown = Just (baseDir </> "markdown")
-inputDir HTML = Just (baseDir </> "html")
-
-outputDir :: Format To -> Maybe FilePath
-outputDir HTML = Just (baseDir </> "html")
-outputDir YAML = Nothing
+-- | Where a category's fixtures live. A category is named by the format its
+-- inputs are written in; both the parser and the formatter suites read the
+-- same directory, differing only in which expected file they compare against.
+categoryDir :: Format From -> FilePath
+categoryDir JSON = baseDir </> "pinboard" </> "json"
+categoryDir XML = baseDir </> "pinboard" </> "xml"
+categoryDir Markdown = baseDir </> "markdown"
+categoryDir HTML = baseDir </> "html"
 
 formatExt :: Format f -> String
 formatExt JSON = "json"
@@ -69,13 +69,20 @@ split path = fmap (drop 1) (splitExtensions path)
 splitExt :: String -> [String]
 splitExt s = filter (not . null) (Split.splitOn "." s)
 
-processFile :: SFlow f -> Format f -> FilePath -> TestMap f -> FilePath -> IO (TestMap f)
-processFile sflow format dir acc file =
-  case (sflow, parts) of
-    (SFrom, ["expected", "yaml"]) -> updateWith (\tc t -> tc {expected = t})
-    (SFrom, ["input", e]) | e == formatExt format -> updateWith (\tc t -> tc {input = t})
-    (STo, ["expected", e]) | e == formatExt format -> updateWith (\tc t -> tc {expected = t})
-    (STo, ["input", _]) -> updateWith (\tc t -> tc {input = t})
+-- | A case being assembled: either half may still be missing.
+data Partial = MkPartial
+  { partialInput :: Maybe Text
+  , partialExpected :: Maybe Text
+  }
+
+emptyPartial :: Partial
+emptyPartial = MkPartial {partialInput = Nothing, partialExpected = Nothing}
+
+processFile :: Format From -> String -> FilePath -> PartialMap -> FilePath -> IO PartialMap
+processFile inputFormat expectedExt dir acc file =
+  case parts of
+    ["input", e] | e == formatExt inputFormat -> updateWith (\p t -> p {partialInput = Just t})
+    ["expected", e] | e == expectedExt -> updateWith (\p t -> p {partialExpected = Just t})
     _ -> pure acc
   where
     (stem, ext) = split file
@@ -83,26 +90,50 @@ processFile sflow format dir acc file =
     parts = splitExt ext
     updateWith field = do
       text <- readText fullPath
-      let updater maybeCase = case maybeCase of
-            Nothing -> Just (field (MkTestCase {stem, format, input = Text.empty, expected = Text.empty}) text)
-            Just tc -> Just (field tc text)
-      pure (Map.alter updater stem acc)
+      pure (Map.alter (Just . flip field text . Maybe.fromMaybe emptyPartial) stem acc)
 
-discover :: SFlow f -> (Format f -> Maybe FilePath) -> Format f -> IO [TestCase f]
-discover sflow dirFor format =
-  case dirFor format of
-    Nothing -> pure []
-    Just dir -> do
-      allFiles <- listDirectory dir
-      testMap <- foldM (processFile sflow format dir) Map.empty allFiles
-      let tests = map snd (Map.toList testMap)
-      pure (sort tests)
+-- | Assemble the cases in a category, refusing to hand back a suite that would
+-- pass without testing anything.
+--
+-- An uninitialized submodule leaves the directories missing or empty, and an
+-- empty list of cases is a suite of no tests: it passes, and the entire golden
+-- set is silently gone. A fixture with only one of its two halves is the same
+-- failure in miniature - it would have been compared against the empty string.
+discover :: Format From -> String -> Format f -> IO [TestCase f]
+discover inputFormat expectedExt format = do
+  allFiles <- listDirectory dir
+  partials <- foldM (processFile inputFormat expectedExt dir) Map.empty allFiles
+  cases <- traverse complete (Map.toList partials)
+  Monad.when (List.null cases) $
+    fail $
+      "no test cases found in "
+        ++ dir
+        ++ " (looking for *.input."
+        ++ formatExt inputFormat
+        ++ " alongside *.expected."
+        ++ expectedExt
+        ++ "); is the test/data submodule initialized?"
+  pure (sort cases)
+  where
+    dir = categoryDir inputFormat
+
+    complete (stem, partial) =
+      case (partial.partialInput, partial.partialExpected) of
+        (Just input, Just expected) -> pure (MkTestCase {stem, format, input, expected})
+        (Nothing, _) -> missing stem ("input." ++ formatExt inputFormat)
+        (_, Nothing) -> missing stem ("expected." ++ expectedExt)
+
+    missing stem what =
+      fail (dir </> stem ++ " has no " ++ stem ++ "." ++ what)
+
+type PartialMap = Map String Partial
 
 discoverInput :: Format From -> IO [TestCase From]
-discoverInput = discover SFrom inputDir
+discoverInput inputFormat = discover inputFormat "yaml" inputFormat
 
-discoverOutput :: Format To -> IO [TestCase To]
-discoverOutput = discover STo outputDir
+discoverOutput :: Format From -> Format To -> IO [TestCase To]
+discoverOutput inputFormat outputFormat =
+  discover inputFormat (formatExt outputFormat) outputFormat
 
 testParser :: TestCase From -> IO Test
 testParser testCase = testIO testCase.stem $ do

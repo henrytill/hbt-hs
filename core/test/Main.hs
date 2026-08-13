@@ -16,7 +16,7 @@ handleResults (output, passed) = putStr output >> pure passed
 main :: IO ()
 main = do
   htmlParserCases <- discoverInput HTML
-  htmlFormatterCases <- discoverOutput HTML
+  htmlFormatterCases <- discoverOutput HTML HTML
   markdownParserCases <- discoverInput Markdown
   jsonParserCases <- discoverInput JSON
   xmlParserCases <- discoverInput XML
