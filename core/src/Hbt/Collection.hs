@@ -25,8 +25,9 @@ module Hbt.Collection
   )
 where
 
-import Control.Exception (Exception, throw)
+import Control.Exception (Exception, throw, throwIO)
 import Control.Monad (foldM)
+import Control.Monad qualified as Monad
 import Data.List (elemIndex, sortOn)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -57,7 +58,19 @@ instance Show Id where
       . shows id.index
       . showChar '}'
 
-newtype Error = ForeignId Id
+data Error
+  = ForeignId Id
+  | -- | The declared length disagreed with the number of nodes: declared, actual.
+    LengthMismatch Int Int
+  | -- | A node's id was not its position once the nodes were sorted by id.
+    -- Because they are sorted first, this one comparison rejects gaps,
+    -- negative and out-of-range ids, and duplicates alike: expected, found.
+    UnexpectedId Int Int
+  | -- | An edge pointed outside the collection: source node, edge target.
+    EdgeOutOfBounds Int Int
+  | -- | Two nodes shared a URI, which would leave the first unreachable
+    -- through the uri index: node, uri.
+    DuplicateURI Int URI
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
@@ -171,14 +184,45 @@ toRepr collection =
     mkNodeRepr :: Int -> Entity -> NodeRepr
     mkNodeRepr = flip . MkNodeRepr <*> (collection.edges !)
 
+-- | Rebuild a collection from its serialized form, rejecting data that would
+-- leave it in a state the rest of the module assumes cannot happen.
+--
+-- Nothing downstream re-checks any of this, so whatever gets past here is
+-- trusted: an out-of-range edge index later hands out an 'Id' whose lookup
+-- fails on a raw vector bounds error, and a duplicated URI leaves an entity
+-- that cannot be found by its own URI.
+--
+-- A node with no URI needs no check here: 'Hbt.Entity.URI.parse' rejects the
+-- empty string, so an entity without one never deserializes in the first
+-- place.
 fromRepr :: CollectionRepr -> IO Collection
 fromRepr serialized = do
+  Monad.when (serialized.length /= count) $
+    throwIO (LengthMismatch serialized.length count)
+  Vector.imapM_ checkId sorted
+  Vector.imapM_ checkEdges edges
+  uris <- Vector.ifoldM' insertURI Map.empty nodes
   tag <- Unique.newUnique
   pure $ MkCollection {tag, nodes, edges, uris}
   where
-    nodes = Vector.map (.entity) serialized.value
-    edges = Vector.map (.edges) serialized.value
-    uris = Map.fromList . Vector.toList $ Vector.imap (\i entity -> (entity.uri, i)) nodes
+    -- Sorting first means a file that lists its nodes out of order is still
+    -- read correctly, since edges refer to ids rather than to positions.
+    sorted = Vector.fromList (sortOn (.id) (Vector.toList serialized.value))
+    count = Vector.length sorted
+    nodes = Vector.map (.entity) sorted
+    edges = Vector.map (.edges) sorted
+
+    checkId index node =
+      Monad.when (node.id /= index) $ throwIO (UnexpectedId index node.id)
+
+    checkEdges index =
+      Vector.mapM_ $ \target ->
+        Monad.when (target < 0 || target >= count) $
+          throwIO (EdgeOutOfBounds index target)
+
+    insertURI acc index entity
+      | Map.member entity.uri acc = throwIO (DuplicateURI index entity.uri)
+      | otherwise = pure (Map.insert entity.uri index acc)
 
 -- | YAML configuration that preserves field order as expected by tests
 yamlConfig :: YamlPretty.Config

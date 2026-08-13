@@ -2,10 +2,14 @@
 
 module Hbt.CollectionTest (results) where
 
+import Control.Exception (SomeException, try)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text.Encoding
 import Data.Vector qualified as Vector
+import Data.Yaml qualified as Yaml
 import Hbt.Collection
 import Hbt.Entity (Entity (..), Label (..), Name (..))
 import Hbt.Entity qualified as Entity
@@ -248,9 +252,92 @@ edgeTests = do
       , assertBool "addEdges creates backward edge" (Vector.elem id1 bidirectionalEdgesFromId2)
       ]
 
+-- | Decode a YAML collection, reporting whether it was accepted.
+decodes :: Text -> IO Bool
+decodes yaml = do
+  result <- try @SomeException $ do
+    repr <- Yaml.decodeThrow @IO @CollectionRepr (Text.Encoding.encodeUtf8 yaml)
+    collection <- fromRepr repr
+    pure (length collection)
+  pure (either (const False) (const True) result)
+
+node :: Int -> Text -> Text -> Text
+node nodeId uri edges =
+  "- id: "
+    <> Text.pack (show nodeId)
+    <> "\n  entity:\n    uri: "
+    <> uri
+    <> "\n    createdAt: 1700000000\n    updatedAt: []\n    names: []\n    labels: []\n  edges: "
+    <> edges
+    <> "\n"
+
+collectionYaml :: Int -> [Text] -> Text
+collectionYaml declaredLength nodes =
+  "version: 0.1.0\nlength: " <> Text.pack (show declaredLength) <> "\nvalue:\n" <> Text.concat nodes
+
+fromReprTests :: IO Test
+fromReprTests = do
+  wellFormed <- decodes (collectionYaml 2 [node 0 "https://e.test/a" "[1]", node 1 "https://e.test/b" "[0]"])
+  outOfOrder <- decodes (collectionYaml 2 [node 1 "https://e.test/b" "[0]", node 0 "https://e.test/a" "[1]"])
+  badLength <- decodes (collectionYaml 3 [node 0 "https://e.test/a" "[]"])
+  gappedId <- decodes (collectionYaml 2 [node 0 "https://e.test/a" "[]", node 2 "https://e.test/b" "[]"])
+  duplicateId <- decodes (collectionYaml 2 [node 0 "https://e.test/a" "[]", node 0 "https://e.test/b" "[]"])
+  danglingEdge <- decodes (collectionYaml 1 [node 0 "https://e.test/a" "[7]"])
+  negativeEdge <- decodes (collectionYaml 1 [node 0 "https://e.test/a" "[-1]"])
+  duplicateURI <- decodes (collectionYaml 2 [node 0 "https://e.test/a" "[]", node 1 "https://e.test/a" "[]"])
+  emptyURI <- decodes (collectionYaml 1 [node 0 "''" "[]"])
+  pure $
+    group
+      "Deserialization"
+      [ assertBool "a well-formed collection is accepted" wellFormed
+      , assertBool "nodes listed out of id order are accepted" outOfOrder
+      , assertBool "a declared length that disagrees is rejected" (not badLength)
+      , assertBool "a gap in the ids is rejected" (not gappedId)
+      , assertBool "a duplicate id is rejected" (not duplicateId)
+      , assertBool "an out-of-range edge is rejected" (not danglingEdge)
+      , assertBool "a negative edge is rejected" (not negativeEdge)
+      , assertBool "a duplicate uri is rejected" (not duplicateURI)
+      , assertBool "an empty uri is rejected" (not emptyURI)
+      ]
+
+roundTripTests :: IO Test
+roundTripTests = do
+  coll <- new
+  let entity1 =
+        Entity.mkEntity
+          (safeURI "https://example.com/1")
+          (Time.fromSeconds 1700000000)
+          (Just (MkName "One"))
+          (Set.singleton (MkLabel "label1"))
+      entity2 =
+        Entity.mkEntity
+          (safeURI "https://example.com/2")
+          (Time.fromSeconds 1700000001)
+          (Just (MkName "Two"))
+          Set.empty
+      (id1, collection1) = insert entity1 coll
+      (id2, collection2) = insert entity2 collection1
+      original = addEdges id1 id2 collection2
+  restored <- fromRepr (toRepr original)
+  pure $
+    group
+      "Serialization round trip"
+      [ assertEqual "a collection survives toRepr and fromRepr" original restored
+      , assertEqual "entities are preserved" (allEntities original) (allEntities restored)
+      ]
+
 allTests :: IO Test
 allTests = do
-  ioTests <- sequence [emptyCollectionTests, insertTests, multipleInsertTests, upsertTests, edgeTests]
+  ioTests <-
+    sequence
+      [ emptyCollectionTests
+      , insertTests
+      , multipleInsertTests
+      , upsertTests
+      , edgeTests
+      , fromReprTests
+      , roundTripTests
+      ]
   pure $
     group
       "Hbt.Collection tests"
