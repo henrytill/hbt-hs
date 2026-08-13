@@ -10,11 +10,15 @@ import Control.Monad (foldM, when)
 import Control.Monad.Catch (MonadThrow (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.State.Strict (MonadState, StateT (..), execStateT)
+import Data.Char qualified as Char
 import Data.Coerce (coerce)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Text.Lazy qualified as LazyText
+import Data.Text.Lazy.Builder qualified as Builder
+import Data.Text.Read qualified as Read
 import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
 import Hbt.Collection qualified as Collection
@@ -129,8 +133,60 @@ resolveToRead (entity, tagged) = entity {toRead = tagged <> entity.toRead}
 splitTags :: Text -> [Text]
 splitTags = filter (not . Text.null) . map Text.strip . Text.splitOn ","
 
+-- | The named references a bookmark file's attribute values can carry.
+--
+-- The lexer decodes references in text content but leaves attribute values
+-- exactly as written, so this covers the other half. It is deliberately not
+-- the full HTML 5 table: these five are what this formatter and the Go, OCaml
+-- and Rust ones emit, and what a URL with a query string needs.
+namedRefs :: [(Text, Char)]
+namedRefs = [("amp", '&'), ("lt", '<'), ("gt", '>'), ("quot", '"'), ("apos", '\'')]
+
+-- | An upper bound on a reference's length, so a bare @&@ costs a short scan
+-- rather than a scan to the end of the value.
+maxRefLength :: Int
+maxRefLength = 10
+
+decodeRefs :: Text -> Text
+decodeRefs input
+  | Text.isInfixOf "&" input = LazyText.toStrict (Builder.toLazyText (go input))
+  | otherwise = input
+  where
+    go text
+      | Text.null rest = Builder.fromText before
+      | otherwise = Builder.fromText before <> decode (Text.drop 1 rest)
+      where
+        (before, rest) = Text.breakOn "&" text
+
+    decode text
+      | not (Text.null semi)
+      , Just c <- resolve body =
+          Builder.singleton c <> go (Text.drop (Text.length body + 1) text)
+      | otherwise = Builder.singleton '&' <> go text
+      where
+        (body, semi) = Text.breakOn ";" (Text.take maxRefLength text)
+
+    resolve body = case Text.uncons body of
+      Just ('#', digits) -> numeric digits
+      _ -> lookup body namedRefs
+
+    numeric digits
+      | Just hexDigits <- Text.stripPrefix "x" digits = codepoint Read.hexadecimal hexDigits
+      | Just hexDigits <- Text.stripPrefix "X" digits = codepoint Read.hexadecimal hexDigits
+      | otherwise = codepoint Read.decimal digits
+
+    -- Surrogates are excluded because Text cannot hold them.
+    codepoint reader digits = case reader digits of
+      Right (n, rest)
+        | Text.null rest
+        , n > 0
+        , n <= 0x10FFFF
+        , n < 0xD800 || n > 0xDFFF ->
+            Just (Char.chr n)
+      _ -> Nothing
+
 accumulateEntity :: (HasCallStack) => Accum -> Attr -> IO Accum
-accumulateEntity (entity, tagged) (Attr name value) =
+accumulateEntity (entity, tagged) (Attr name rawValue) =
   case Text.toLower name of
     "href" -> do
       uri <- either throwIO pure (URI.parse value)
@@ -157,6 +213,7 @@ accumulateEntity (entity, tagged) (Attr name value) =
     "feed" -> keep (entity {isFeed = Entity.mkIsFeed (value == "true")})
     _ -> keep entity
   where
+    value = decodeRefs rawValue
     keep e = pure (e, tagged)
 
 createEntity :: NetscapeM Entity

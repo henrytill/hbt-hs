@@ -2,6 +2,7 @@
 
 module Hbt.Parser.HTMLTest (results) where
 
+import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Hbt (Format (..), formatWith)
@@ -121,9 +122,38 @@ trailingBookmarkTests = testIO "records a bookmark the input never closes" $ do
       , assertEqual "its description is recorded too" [MkExtended "trailing description"] unclosed.extended
       ]
 
+attributeRefTests :: IO Test
+attributeRefTests = testIO "decodes character references in attributes" $ do
+  let query = "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<DL><p>\n    <DT><A HREF=\"https://e.test/?a=1&amp;b=2\" ADD_DATE=\"1700000000\">T</A>\n</DL><p>\n"
+  collection <- HTMLParser.parse query
+  formatted <- formatWith HTML collection
+  again <- formatWith HTML =<< HTMLParser.parse formatted
+  tagged <- parseOnly (bookmark "TAGS=\"a&amp;b,c\"")
+  numeric <- parseOnly (bookmark "TAGS=\"a&#38;b,&#x26;c\"")
+  bare <- parseOnly (bookmark "TAGS=\"a&b,c&notaref;d\"")
+  pure $
+    group
+      "Attribute references"
+      [ assertBool
+          "the ampersand reaches the URI decoded"
+          (Maybe.isJust (Collection.lookupId (either (error . show) id (URI.parse "https://e.test/?a=1&b=2")) collection))
+      , assertEqual "formatting twice is stable" formatted again
+      , assertEqual "references in TAGS are decoded" ["a&b", "c"] (labelsOf tagged)
+      , assertEqual "numeric references are decoded" ["&c", "a&b"] (labelsOf numeric)
+      , assertEqual "a non-reference ampersand is left alone" ["a&b", "c&notaref;d"] (labelsOf bare)
+      ]
+
 allTests :: IO Test
 allTests = do
-  tests <- sequence [tagTests, toReadTests, textRunTests, roundTripTests, trailingBookmarkTests]
+  tests <-
+    sequence
+      [ tagTests
+      , toReadTests
+      , textRunTests
+      , roundTripTests
+      , trailingBookmarkTests
+      , attributeRefTests
+      ]
   pure (group "Hbt.Parser.HTML tests" tests)
 
 results :: IO (String, Bool)
