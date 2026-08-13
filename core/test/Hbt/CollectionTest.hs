@@ -273,8 +273,16 @@ node nodeId uri edges =
     <> "\n"
 
 collectionYaml :: Int -> [Text] -> Text
-collectionYaml declaredLength nodes =
-  "version: 0.1.0\nlength: " <> Text.pack (show declaredLength) <> "\nvalue:\n" <> Text.concat nodes
+collectionYaml = versionedYaml "0.1.0"
+
+versionedYaml :: Text -> Int -> [Text] -> Text
+versionedYaml version declaredLength nodes =
+  "version: "
+    <> version
+    <> "\nlength: "
+    <> Text.pack (show declaredLength)
+    <> "\nvalue:\n"
+    <> Text.concat nodes
 
 fromReprTests :: IO Test
 fromReprTests = do
@@ -299,6 +307,30 @@ fromReprTests = do
       , assertBool "a negative edge is rejected" (not negativeEdge)
       , assertBool "a duplicate uri is rejected" (not duplicateURI)
       , assertBool "an empty uri is rejected" (not emptyURI)
+      ]
+
+versionTests :: IO Test
+versionTests = do
+  let one v = decodes (versionedYaml v 1 [node 0 "https://e.test/a" "[]"])
+  current <- one "0.1.0"
+  patch <- one "0.1.7"
+  minorAhead <- one "0.2.0"
+  majorAhead <- one "1.0.0"
+  prerelease <- one "0.1.0-rc.1"
+  garbage <- one "banana"
+  truncated <- one "0.1"
+  leadingZero <- one "0.01.0"
+  pure $
+    group
+      "Version"
+      [ assertBool "the current version is accepted" current
+      , assertBool "a later patch is accepted" patch
+      , assertBool "a later minor is rejected" (not minorAhead)
+      , assertBool "a later major is rejected" (not majorAhead)
+      , assertBool "a prerelease of the current version is accepted" prerelease
+      , assertBool "a non-version is rejected" (not garbage)
+      , assertBool "a two-part version is rejected" (not truncated)
+      , assertBool "a leading zero is rejected" (not leadingZero)
       ]
 
 roundTripTests :: IO Test
@@ -345,6 +377,7 @@ allTests = do
       , upsertTests
       , edgeTests
       , fromReprTests
+      , versionTests
       , roundTripTests
       ]
   pure $

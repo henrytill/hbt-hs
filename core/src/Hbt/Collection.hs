@@ -28,6 +28,7 @@ where
 import Control.Exception (Exception, throw, throwIO)
 import Control.Monad (foldM)
 import Control.Monad qualified as Monad
+import Data.Char qualified as Char
 import Data.List (elemIndex, sortOn)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -71,6 +72,10 @@ data Error
   | -- | Two nodes shared a URI, which would leave the first unreachable
     -- through the uri index: node, uri.
     DuplicateURI Int URI
+  | -- | The version was not valid semver.
+    MalformedVersion String
+  | -- | The version was well formed but not one this can read: found.
+    UnsupportedVersion String
   deriving stock (Eq, Show)
   deriving anyclass (Exception)
 
@@ -173,10 +178,47 @@ addEdge from to collection
 addEdges :: (HasCallStack) => Id -> Id -> Collection -> Collection
 addEdges from to = addEdge from to . addEdge to from
 
+-- | The version this reads and writes.
+--
+-- Compatibility is by major and minor: 0.1.x is readable, anything else is
+-- not. Below 1.0 semver gives the minor the weight the major carries later,
+-- so a 0.2 collection may say things a 0.1 reader would misread.
+currentVersion :: String
+currentVersion = "0.1.0"
+
+-- | The numeric core of a semver string, ignoring any prerelease or build
+-- metadata that follows it.
+parseVersion :: String -> Maybe (Int, Int, Int)
+parseVersion version =
+  case traverse readNumber (splitOn '.' core) of
+    Just [major, minor, patch] -> Just (major, minor, patch)
+    _ -> Nothing
+  where
+    core = takeWhile (\c -> c /= '-' && c /= '+') version
+
+    splitOn sep s = case break (== sep) s of
+      (before, []) -> [before]
+      (before, _ : rest) -> before : splitOn sep rest
+
+    -- Semver forbids a leading zero, so "01" is not 1.
+    readNumber s = case s of
+      "0" -> Just 0
+      c : _ | c /= '0', all Char.isDigit s -> Just (read s)
+      _ -> Nothing
+
+checkVersion :: String -> IO ()
+checkVersion version =
+  case (parseVersion version, parseVersion currentVersion) of
+    (Nothing, _) -> throwIO (MalformedVersion version)
+    (Just (major, minor, _), Just (supportedMajor, supportedMinor, _))
+      | major /= supportedMajor || minor /= supportedMinor ->
+          throwIO (UnsupportedVersion version)
+    _ -> pure ()
+
 toRepr :: Collection -> CollectionRepr
 toRepr collection =
   MkCollectionRepr
-    { version = "0.1.0"
+    { version = currentVersion
     , length = Vector.length collection.nodes
     , value = Vector.imap mkNodeRepr collection.nodes
     }
@@ -197,6 +239,7 @@ toRepr collection =
 -- place.
 fromRepr :: CollectionRepr -> IO Collection
 fromRepr serialized = do
+  checkVersion serialized.version
   Monad.when (serialized.length /= count) $
     throwIO (LengthMismatch serialized.length count)
   Vector.imapM_ checkId sorted
