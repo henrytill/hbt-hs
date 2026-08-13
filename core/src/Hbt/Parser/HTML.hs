@@ -101,33 +101,51 @@ newtype NetscapeM a = MkNetscapeM (StateT ParseState IO a)
 execNetscapeM :: NetscapeM a -> ParseState -> IO ParseState
 execNetscapeM (MkNetscapeM m) = execStateT m
 
-accumulateEntity :: (HasCallStack) => Entity -> Attr -> IO Entity
-accumulateEntity entity (Attr name value) =
+-- | An entity under construction, alongside the to-read value implied by a
+-- @toread@ tag.
+--
+-- The tag is kept out of the entity so that a TOREAD attribute wins regardless
+-- of which of the two comes first in the attribute list: the attribute states
+-- the value, the tag only implies it. They are resolved once, in
+-- 'resolveToRead', after every attribute has been seen.
+type Accum = (Entity, Entity.ToRead)
+
+resolveToRead :: Accum -> Entity
+resolveToRead (entity, tagged) = entity {toRead = tagged <> entity.toRead}
+
+-- | Split a TAGS value, discarding surrounding whitespace and empty tags.
+splitTags :: Text -> [Text]
+splitTags = filter (not . Text.null) . map Text.strip . Text.splitOn ","
+
+accumulateEntity :: (HasCallStack) => Accum -> Attr -> IO Accum
+accumulateEntity (entity, tagged) (Attr name value) =
   case Text.toLower name of
     "href" -> do
       uri <- either throwIO pure (URI.parse value)
-      pure (entity {uri})
+      keep (entity {uri})
     "add_date" ->
       let createdAtTime = Maybe.fromMaybe Time.epoch (Time.parseTimestamp value)
           updatedAt = Set.insert createdAtTime entity.updatedAt
-       in pure (entity {updatedAt})
+       in keep (entity {updatedAt})
     "last_modified" ->
       let modifiedTime = Time.parseTimestamp value
           updatedAt = maybe entity.updatedAt (`Set.insert` entity.updatedAt) modifiedTime
-       in pure (entity {updatedAt})
+       in keep (entity {updatedAt})
     "last_visit" ->
       let lastVisitedAtTime = Time.parseTimestamp value
           lastVisitedAt = Entity.MkLastVisitedAt lastVisitedAtTime
-       in pure (entity {lastVisitedAt})
+       in keep (entity {lastVisitedAt})
     "tags" ->
-      let tagList = Text.splitOn "," value
-          toRead = entity.toRead <> if "toread" `elem` tagList then Entity.mkToRead True else mempty
+      let tagList = splitTags value
+          fromTag = if "toread" `elem` tagList then Entity.mkToRead True else mempty
           labels = Set.union entity.labels (Set.fromList (coerce (filter (/= "toread") tagList)))
-       in pure (entity {labels, toRead})
-    "private" -> pure (entity {shared = Entity.mkShared (value /= "1")})
-    "toread" -> pure (entity {toRead = Entity.mkToRead (value == "1")})
-    "feed" -> pure (entity {isFeed = Entity.mkIsFeed (value == "true")})
-    _ -> pure entity
+       in pure (entity {labels}, tagged <> fromTag)
+    "private" -> keep (entity {shared = Entity.mkShared (value /= "1")})
+    "toread" -> keep (entity {toRead = Entity.mkToRead (value == "1")})
+    "feed" -> keep (entity {isFeed = Entity.mkIsFeed (value == "true")})
+    _ -> keep entity
+  where
+    keep e = pure (e, tagged)
 
 createEntity :: NetscapeM Entity
 createEntity = do
@@ -136,7 +154,7 @@ createEntity = do
   name <- use maybeDescription
   ext <- use maybeExtended
   let startEntity = Entity.empty
-  accumulated <- liftIO $ foldM accumulateEntity startEntity attrs
+  accumulated <- liftIO $ resolveToRead <$> foldM accumulateEntity (startEntity, mempty) attrs
   let names = maybe Set.empty (Set.singleton . Entity.MkName) name
       labels = Set.unions [accumulated.labels, Set.fromList . coerce $ reverse folders]
       extended = Maybe.maybeToList $ fmap Entity.MkExtended ext

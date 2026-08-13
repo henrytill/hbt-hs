@@ -4,6 +4,7 @@ import Control.Monad (unless)
 import Hbt (Format (..))
 import Hbt.CollectionTest qualified as CollectionTest
 import Hbt.Formatter.HTMLTest qualified as FormatterHTMLTest
+import Hbt.Parser.HTMLTest qualified as ParserHTMLTest
 import System.Exit (exitFailure)
 import TestData (discoverInput, discoverOutput, formatterTests, parserTests)
 import TestUtilities (testResults)
@@ -24,6 +25,7 @@ main = do
       [ CollectionTest.results
       , testResults "Hbt.Parser.HTML" <$> parserTests "HTML Parser" htmlParserCases
       , testResults "Hbt.Formatter.HTML" <$> formatterTests "HTML Formatter" HTML htmlFormatterCases
+      , ParserHTMLTest.results
       , FormatterHTMLTest.results
       , testResults "Hbt.Parser.Markdown" <$> parserTests "Markdown Parser" markdownParserCases
       , testResults "Hbt.Parser.Pinboard.JSON" <$> parserTests "Pinboard JSON Parser" jsonParserCases

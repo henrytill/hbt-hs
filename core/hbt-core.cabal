@@ -91,6 +91,7 @@ test-suite hbt-test
     other-modules:
         Hbt.CollectionTest
         Hbt.Formatter.HTMLTest
+        Hbt.Parser.HTMLTest
         TestData
         TestUtilities
 
