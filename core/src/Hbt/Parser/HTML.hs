@@ -193,8 +193,7 @@ accumulateEntity (entity, tagged) (Attr name rawValue) =
       keep (entity {uri})
     "add_date" ->
       let createdAtTime = Maybe.fromMaybe Time.epoch (Time.parseTimestamp value)
-          updatedAt = Set.insert createdAtTime entity.updatedAt
-       in keep (entity {updatedAt})
+       in keep (entity {createdAt = Entity.mkCreatedAt createdAtTime})
     "last_modified" ->
       let modifiedTime = Time.parseTimestamp value
           updatedAt = maybe entity.updatedAt (`Set.insert` entity.updatedAt) modifiedTime

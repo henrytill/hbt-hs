@@ -50,8 +50,8 @@ entityTests =
    in group
         "Entity operations"
         [ assertEqual "mkEntity sets correct URI" uri entity.uri
-        , assertEqual "mkEntity sets correct creation time" time entity.createdAt
-        , assertEqual "mkEntity sets update history with creation time" (Set.singleton time) entity.updatedAt
+        , assertEqual "mkEntity sets correct creation time" (Entity.mkCreatedAt time) entity.createdAt
+        , assertEqual "mkEntity records no update yet" Set.empty entity.updatedAt
         , assertEqual "mkEntity sets correct names" expectedNames entity.names
         , assertEqual "mkEntity sets correct labels" labels entity.labels
         ]

@@ -80,7 +80,7 @@ schemePreservationTests = testIO "leaves non-http schemes alone" $ do
 lastModifiedTests :: IO Test
 lastModifiedTests = testIO "emits LAST_MODIFIED only for a real update" $ do
   let created = entityWith "https://e.test/" Nothing Set.empty []
-      updated = created {Entity.updatedAt = Set.insert (Time.fromSeconds 1800000000) created.updatedAt}
+      updated = created {Entity.updatedAt = Set.singleton (Time.fromSeconds 1800000000)}
   neverUpdated <- formatEntity created
   wasUpdated <- formatEntity updated
   pure $

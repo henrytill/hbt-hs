@@ -15,6 +15,10 @@ module Hbt.Entity
   , Extended (..)
   , LastVisitedAt (..)
   , getLastVisitedAt
+  , CreatedAt
+  , mkCreatedAt
+  , getCreatedAt
+  , lookupCreatedAt
   , Entity (..)
   , mkEntity
   , empty
@@ -28,12 +32,12 @@ import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), 
 import Data.Functor ((<&>))
 import Data.Maybe qualified as Maybe
 import Data.Monoid (Last (..))
+import Data.Semigroup (Min (..))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
 import GHC.Stack (HasCallStack)
 import Hbt.Entity.Time (Time)
 import Hbt.Entity.Time qualified as Time
@@ -97,9 +101,40 @@ instance Semigroup LastVisitedAt where
 instance Monoid LastVisitedAt where
   mempty = MkLastVisitedAt Nothing
 
+-- | The earliest creation time recorded for an entity.
+--
+-- The mirror image of 'LastVisitedAt': both wrap an optional 'Time' and keep
+-- one end of the range on merge, the earliest here against the latest there,
+-- with the absent value as the identity. Wrapping @Min@ in @Maybe@ gets both
+-- instances from the ones they are built out of, rather than nominating a
+-- sentinel time to stand in for "none recorded".
+newtype CreatedAt = MkCreatedAt (Maybe (Min Time))
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving newtype (Semigroup, Monoid)
+
+mkCreatedAt :: Time -> CreatedAt
+mkCreatedAt = MkCreatedAt . Just . Min
+
+-- | The recorded creation time, if there is one.
+lookupCreatedAt :: CreatedAt -> Maybe Time
+lookupCreatedAt (MkCreatedAt a) = fmap getMin a
+
+-- | The creation time, defaulting to the epoch.
+--
+-- An entity with none recorded is one that was never given a time - only
+-- 'empty' and an HTML anchor with no ADD_DATE - and the epoch is what the
+-- minimum of an empty update history used to give for those.
+getCreatedAt :: CreatedAt -> Time
+getCreatedAt = Maybe.fromMaybe Time.epoch . lookupCreatedAt
+
 data Entity = MkEntity
   { uri :: URI
+  , createdAt :: CreatedAt
   , updatedAt :: Set Time
+  -- ^ Updates, which never include 'createdAt'. The two are separate fields
+  -- because the wire format distinguishes an update that merely repeats the
+  -- creation time - stated outright by a LAST_MODIFIED attribute - from one
+  -- that was never recorded at all.
   , names :: Set Name
   , labels :: Set Label
   , isFeed :: IsFeed
@@ -110,17 +145,12 @@ data Entity = MkEntity
   }
   deriving stock (Eq, Ord, Show)
 
-instance HasField "createdAt" Entity Time where
-  getField entity
-    | Set.null entity.updatedAt = minBound
-    | otherwise = Set.findMin entity.updatedAt
-
 instance ToJSON Entity where
   toJSON entity =
     object $
       [ "uri" .= entity.uri
-      , "createdAt" .= entity.createdAt
-      , "updatedAt" .= Set.delete entity.createdAt entity.updatedAt
+      , "createdAt" .= getCreatedAt entity.createdAt
+      , "updatedAt" .= entity.updatedAt
       , "names" .= entity.names
       , "labels" .= entity.labels
       ]
@@ -133,11 +163,10 @@ instance ToJSON Entity where
 instance FromJSON Entity where
   parseJSON = withObject "Entity" $ \v -> do
     createdAt <- v .: "createdAt"
-    updatedAt <- v .: "updatedAt"
-    let updatedAtWithCreation = Set.insert createdAt updatedAt
     MkEntity
       <$> v .: "uri"
-      <*> pure updatedAtWithCreation
+      <*> pure (mkCreatedAt createdAt)
+      <*> v .: "updatedAt"
       <*> v .: "names"
       <*> v .: "labels"
       <*> v .:? "isFeed" .!= mempty
@@ -146,11 +175,25 @@ instance FromJSON Entity where
       <*> v .:? "extended" .!= mempty
       <*> v .:? "lastVisitedAt" .!= mempty
 
+-- | The later of two creation times, recorded as an update.
+--
+-- Merging keeps the earlier creation time, so the later one would otherwise be
+-- lost; it becomes an update instead. Two entities that agree on their
+-- creation time record nothing, since a timestamp that merely repeats
+-- createdAt carries no information - which is what bookmarks_same_timestamp
+-- pins, and how the Go, OCaml and Rust implementations settled it.
+supersededCreation :: CreatedAt -> CreatedAt -> Set Time
+supersededCreation a b =
+  case (lookupCreatedAt a, lookupCreatedAt b) of
+    (Just x, Just y) | x /= y -> Set.singleton (max x y)
+    _ -> Set.empty
+
 instance Semigroup Entity where
   a <> b =
     MkEntity
       { uri = a.uri <> b.uri
-      , updatedAt = a.updatedAt <> b.updatedAt
+      , createdAt = a.createdAt <> b.createdAt
+      , updatedAt = Set.unions [a.updatedAt, b.updatedAt, supersededCreation a.createdAt b.createdAt]
       , names = a.names <> b.names
       , labels = a.labels <> b.labels
       , isFeed = a.isFeed <> b.isFeed
@@ -164,6 +207,7 @@ instance Monoid Entity where
   mempty =
     MkEntity
       { uri = mempty
+      , createdAt = mempty
       , updatedAt = mempty
       , names = mempty
       , labels = mempty
@@ -181,7 +225,7 @@ mkEntity :: URI -> Time -> Maybe Name -> Set Label -> Entity
 mkEntity uri createdAt maybeName labels =
   mempty
     { uri
-    , updatedAt = Set.singleton createdAt
+    , createdAt = mkCreatedAt createdAt
     , names = maybe Set.empty Set.singleton maybeName
     , labels
     }
@@ -209,7 +253,8 @@ fromPost post = do
   pure
     MkEntity
       { uri
-      , updatedAt = Set.singleton time
+      , createdAt = mkCreatedAt time
+      , updatedAt = Set.empty
       , names = maybe Set.empty Set.singleton name
       , labels = Set.fromList $ Maybe.mapMaybe toLabel post.tags.unTags
       , isFeed = mkIsFeed False
