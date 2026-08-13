@@ -14,6 +14,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: true
+          persist-credentials: false
       - uses: cachix/install-nix-action@v31.11.0
       - uses: cachix/cachix-action@v17
         with:
@@ -28,6 +29,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: true
+          persist-credentials: false
       - uses: cachix/install-nix-action@v31.11.0
       - uses: cachix/cachix-action@v17
         with:
