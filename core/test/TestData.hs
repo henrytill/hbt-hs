@@ -142,13 +142,32 @@ testParser testCase = testIO testCase.stem $ do
   actual <- parseWith testCase.format testCase.input
   pure (assertEqual testCase.stem expected actual)
 
+-- | Compare formatter output against the fixture.
+--
+-- YAML is compared as a parsed document rather than byte by byte. Emitters
+-- disagree about when a scalar needs quoting and where to fold a long line -
+-- the fixtures quote a URL containing '#', this one does not - and the two
+-- spellings mean the same thing. Comparing documents stays sensitive to what
+-- does matter: a field present on one side and absent on the other, or holding
+-- a different value.
+--
+-- HTML has no such parser to hand, so it is compared by reparsing both sides
+-- into collections. That is weaker - it cannot see a difference that survives
+-- a round trip - which is why the escaping and LAST_MODIFIED defects it missed
+-- have unit tests of their own.
 testFormatter :: Format From -> TestCase To -> IO Test
 testFormatter inputFormat testCase = testIO testCase.stem $ do
   parsed <- parseWith inputFormat testCase.input
   formatted <- formatWith testCase.format parsed
-  actualReparsed <- parseWith inputFormat formatted
-  expectedReparsed <- parseWith inputFormat testCase.expected
-  pure (assertEqual testCase.stem expectedReparsed actualReparsed)
+  case testCase.format of
+    YAML -> do
+      actual <- Yaml.decodeThrow @IO @Yaml.Value (Text.Encoding.encodeUtf8 formatted)
+      expected <- Yaml.decodeThrow @IO @Yaml.Value (Text.Encoding.encodeUtf8 testCase.expected)
+      pure (assertEqual testCase.stem expected actual)
+    HTML -> do
+      actualReparsed <- parseWith inputFormat formatted
+      expectedReparsed <- parseWith inputFormat testCase.expected
+      pure (assertEqual testCase.stem expectedReparsed actualReparsed)
 
 parserTests :: String -> [TestCase From] -> IO Test
 parserTests groupName testCases = do

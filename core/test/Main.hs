@@ -17,6 +17,10 @@ main :: IO ()
 main = do
   htmlParserCases <- discoverInput HTML
   htmlFormatterCases <- discoverOutput HTML HTML
+  htmlYamlCases <- discoverOutput HTML YAML
+  markdownYamlCases <- discoverOutput Markdown YAML
+  jsonYamlCases <- discoverOutput JSON YAML
+  xmlYamlCases <- discoverOutput XML YAML
   markdownParserCases <- discoverInput Markdown
   jsonParserCases <- discoverInput JSON
   xmlParserCases <- discoverInput XML
@@ -30,6 +34,10 @@ main = do
       , testResults "Hbt.Parser.Markdown" <$> parserTests "Markdown Parser" markdownParserCases
       , testResults "Hbt.Parser.Pinboard.JSON" <$> parserTests "Pinboard JSON Parser" jsonParserCases
       , testResults "Hbt.Parser.Pinboard.XML" <$> parserTests "Pinboard XML Parser" xmlParserCases
+      , testResults "Hbt.Formatter.YAML" <$> formatterTests "YAML Formatter (html)" HTML htmlYamlCases
+      , testResults "Hbt.Formatter.YAML" <$> formatterTests "YAML Formatter (markdown)" Markdown markdownYamlCases
+      , testResults "Hbt.Formatter.YAML" <$> formatterTests "YAML Formatter (pinboard json)" JSON jsonYamlCases
+      , testResults "Hbt.Formatter.YAML" <$> formatterTests "YAML Formatter (pinboard xml)" XML xmlYamlCases
       ]
 
   results <- traverse handleResults testSuites
