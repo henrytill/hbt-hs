@@ -47,3 +47,14 @@ jobs:
         with:
           name: pinboard-client-x86_64-unknown-linux-musl
           path: result-all-static/bin/pinboard-client
+
+  zizmor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
