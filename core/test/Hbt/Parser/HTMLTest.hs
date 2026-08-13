@@ -103,9 +103,27 @@ roundTripTests = testIO "round-trips text through the formatter" $ do
       , assertEqual "the title survives a round trip" titled.names titledAgain.names
       ]
 
+trailingBookmarkTests :: IO Test
+trailingBookmarkTests = testIO "records a bookmark the input never closes" $ do
+  noDL <-
+    parseOnly
+      "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n\
+      \<DT><A HREF=\"https://e.test/\" ADD_DATE=\"1700000000\">Title</A>\n"
+  unclosed <-
+    parseOnly
+      "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<DL><p>\n\
+      \    <DT><A HREF=\"https://e.test/\" ADD_DATE=\"1700000000\">Title</A>\n\
+      \    <DD>trailing description\n"
+  pure $
+    group
+      "Trailing bookmark"
+      [ assertEqual "a bookmark with no enclosing DL is recorded" [MkName "Title"] (Set.toList noDL.names)
+      , assertEqual "its description is recorded too" [MkExtended "trailing description"] unclosed.extended
+      ]
+
 allTests :: IO Test
 allTests = do
-  tests <- sequence [tagTests, toReadTests, textRunTests, roundTripTests]
+  tests <- sequence [tagTests, toReadTests, textRunTests, roundTripTests, trailingBookmarkTests]
   pure (group "Hbt.Parser.HTML tests" tests)
 
 results :: IO (String, Bool)

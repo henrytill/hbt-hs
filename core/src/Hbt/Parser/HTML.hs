@@ -238,7 +238,13 @@ handle CloseDL = do
 handle _ = pure ()
 
 process :: [Token] -> NetscapeM ()
-process = mapM_ handle
+process tokens = do
+  mapM_ handle tokens
+  -- Running out of input is not a malformed-input signal, it just means no
+  -- more text and no more attributes are coming, so the last bookmark is
+  -- recorded here exactly as the other flush points record theirs.
+  flushText
+  addPendingIfAny
 
 parse :: Text -> IO Collection
 parse input = do
