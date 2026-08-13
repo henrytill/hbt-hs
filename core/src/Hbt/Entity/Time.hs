@@ -4,6 +4,7 @@ module Hbt.Entity.Time
   ( Error
   , Time
   , toText
+  , toSeconds
   , epoch
   , fromSeconds
   , parse
@@ -39,11 +40,18 @@ instance Bounded Time where
   minBound = epoch
   maxBound = fromSeconds maxBound
 
-toText :: Time -> Text
-toText (MkTime posixTime) = Text.pack . show $ round @_ @Int64 posixTime
+toSeconds :: Time -> Int64
+toSeconds (MkTime posixTime) = round posixTime
 
+toText :: Time -> Text
+toText = Text.pack . show . toSeconds
+
+-- | The shared wire format spells a time as an integer, not as a string: the
+-- schema's Time is {"type": "integer", "format": "int64"}, and the fixtures
+-- write @createdAt: 1609459200@ unquoted. Writing it through 'toText' produced
+-- a quoted string that the matching 'FromJSON' then refused to read back.
 instance ToJSON Time where
-  toJSON = toJSON . toText
+  toJSON = toJSON . toSeconds
 
 instance FromJSON Time where
   parseJSON = fmap fromSeconds . parseJSON

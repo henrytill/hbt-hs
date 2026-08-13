@@ -10,6 +10,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
 import Data.Vector qualified as Vector
 import Data.Yaml qualified as Yaml
+import Data.Yaml.Pretty qualified as YamlPretty
 import Hbt.Collection
 import Hbt.Entity (Entity (..), Label (..), Name (..))
 import Hbt.Entity qualified as Entity
@@ -319,11 +320,19 @@ roundTripTests = do
       (id2, collection2) = insert entity2 collection1
       original = addEdges id1 id2 collection2
   restored <- fromRepr (toRepr original)
+  -- Through the YAML text as well, which is where a ToJSON that disagrees with
+  -- its FromJSON shows up.
+  let encoded = YamlPretty.encodePretty yamlConfig (toRepr original)
+  reread <- fromRepr =<< Yaml.decodeThrow @IO @CollectionRepr encoded
   pure $
     group
       "Serialization round trip"
       [ assertEqual "a collection survives toRepr and fromRepr" original restored
       , assertEqual "entities are preserved" (allEntities original) (allEntities restored)
+      , assertEqual "a collection survives the YAML text" original reread
+      , assertBool
+          "a time is written as an integer, not a string"
+          ("createdAt: 1700000000\n" `Text.isInfixOf` Text.Encoding.decodeUtf8 encoded)
       ]
 
 allTests :: IO Test
