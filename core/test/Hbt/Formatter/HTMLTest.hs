@@ -77,6 +77,20 @@ schemePreservationTests = testIO "leaves non-http schemes alone" $ do
       "Scheme preservation"
       [assertBool "gopher: survives formatting" ("HREF=\"gopher://e.test/1/x\"" `Text.isInfixOf` formatted)]
 
+lastModifiedTests :: IO Test
+lastModifiedTests = testIO "emits LAST_MODIFIED only for a real update" $ do
+  let created = entityWith "https://e.test/" Nothing Set.empty []
+      updated = created {Entity.updatedAt = Set.insert (Time.fromSeconds 1800000000) created.updatedAt}
+  neverUpdated <- formatEntity created
+  wasUpdated <- formatEntity updated
+  pure $
+    group
+      "LAST_MODIFIED"
+      [ assertBool "omitted when the entity was never updated" (not ("LAST_MODIFIED" `Text.isInfixOf` neverUpdated))
+      , assertBool "present when the entity was updated" ("LAST_MODIFIED=\"1800000000\"" `Text.isInfixOf` wasUpdated)
+      , assertBool "ADD_DATE still names the creation time" ("ADD_DATE=\"1700000000\"" `Text.isInfixOf` wasUpdated)
+      ]
+
 allTests :: IO Test
 allTests = do
   tests <-
@@ -85,6 +99,7 @@ allTests = do
       , textEscapingTests
       , quotePreservationTests
       , schemePreservationTests
+      , lastModifiedTests
       ]
   pure (group "Hbt.Formatter.HTML tests" tests)
 

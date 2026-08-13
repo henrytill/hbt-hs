@@ -47,10 +47,14 @@ getFirstName def names
   | Set.null names = def
   | otherwise = (Set.findMin names).unName
 
+-- | The most recent update, if the entity has one.
+--
+-- @createdAt@ is the minimum of @updatedAt@ rather than a field of its own, so
+-- it has to come out of the set before the maximum means anything: without
+-- that, an entity that was never updated reports its creation time as its last
+-- modification. This mirrors what 'Hbt.Entity.toJSON' writes.
 getLastModified :: Entity -> Maybe Time
-getLastModified entity
-  | Set.null entity.updatedAt = Nothing
-  | otherwise = Just (Set.findMax entity.updatedAt)
+getLastModified entity = Set.lookupMax (Set.delete entity.createdAt entity.updatedAt)
 
 -- | Escape a value destined for a double-quoted attribute.
 --
