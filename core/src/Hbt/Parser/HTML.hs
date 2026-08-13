@@ -46,6 +46,12 @@ pattern OpenA attrs <- TagOpen (isTagName "a" -> True) attrs
 pattern OpenDD :: [Attr] -> Token
 pattern OpenDD attrs <- TagOpen (isTagName "dd" -> True) attrs
 
+pattern CloseA :: Token
+pattern CloseA <- TagClose (isTagName "a" -> True)
+
+pattern CloseH3 :: Token
+pattern CloseH3 <- TagClose (isTagName "h3" -> True)
+
 pattern CloseDL :: Token
 pattern CloseDL <- TagClose (isTagName "dl" -> True)
 
@@ -63,6 +69,8 @@ data ParseState = MkParseState
   , attributes :: [Attr]
   , folderStack :: [Text]
   , waitingFor :: WaitingFor
+  , textChunks :: [Text]
+  -- ^ Text chunks of the run being read, most recent first.
   }
   deriving stock (Eq)
 
@@ -75,6 +83,7 @@ mkParseState coll =
     , attributes = []
     , folderStack = []
     , waitingFor = None
+    , textChunks = []
     }
 
 collection :: Lens' ParseState Collection
@@ -94,6 +103,9 @@ folderStack f s = (\fs -> s {folderStack = fs}) <$> f s.folderStack
 
 waitingFor :: Lens' ParseState WaitingFor
 waitingFor f s = (\w -> s {waitingFor = w}) <$> f s.waitingFor
+
+textChunks :: Lens' ParseState [Text]
+textChunks f s = (\t -> s {textChunks = t}) <$> f s.textChunks
 
 newtype NetscapeM a = MkNetscapeM (StateT ParseState IO a)
   deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
@@ -171,36 +183,57 @@ addPending = do
   maybeDescription .= Nothing
   maybeExtended .= Nothing
 
-handle :: Token -> NetscapeM ()
-handle (OpenH3 _) =
-  waitingFor .= FolderName
-handle (OpenDT _) = do
+-- | Commit the text run read so far to whatever was waiting for it.
+--
+-- A run is made of every 'ContentText' token between the tag that started it
+-- and the tag that ends it, which is more than one token whenever the text
+-- contains a character reference or nested markup: the lexer emits
+-- @Tom &amp; Jerry@ as three separate tokens.
+flushText :: NetscapeM ()
+flushText = do
+  what <- use waitingFor
+  chunks <- use textChunks
+  textChunks .= []
+  waitingFor .= None
+  let text = Text.strip (Text.concat (reverse chunks))
+      maybeText = if Text.null text then Nothing else Just text
+  case what of
+    -- Pushed even when empty, so that the matching </DL> pops the right folder.
+    FolderName -> folderStack %= (text :)
+    BookmarkDescription -> maybeDescription .= maybeText
+    ExtendedDescription -> maybeExtended .= maybeText
+    None -> pure ()
+
+addPendingIfAny :: NetscapeM ()
+addPendingIfAny = do
   hasAttrs <- uses attributes (not . null)
   when hasAttrs addPending
+
+handle :: Token -> NetscapeM ()
+handle (OpenH3 _) = do
+  flushText
+  waitingFor .= FolderName
+handle CloseH3 =
+  flushText
+handle (OpenDT _) = do
+  flushText
+  addPendingIfAny
 handle (OpenA attrs) = do
+  flushText
   attributes .= attrs
   waitingFor .= BookmarkDescription
+handle CloseA =
+  flushText
 handle (OpenDD _) = do
+  flushText
   hasAttrs <- uses attributes (not . null)
   when hasAttrs $ waitingFor .= ExtendedDescription
-handle (ContentText str) =
-  use waitingFor >>= \w ->
-    case w of
-      FolderName -> do
-        folderStack %= (Text.strip str :)
-        waitingFor .= None
-      BookmarkDescription -> do
-        maybeDescription .= Just (Text.strip str)
-        waitingFor .= None
-      ExtendedDescription -> do
-        maybeExtended .= Just (Text.strip str)
-        hasAttrs <- uses attributes (not . null)
-        when hasAttrs addPending
-        waitingFor .= None
-      None -> pure ()
+handle (ContentText str) = do
+  reading <- uses waitingFor (/= None)
+  when reading $ textChunks %= (str :)
 handle CloseDL = do
-  hasAttrs <- uses attributes (not . null)
-  when hasAttrs addPending
+  flushText
+  addPendingIfAny
   folderStack %= drop1
 handle _ = pure ()
 

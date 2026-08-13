@@ -4,8 +4,9 @@ module Hbt.Parser.HTMLTest (results) where
 
 import Data.Set qualified as Set
 import Data.Text (Text)
+import Hbt (Format (..), formatWith)
 import Hbt.Collection qualified as Collection
-import Hbt.Entity (Entity (..), Label (..), getToRead)
+import Hbt.Entity (Entity (..), Extended (..), Label (..), Name (..), getToRead)
 import Hbt.Entity.URI qualified as URI
 import Hbt.Parser.HTML qualified as HTMLParser
 import Test.Dwergaz
@@ -13,10 +14,16 @@ import TestUtilities (testIO, testResults)
 
 -- | Wrap an anchor's attributes in the smallest bookmark file that parses.
 bookmark :: Text -> Text
-bookmark attrs =
+bookmark attrs = bookmarkWith attrs "Title"
+
+-- | As 'bookmark', with the anchor text spelled out.
+bookmarkWith :: Text -> Text -> Text
+bookmarkWith attrs title =
   "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<DL><p>\n    <DT><A HREF=\"https://e.test/\" ADD_DATE=\"1700000000\" "
     <> attrs
-    <> ">Title</A>\n</DL><p>\n"
+    <> ">"
+    <> title
+    <> "</A>\n</DL><p>\n"
 
 parseOnly :: Text -> IO Entity
 parseOnly input = do
@@ -60,9 +67,45 @@ toReadTests = testIO "resolves the to-read flag" $ do
       , assertEqual "toreading does not set the flag" Nothing (getToRead substring.toRead)
       ]
 
+textRunTests :: IO Test
+textRunTests = testIO "reads a whole text run" $ do
+  entity <-
+    parseOnly
+      "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<DL><p>\n\
+      \    <DT><A HREF=\"https://e.test/\" ADD_DATE=\"1700000000\">Tom &amp; Jerry <b>bold</b> end</A>\n\
+      \    <DD>desc &amp; more &lt;tag&gt;\n\
+      \</DL><p>\n"
+  pure $
+    group
+      "Text runs"
+      [ assertEqual
+          "the anchor text survives references and nested markup"
+          [MkName "Tom & Jerry bold end"]
+          (Set.toList entity.names)
+      , assertEqual
+          "the description survives references"
+          [MkExtended "desc & more <tag>"]
+          entity.extended
+      ]
+
+roundTripTests :: IO Test
+roundTripTests = testIO "round-trips text through the formatter" $ do
+  -- Written as references so that the parsed title holds the literal
+  -- characters, which is what the formatter then has to escape again.
+  let source = bookmarkWith "" "Tom &amp; Jerry &lt;b&gt; &quot;quoted&quot; O'Reilly"
+      title = MkName "Tom & Jerry <b> \"quoted\" O'Reilly"
+  titled <- parseOnly source
+  titledAgain <- parseOnly =<< formatWith HTML =<< HTMLParser.parse source
+  pure $
+    group
+      "Round trip"
+      [ assertEqual "the title is read back intact" [title] (Set.toList titled.names)
+      , assertEqual "the title survives a round trip" titled.names titledAgain.names
+      ]
+
 allTests :: IO Test
 allTests = do
-  tests <- sequence [tagTests, toReadTests]
+  tests <- sequence [tagTests, toReadTests, textRunTests, roundTripTests]
   pure (group "Hbt.Parser.HTML tests" tests)
 
 results :: IO (String, Bool)
