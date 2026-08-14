@@ -201,10 +201,9 @@ parseVersion version =
       (before, _ : rest) -> before : splitOn sep rest
 
     -- Semver forbids a leading zero, so "01" is not 1.
-    readNumber s = case s of
-      "0" -> Just 0
-      c : _ | c /= '0', all Char.isDigit s -> Just (read s)
-      _ -> Nothing
+    readNumber "0" = Just 0
+    readNumber s@(c : _) | c /= '0', all Char.isDigit s = Just (read s)
+    readNumber _ = Nothing
 
 checkVersion :: String -> IO ()
 checkVersion version =
