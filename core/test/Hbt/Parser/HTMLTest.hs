@@ -86,7 +86,7 @@ textRunTests = testIO "reads a whole text run" $ do
       , assertEqual
           "the description survives references"
           [MkExtended "desc & more <tag>"]
-          entity.extended
+          (Set.toList entity.extended)
       ]
 
 roundTripTests :: IO Test
@@ -119,7 +119,7 @@ trailingBookmarkTests = testIO "records a bookmark the input never closes" $ do
     group
       "Trailing bookmark"
       [ assertEqual "a bookmark with no enclosing DL is recorded" [MkName "Title"] (Set.toList noDL.names)
-      , assertEqual "its description is recorded too" [MkExtended "trailing description"] unclosed.extended
+      , assertEqual "its description is recorded too" [MkExtended "trailing description"] (Set.toList unclosed.extended)
       ]
 
 attributeRefTests :: IO Test

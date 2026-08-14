@@ -140,7 +140,7 @@ data Entity = MkEntity
   , isFeed :: IsFeed
   , shared :: Shared
   , toRead :: ToRead
-  , extended :: [Extended]
+  , extended :: Set Extended
   , lastVisitedAt :: LastVisitedAt
   }
   deriving stock (Eq, Ord, Show)
@@ -260,6 +260,6 @@ fromPost post = do
       , isFeed = mkIsFeed False
       , shared = mkShared $ Pinboard.toBool post.shared
       , toRead = mkToRead $ Pinboard.toBool post.toread
-      , extended = Maybe.maybeToList $ post.extended >>= nonEmpty <&> MkExtended
+      , extended = maybe Set.empty (Set.singleton . MkExtended) (post.extended >>= nonEmpty)
       , lastVisitedAt = MkLastVisitedAt Nothing
       }
