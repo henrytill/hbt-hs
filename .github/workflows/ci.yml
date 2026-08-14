@@ -14,12 +14,12 @@ jobs:
   linux-flake:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31.11.0
-      - uses: cachix/cachix-action@v17
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
         with:
           name: henrytill
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
@@ -29,21 +29,21 @@ jobs:
     needs: linux-flake
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
           persist-credentials: false
-      - uses: cachix/install-nix-action@v31.11.0
-      - uses: cachix/cachix-action@v17
+      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+      - uses: cachix/cachix-action@5f2d7c5294214f71b873db4b969586b980625e71 # v17
         with:
           name: henrytill
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
       - run: nix build -L .#all-static -o result-all-static
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: hbt-x86_64-unknown-linux-musl
           path: result-all-static/bin/hbt
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pinboard-client-x86_64-unknown-linux-musl
           path: result-all-static/bin/pinboard-client
@@ -54,7 +54,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
