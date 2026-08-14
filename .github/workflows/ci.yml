@@ -9,8 +9,13 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   linux-flake:
+    name: Linux (Nix flake)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,6 +32,7 @@ jobs:
       - run: nix build -L .#all -o result-all
 
   linux-flake-static:
+    name: Linux (Nix flake, static)
     needs: linux-flake
     runs-on: ubuntu-latest
     permissions:
