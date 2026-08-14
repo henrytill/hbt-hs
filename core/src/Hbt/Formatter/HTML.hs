@@ -91,7 +91,7 @@ fromEntity entity =
     , toRead = fmap stringOfBool (getToRead entity.toRead)
     , feed = fmap feedOfBool (getIsFeed entity.isFeed)
     , lastVisit = fmap Time.toText (getLastVisitedAt entity.lastVisitedAt)
-    , description = fmap (escapeText . (.unExtended)) (Maybe.listToMaybe entity.extended)
+    , description = fmap (escapeText . (.unExtended)) (Set.lookupMin entity.extended)
     }
   where
     href = Maybe.fromMaybe mempty (URI.toText entity.uri) -- TODO
