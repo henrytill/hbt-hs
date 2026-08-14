@@ -22,7 +22,7 @@ collectionOf entity = do
 
 entityWith :: Text -> Maybe Name -> Set.Set Label -> [Extended] -> Entity
 entityWith uriText name labels extended =
-  (Entity.mkEntity uri (Time.fromSeconds 1700000000) name labels) {Entity.extended = extended}
+  (Entity.mkEntity uri (Time.fromSeconds 1700000000) name labels) {Entity.extended = Set.fromList extended}
   where
     uri = either (error . show) id (URI.parse uriText)
 

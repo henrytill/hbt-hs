@@ -68,7 +68,7 @@ updateEntityTests =
           { Entity.shared = Entity.mkShared False
           , Entity.toRead = Entity.mkToRead False
           , Entity.isFeed = Entity.mkIsFeed False
-          , Entity.extended = [Entity.MkExtended "desc1"]
+          , Entity.extended = Set.singleton (Entity.MkExtended "desc1")
           }
       entity2 =
         ( Entity.mkEntity
@@ -80,7 +80,7 @@ updateEntityTests =
           { Entity.shared = Entity.mkShared True
           , Entity.toRead = Entity.mkToRead True
           , Entity.isFeed = Entity.mkIsFeed True
-          , Entity.extended = [Entity.MkExtended "desc2"]
+          , Entity.extended = Set.singleton (Entity.MkExtended "desc2")
           }
       absorbed = Entity.absorb entity2 entity1
       expectedNames = Set.union entity1.names entity2.names
@@ -95,7 +95,7 @@ updateEntityTests =
         , assertEqual "uses last-write-wins for shared" (Entity.mkShared True) absorbed.shared
         , assertEqual "uses last-write-wins for toRead" (Entity.mkToRead True) absorbed.toRead
         , assertEqual "uses logical OR for isFeed" (Entity.mkIsFeed True) absorbed.isFeed
-        , assertEqual "concatenates extended" [Entity.MkExtended "desc1", Entity.MkExtended "desc2"] absorbed.extended
+        , assertEqual "merges extended" (Set.fromList [Entity.MkExtended "desc1", Entity.MkExtended "desc2"]) absorbed.extended
         ]
 
 absorbEntityTests :: Test
