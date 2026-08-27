@@ -78,6 +78,8 @@ data Partial = MkPartial
 emptyPartial :: Partial
 emptyPartial = MkPartial {partialInput = Nothing, partialExpected = Nothing}
 
+type PartialMap = Map String Partial
+
 processFile :: Format From -> String -> FilePath -> PartialMap -> FilePath -> IO PartialMap
 processFile inputFormat expectedExt dir acc file =
   case parts of
@@ -125,8 +127,6 @@ discover inputFormat expectedExt format = do
 
     missing stem what =
       fail (dir </> stem ++ " has no " ++ stem ++ "." ++ what)
-
-type PartialMap = Map String Partial
 
 discoverInput :: Format From -> IO [TestCase From]
 discoverInput inputFormat = discover inputFormat "yaml" inputFormat
