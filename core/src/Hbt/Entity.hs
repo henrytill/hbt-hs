@@ -29,6 +29,7 @@ where
 
 import Control.Exception (throwIO)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?), (.=))
+import Data.Containers.ListUtils (nubOrd)
 import Data.Functor ((<&>))
 import Data.Maybe qualified as Maybe
 import Data.Monoid (Last (..))
@@ -188,6 +189,18 @@ supersededCreation a b =
     (Just x, Just y) | x /= y -> Set.singleton (max x y)
     _ -> Set.empty
 
+-- | Concatenation that drops values already present, keeping the first
+-- occurrence of each.
+--
+-- Plain concatenation made Entity's <> non-idempotent for extended: absorb
+-- only skips the merge when two entities are exactly equal, so entities
+-- differing in some other field but sharing a description accumulated a copy
+-- of it per occurrence, and nothing downstream deduped. Union by value fixes
+-- that while keeping insertion order, which is the ordering the Go, OCaml and
+-- Rust implementations produce and the wire format records.
+unionExtended :: [Extended] -> [Extended] -> [Extended]
+unionExtended a b = nubOrd (a ++ b)
+
 instance Semigroup Entity where
   a <> b =
     MkEntity
@@ -199,7 +212,7 @@ instance Semigroup Entity where
       , isFeed = a.isFeed <> b.isFeed
       , shared = a.shared <> b.shared
       , toRead = a.toRead <> b.toRead
-      , extended = a.extended <> b.extended
+      , extended = unionExtended a.extended b.extended
       , lastVisitedAt = a.lastVisitedAt <> b.lastVisitedAt
       }
 

@@ -95,7 +95,36 @@ updateEntityTests =
         , assertEqual "uses last-write-wins for shared" (Entity.mkShared True) absorbed.shared
         , assertEqual "uses last-write-wins for toRead" (Entity.mkToRead True) absorbed.toRead
         , assertEqual "uses logical OR for isFeed" (Entity.mkIsFeed True) absorbed.isFeed
-        , assertEqual "concatenates extended" [Entity.MkExtended "desc1", Entity.MkExtended "desc2"] absorbed.extended
+        , assertEqual "unions extended in order" [Entity.MkExtended "desc1", Entity.MkExtended "desc2"] absorbed.extended
+        ]
+
+sharedExtendedTests :: Test
+sharedExtendedTests =
+  let describedWith label =
+        ( Entity.mkEntity
+            (safeURI "https://example.com")
+            (Time.fromSeconds 1000)
+            (Just (MkName "Test"))
+            (Set.singleton (MkLabel label))
+        )
+          { Entity.extended = [Entity.MkExtended "desc"]
+          }
+      absorbed = Entity.absorb (describedWith "label2") (describedWith "label1")
+      thrice = Entity.absorb (describedWith "label3") absorbed
+   in group
+        "Entity absorption with a shared description"
+        [ assertEqual
+            "a description shared by two entities is kept once"
+            [Entity.MkExtended "desc"]
+            absorbed.extended
+        , assertEqual
+            "absorbing a third does not repeat it either"
+            [Entity.MkExtended "desc"]
+            thrice.extended
+        , assertEqual
+            "the labels still merge"
+            (Set.fromList [MkLabel "label1", MkLabel "label2"])
+            absorbed.labels
         ]
 
 absorbEntityTests :: Test
@@ -383,7 +412,7 @@ allTests = do
   pure $
     group
       "Hbt.Collection tests"
-      ([emptyEntityTests, entityTests, updateEntityTests, absorbEntityTests] ++ ioTests)
+      ([emptyEntityTests, entityTests, updateEntityTests, sharedExtendedTests, absorbEntityTests] ++ ioTests)
 
 results :: IO (String, Bool)
 results = testResults "Hbt.Collection" <$> allTests
