@@ -26,3 +26,7 @@
         - ViewPatterns
 
 - ignore: { name: "Use lambda-case" }
+
+# Version.version appends HBT_COMMIT_SUFFIX, which project.h defaults to the
+# empty string for a build with no revision to stamp.
+- ignore: { name: "Evaluate", within: Version }
