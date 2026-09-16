@@ -29,23 +29,16 @@
     }:
     let
       ghcName = "ghc9103";
-      # Stamp the revision the executable is built from into project.h, which
-      # Version.hs includes.  A source with no git metadata carries neither
-      # attribute, and the header in the repository defines nothing, so the
-      # executable then reports the cabal version alone.
+      # Stamp the revision the executable is built from into project.h, the
+      # header cli/exe/Version.hs includes.  A source with no git metadata
+      # carries neither attribute, and the header in the repository defaults the
+      # suffix to empty, so the executable then reports the cabal version alone.
       stampRevision =
         final: drv:
         if self ? shortRev || self ? dirtyShortRev then
           final.haskell.lib.overrideCabal drv (_: {
             postPatch = ''
-              cat > exe/project.h <<'EOF'
-              #ifndef HBT_PROJECT_H
-              #define HBT_PROJECT_H
-
-              #define HBT_COMMIT "${self.shortRev or self.dirtyShortRev}"
-
-              #endif
-              EOF
+              echo '#define HBT_COMMIT_SUFFIX "-${self.shortRev or self.dirtyShortRev}"' > exe/project.h
             '';
           })
         else
