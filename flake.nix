@@ -33,16 +33,19 @@
       # header cli/exe/Version.hs includes.  A source with no git metadata
       # carries neither attribute, and the header in the repository defaults the
       # suffix to empty, so the executable then reports the cabal version alone.
-      stampRevision =
+      stampCliRevision =
         final: drv:
-        if self ? shortRev || self ? dirtyShortRev then
-          final.haskell.lib.overrideCabal drv (_: {
+        let
+          rev = self.shortRev or self.dirtyShortRev or null;
+        in
+        final.haskell.lib.overrideCabal drv (
+          _:
+          final.lib.optionalAttrs (rev != null) {
             postPatch = ''
-              echo '#define HBT_COMMIT_SUFFIX "-${self.shortRev or self.dirtyShortRev}"' > exe/project.h
+              echo '#define HBT_COMMIT_SUFFIX "-${rev}"' > exe/project.h
             '';
-          })
-        else
-          drv;
+          }
+        );
       maybeStaticExecutable =
         isStatic: final: prev: drv:
         final.haskell.lib.overrideCabal drv (
@@ -110,7 +113,7 @@
                   name = "hbt-attic-src";
                 }) { };
                 hbt-cli = maybeStaticExecutable isStatic final prev (
-                  stampRevision final (
+                  stampCliRevision final (
                     hfinal.callCabal2nix "hbt-cli" (builtins.path {
                       path = ./cli;
                       name = "hbt-cli-src";
