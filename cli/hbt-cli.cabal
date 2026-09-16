@@ -12,6 +12,7 @@ synopsis:           Heterogeneous Bookmark Transformation
 category:           Web
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
+extra-source-files: exe/project.h
 
 common warnings
     ghc-options:
@@ -32,7 +33,13 @@ common exts
 executable hbt
     import:           warnings, exts
     main-is:          Main.hs
+    other-modules:
+        Paths_hbt_cli
+        Version
+
+    autogen-modules:  Paths_hbt_cli
     hs-source-dirs:   exe
+    include-dirs:     exe
     default-language: GHC2024
     build-depends:
         base >=4.20.1 && <4.23,

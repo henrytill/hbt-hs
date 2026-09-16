@@ -19,6 +19,7 @@ import System.Environment qualified as Environment
 import System.Exit qualified as Exit
 import System.FilePath qualified as FilePath
 import System.IO qualified as IO
+import Version qualified
 
 data Options = MkOptions
   { inputFormat :: Maybe (Format From)
@@ -28,6 +29,7 @@ data Options = MkOptions
   , listTags :: Bool
   , mappingsFile :: Maybe FilePath
   , showHelp :: Bool
+  , showVersion :: Bool
   }
   deriving stock (Show)
 
@@ -41,6 +43,7 @@ defaultOptions =
     , listTags = False
     , mappingsFile = Nothing
     , showHelp = False
+    , showVersion = False
     }
 
 allConstructors :: SFlow f -> [Format f]
@@ -112,6 +115,11 @@ options =
       ["help"]
       (NoArg (\opts -> opts {showHelp = True}))
       "Show this help message"
+  , Option
+      ['V']
+      ["version"]
+      (NoArg (\opts -> opts {showVersion = True}))
+      "Show version"
   ]
 
 printUsage :: IO ()
@@ -180,6 +188,10 @@ main :: IO ()
 main = do
   argv <- Environment.getArgs
   (opts, files) <- parseOptions argv
+
+  when opts.showVersion $ do
+    putStrLn $ "hbt " ++ Version.version
+    Exit.exitSuccess
 
   when opts.showHelp $ do
     printUsage
