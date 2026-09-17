@@ -124,6 +124,50 @@ absorbEntityTests =
         , assertEqual "absorbEntity merges entity labels" expectedLabels absorbed.labels
         ]
 
+-- | A merge that lowers createdAt onto an instant an earlier mention stated as
+-- its LAST_MODIFIED used to leave that instant behind, repeating createdAt.
+-- Fixture: html/bookmarks_superseded_creation. See #43.
+absorbSupersededCreationTests :: Test
+absorbSupersededCreationTests =
+  let inverted =
+        ( Entity.mkEntity
+            (safeURI "https://example.com")
+            (Time.fromSeconds 2000)
+            Nothing
+            (Set.singleton (MkLabel "label1"))
+        )
+          { Entity.updatedAt = Set.singleton (Time.fromSeconds 1000)
+          }
+      lower =
+        Entity.mkEntity
+          (safeURI "https://example.com")
+          (Time.fromSeconds 1000)
+          Nothing
+          (Set.singleton (MkLabel "label2"))
+      absorbed = Entity.absorb lower inverted
+   in group
+        "Entity absorption of a superseded creation time"
+        [ assertEqual "takes the earlier creation time" (Entity.mkCreatedAt (Time.fromSeconds 1000)) absorbed.createdAt
+        , assertEqual "records only the displaced one as an update" (Set.singleton (Time.fromSeconds 2000)) absorbed.updatedAt
+        ]
+
+-- | '<>' is associative even when a history holds an instant equal to its own
+-- createdAt, the shape html/bookmarks_simple parses. Removing the winning
+-- creation time only when the two differ passes every fixture and fails here:
+-- bracketing left records no update, bracketing right keeps the 1000 that the
+-- first merge had no reason to remove. See henrytill/hbt-data#35.
+semigroupAssociativityTests :: Test
+semigroupAssociativityTests =
+  let at secs = Entity.mkEntity (safeURI "https://example.com") (Time.fromSeconds secs) Nothing Set.empty
+      a = (at 1000) {Entity.updatedAt = Set.singleton (Time.fromSeconds 1000)}
+      b = at 1000
+      c = at 2000
+   in group
+        "Entity <> is associative"
+        [ assertEqual "over a history repeating its own creation time" ((a <> b) <> c) (a <> (b <> c))
+        , assertEqual "over distinct creation times" ((c <> a) <> b) (c <> (a <> b))
+        ]
+
 emptyCollectionTests :: IO Test
 emptyCollectionTests = do
   coll <- new
@@ -383,7 +427,9 @@ allTests = do
   pure $
     group
       "Hbt.Collection tests"
-      ([emptyEntityTests, entityTests, updateEntityTests, absorbEntityTests] ++ ioTests)
+      ( [emptyEntityTests, entityTests, updateEntityTests, absorbEntityTests, absorbSupersededCreationTests, semigroupAssociativityTests]
+          ++ ioTests
+      )
 
 results :: IO (String, Bool)
 results = testResults "Hbt.Collection" <$> allTests

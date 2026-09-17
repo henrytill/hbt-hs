@@ -213,7 +213,6 @@
         };
         checks.conformance = hbt-data.lib.${system}.check {
           binary = "${self.packages.${system}.hbt-cli}/bin/hbt";
-          waivers = ./conformance.waivers;
         };
         devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
           packages = hpkgs: [
