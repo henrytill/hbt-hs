@@ -15,3 +15,5 @@ cabal build hbt-cli
 ```
 
 The harness's flags, what counts as a match, and its timezone policy are documented in `test/data/README.md`. A fixture is added or changed in hbt-data, then picked up here by bumping the submodule.
+
+A `github:` flake reference carries no submodules, so it lacks the `hbt-data` input: `nix build github:henrytill/hbt-hs` still works, but `nix develop` and `nix flake check` fail on it and need a reference that includes submodules, such as `git+https://github.com/henrytill/hbt-hs?submodules=1`, or a checkout.
