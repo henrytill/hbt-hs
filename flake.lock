@@ -60,11 +60,11 @@
         ]
       },
       "locked": {
-        "path": "./core/test/data",
+        "path": "./test/data",
         "type": "path"
       },
       "original": {
-        "path": "./core/test/data",
+        "path": "./test/data",
         "type": "path"
       },
       "parent": []
