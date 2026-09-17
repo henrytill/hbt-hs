@@ -114,6 +114,35 @@
                     enableNuma = false;
                   }
                 );
+                # callCabal2nix runs cabal2nix at evaluation time, with a
+                # cabal2nix built by the package set it is called from.
+                # pkgsMusl is not a cross set, so evaluating the static
+                # packages meant building cabal2nix, and the Haskell libraries
+                # under it, against musl. What cabal2nix writes depends only on
+                # the compiler and the platform, which the two sets share, so
+                # the static set takes the expression from the glibc cabal2nix.
+                callCabal2nix =
+                  if isStatic then
+                    name: src: args:
+                    let
+                      glibc = nixpkgs.legacyPackages.${final.stdenv.hostPlatform.system}.haskell.packages.${ghcName};
+                      expr = glibc.haskellSrc2nix {
+                        inherit name;
+                        src =
+                          if prev.lib.canCleanSource src then
+                            prev.lib.cleanSourceWith {
+                              inherit src;
+                              filter = path: _: prev.lib.hasSuffix ".cabal" path;
+                            }
+                          else
+                            src;
+                      };
+                    in
+                    final.haskell.lib.overrideCabal (hfinal.callPackage expr args) (_: {
+                      inherit src;
+                    })
+                  else
+                    hprev.callCabal2nix;
                 commonmark-initial = hfinal.callCabal2nix "commonmark-initial" commonmark-initial-src { };
                 dwergaz = hfinal.callCabal2nix "dwergaz" dwergaz-src { };
                 uri-bytestring = hfinal.callCabal2nix "uri-bytestring" uri-bytestring-src { };
