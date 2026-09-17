@@ -50,6 +50,25 @@
         "type": "github"
       }
     },
+    "hbt-data": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "path": "./core/test/data",
+        "type": "path"
+      },
+      "original": {
+        "path": "./core/test/data",
+        "type": "path"
+      },
+      "parent": []
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1787964612,
@@ -71,6 +90,7 @@
         "commonmark-initial-src": "commonmark-initial-src",
         "dwergaz-src": "dwergaz-src",
         "flake-utils": "flake-utils",
+        "hbt-data": "hbt-data",
         "nixpkgs": "nixpkgs",
         "uri-bytestring-src": "uri-bytestring-src"
       }

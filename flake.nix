@@ -3,6 +3,14 @@
     self.submodules = true;
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    # hbt-data's own flake, read from the corpus submodule: a relative path
+    # input locks relative to this flake, not by hash, so the submodule stays
+    # the one pin on the harness and the corpus it checks.
+    hbt-data = {
+      url = "path:./core/test/data";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
     commonmark-initial-src = {
       url = "github:henrytill/commonmark-initial";
       flake = false;
@@ -22,6 +30,7 @@
       self,
       nixpkgs,
       flake-utils,
+      hbt-data,
       commonmark-initial-src,
       dwergaz-src,
       uri-bytestring-src,
@@ -173,6 +182,9 @@
           };
           default = all;
         };
+        checks.conformance = hbt-data.lib.${system}.check {
+          binary = "${pkgs.haskell.packages.${ghcName}.hbt-cli}/bin/hbt";
+        };
         devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
           packages = hpkgs: [
             hpkgs.hbt-attic
@@ -190,6 +202,7 @@
             haskell.packages.${ghcName}.hlint
             haskell.packages.${ghcName}.weeder
             yaml-language-server
+            hbt-data.packages.${system}.python
           ];
         };
       }
