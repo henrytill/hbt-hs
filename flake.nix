@@ -7,7 +7,7 @@
     # input locks relative to this flake, not by hash, so the submodule stays
     # the one pin on the harness and the corpus it checks.
     hbt-data = {
-      url = "path:./core/test/data";
+      url = "path:./test/data";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
