@@ -4,7 +4,7 @@
 
 ## Conformance
 
-`test/data/` is [hbt-data](https://github.com/henrytill/hbt-data) as a git submodule: the corpus shared with the [Go](https://github.com/henrytill/hbt-go), [OCaml](https://github.com/henrytill/hbt-ocaml) and [Rust](https://github.com/henrytill/hbt-rs) implementations, and the conformance harness that holds each of them to it by running every fixture through the built `hbt` and comparing what it writes. Clone with `--recurse-submodules`.
+`test/data/` is the [hbt-data](https://github.com/henrytill/hbt-data) submodule: the corpus shared by all four implementations, and the harness that checks each against it. Clone with `--recurse-submodules`.
 
 `nix flake check` runs the harness against the Nix-built executable: `test/data/` is also the `hbt-data` flake input, whose `lib.check` does the work. In the dev shell, which provides the harness's Python:
 
