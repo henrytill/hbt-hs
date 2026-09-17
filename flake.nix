@@ -212,7 +212,7 @@
           default = all;
         };
         checks.conformance = hbt-data.lib.${system}.check {
-          binary = "${pkgs.haskell.packages.${ghcName}.hbt-cli}/bin/hbt";
+          binary = "${self.packages.${system}.hbt-cli}/bin/hbt";
         };
         devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
           packages = hpkgs: [
