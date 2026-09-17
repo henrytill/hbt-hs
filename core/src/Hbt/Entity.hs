@@ -175,25 +175,43 @@ instance FromJSON Entity where
       <*> v .:? "extended" .!= mempty
       <*> v .:? "lastVisitedAt" .!= mempty
 
--- | The later of two creation times, recorded as an update.
+-- | The updates of two merged entities: both histories and both creation
+-- times, minus the creation time that wins.
 --
 -- Merging keeps the earlier creation time, so the later one would otherwise be
--- lost; it becomes an update instead. Two entities that agree on their
--- creation time record nothing, since a timestamp that merely repeats
--- createdAt carries no information - which is what bookmarks_same_timestamp
--- pins, and how the Go, OCaml and Rust implementations settled it.
-supersededCreation :: CreatedAt -> CreatedAt -> Set Time
-supersededCreation a b =
-  case (lookupCreatedAt a, lookupCreatedAt b) of
-    (Just x, Just y) | x /= y -> Set.singleton (max x y)
-    _ -> Set.empty
+-- lost; it becomes an update instead. The winner is removed rather than kept,
+-- since a timestamp that merely repeats createdAt carries no information -
+-- which is what bookmarks_same_timestamp pins, and how the Go, OCaml and Rust
+-- implementations settled it. It can be there to remove because HTML reads
+-- ADD_DATE and LAST_MODIFIED independently, so either history may already hold
+-- the instant that becomes createdAt: bookmarks_superseded_creation.
+--
+-- Adding both times before removing the winner is what keeps '<>' associative.
+-- However the merge is bracketed, each step puts its operands' creation times
+-- back into the history, so the result is always every history and every
+-- creation time in the merge, minus the single smallest creation time. A rule
+-- that removed the winner only when the two times differ is not associative:
+-- with creation times 1, 1 and 2, bracketing left gives no update and
+-- bracketing right leaves the 1 that the first merge did not remove.
+--
+-- The price of that law is that a merge also removes an update equal to a
+-- createdAt it did not move, which Go and Rust keep - henrytill/hbt-data#35,
+-- where this is the argument from associativity for dropping it. An update
+-- strictly below createdAt is untouched either way: henrytill/hbt-data#34.
+mergedUpdates :: Entity -> Entity -> Set Time
+mergedUpdates a b =
+  case Maybe.mapMaybe lookupCreatedAt [a.createdAt, b.createdAt] of
+    [] -> histories
+    creations -> Set.delete (minimum creations) (foldr Set.insert histories creations)
+  where
+    histories = a.updatedAt <> b.updatedAt
 
 instance Semigroup Entity where
   a <> b =
     MkEntity
       { uri = a.uri <> b.uri
       , createdAt = a.createdAt <> b.createdAt
-      , updatedAt = Set.unions [a.updatedAt, b.updatedAt, supersededCreation a.createdAt b.createdAt]
+      , updatedAt = mergedUpdates a b
       , names = a.names <> b.names
       , labels = a.labels <> b.labels
       , isFeed = a.isFeed <> b.isFeed
