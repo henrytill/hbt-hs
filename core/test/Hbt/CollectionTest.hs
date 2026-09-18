@@ -3,6 +3,7 @@
 module Hbt.CollectionTest (results) where
 
 import Control.Exception (SomeException, try)
+import Data.Int (Int64)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -299,15 +300,8 @@ edgeTests = do
 -- (henrytill/hbt-data#38) is pinned here rather than by a fixture.
 decodeNormalizesTests :: IO Test
 decodeNormalizesTests = do
-  let yaml =
-        versionedYaml
-          "0.1.0"
-          1
-          [ "- id: 0\n  entity:\n    uri: https://example.com/\n    createdAt: 1700000000\n"
-              <> "    updatedAt:\n    - 1700000000\n    - 1800000000\n    names: []\n    labels: []\n  edges: []\n"
-          ]
-  repr <- Yaml.decodeThrow @IO @CollectionRepr (Text.Encoding.encodeUtf8 yaml)
-  collection <- fromRepr repr
+  let yaml = collectionYaml 1 [nodeWith 0 "https://example.com/" [1700000000, 1800000000] "[]"]
+  collection <- decodeCollection yaml
   let decoded = lookupEntity (safeURI "https://example.com") collection
   pure $
     group
@@ -322,24 +316,37 @@ decodeNormalizesTests = do
           ((.createdAt) <$> decoded)
       ]
 
+-- | Decode a YAML collection, the way the CLI does.
+decodeCollection :: Text -> IO Collection
+decodeCollection yaml = do
+  repr <- Yaml.decodeThrow @IO @CollectionRepr (Text.Encoding.encodeUtf8 yaml)
+  fromRepr repr
+
 -- | Decode a YAML collection, reporting whether it was accepted.
 decodes :: Text -> IO Bool
 decodes yaml = do
-  result <- try @SomeException $ do
-    repr <- Yaml.decodeThrow @IO @CollectionRepr (Text.Encoding.encodeUtf8 yaml)
-    collection <- fromRepr repr
-    pure (length collection)
+  result <- try @SomeException $ length <$> decodeCollection yaml
   pure (either (const False) (const True) result)
 
 node :: Int -> Text -> Text -> Text
-node nodeId uri edges =
+node nodeId uri = nodeWith nodeId uri []
+
+-- | 'node' with an update history, which only 'decodeNormalizesTests' needs.
+nodeWith :: Int -> Text -> [Int64] -> Text -> Text
+nodeWith nodeId uri updates edges =
   "- id: "
     <> Text.pack (show nodeId)
     <> "\n  entity:\n    uri: "
     <> uri
-    <> "\n    createdAt: 1700000000\n    updatedAt: []\n    names: []\n    labels: []\n  edges: "
+    <> "\n    createdAt: 1700000000\n    updatedAt:"
+    <> updatesYaml
+    <> "\n    names: []\n    labels: []\n  edges: "
     <> edges
     <> "\n"
+  where
+    updatesYaml = case updates of
+      [] -> " []"
+      _ -> foldMap (\u -> "\n    - " <> Text.pack (show u)) updates
 
 collectionYaml :: Int -> [Text] -> Text
 collectionYaml = versionedYaml "0.1.0"
