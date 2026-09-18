@@ -301,17 +301,23 @@ edgeTests = do
 --
 -- The corpus has no YAML input format, so this half of the invariant
 -- (henrytill/hbt-data#38) is pinned here rather than by a fixture.
+--
+-- The history carries an update *below* createdAt as well as one equal to it,
+-- because both halves of the rule need pinning: a normalize written as a
+-- threshold rather than a deletion -- @Set.filter (>= created)@, say -- drops
+-- the earlier one too, and that is the case henrytill/hbt-data#34 settled the
+-- other way.
 decodeNormalizesTests :: IO Test
 decodeNormalizesTests = do
-  let yaml = collectionYaml 1 [nodeWith 0 "https://example.com/" [1700000000, 1800000000] "[]"]
+  let yaml = collectionYaml 1 [nodeWith 0 "https://example.com/" [1600000000, 1700000000, 1800000000] "[]"]
   collection <- decodeCollection yaml
   let decoded = lookupEntity (safeURI "https://example.com") collection
   pure $
     group
       "Decoding normalizes the update history"
       [ assertEqual
-          "an update repeating createdAt does not survive the wire"
-          (Just (Set.singleton (Time.fromSeconds 1800000000)))
+          "the repeat of createdAt goes, and only it"
+          (Just (Set.fromList (map Time.fromSeconds [1600000000, 1800000000])))
           ((.updatedAt) <$> decoded)
       , assertEqual
           "createdAt is untouched"
