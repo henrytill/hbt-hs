@@ -137,10 +137,12 @@ absorbSupersededCreationTests =
         "Entity absorption of a superseded creation time"
         [ assertEqual "takes the earlier creation time" (Entity.mkCreatedAt (Time.fromSeconds 1000)) absorbed.createdAt
         , assertEqual "records only the displaced one as an update" (Set.singleton (Time.fromSeconds 2000)) absorbed.updatedAt
-        , -- The guard in absorb, not '<>', is what keeps this one: the rule would remove an
-          -- update equal to createdAt, so without it an anchor whose LAST_MODIFIED repeats its
-          -- ADD_DATE would lose that update on meeting a byte-identical duplicate. No fixture
-          -- covers it; hbt-go, hbt-ocaml and hbt-rs pin it the same way.
+        , -- The guard in absorb, not '<>', is what keeps this one, and only for a duplicate
+          -- that is identical in every field: the rule removes an update equal to createdAt, so
+          -- any incidental difference -- the enclosing folder's label, say -- takes the same
+          -- anchor's LAST_MODIFIED with it. That wider case is deliberate, and all four
+          -- implementations agree on it; henrytill/hbt-data#35 is where it was settled. No
+          -- fixture covers this narrow one; hbt-go, hbt-ocaml and hbt-rs pin it the same way.
           assertEqual "an identical duplicate mention is a no-op" repeats (Entity.absorb repeats repeats)
         ]
 
