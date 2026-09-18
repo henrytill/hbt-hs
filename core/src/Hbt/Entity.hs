@@ -175,7 +175,7 @@ instance ToJSON Entity where
 -- An update strictly below createdAt is untouched: henrytill/hbt-data#34.
 normalize :: Entity -> Entity
 normalize entity =
-  maybe entity (\t -> entity {updatedAt = Set.delete t entity.updatedAt}) (lookupCreatedAt entity.createdAt)
+  entity {updatedAt = maybe entity.updatedAt (`Set.delete` entity.updatedAt) (lookupCreatedAt entity.createdAt)}
 
 instance FromJSON Entity where
   parseJSON = withObject "Entity" $ \v -> do
@@ -194,44 +194,41 @@ instance FromJSON Entity where
         <*> v .:? "lastVisitedAt" .!= mempty
 
 -- | The updates of two merged entities: both histories and both creation
--- times, minus the creation time that wins.
+-- times.
 --
 -- Merging keeps the earlier creation time, so the later one would otherwise be
--- lost; it becomes an update instead. The winner is removed rather than kept,
--- since a timestamp that merely repeats createdAt carries no information -
--- which is what bookmarks_same_timestamp pins, and how the Go, OCaml and Rust
--- implementations settled it. It can be there to remove because HTML reads
--- ADD_DATE and LAST_MODIFIED independently, so either history may already hold
--- the instant that becomes createdAt: bookmarks_superseded_creation.
---
--- Adding both times before removing the winner is what keeps '<>' associative;
--- 'semigroupAssociativityTests' carries the counterexample that a rule removing
--- the winner only when the two times differ fails.
+-- lost; it becomes an update instead. Putting *both* times in, and leaving it
+-- to 'normalize' to take the winner back out, is what keeps '<>' associative:
+-- each merge restores its operands' creation times, so no bracketing can lose
+-- one. 'semigroupAssociativityTests' carries the counterexample that a rule
+-- removing the winner only when the two times differ fails.
 --
 -- The price of that law is that a merge also removes an update equal to a
 -- createdAt it did not move, which Go and Rust keep - henrytill/hbt-data#35,
 -- where this is the argument from associativity for dropping it. An update
 -- strictly below createdAt is untouched either way: henrytill/hbt-data#34.
 mergedUpdates :: Entity -> Entity -> Set Time
-mergedUpdates a b = maybe merged (`Set.delete` merged) (lookupCreatedAt (a.createdAt <> b.createdAt))
+mergedUpdates a b = a.updatedAt <> b.updatedAt <> creations
   where
     creations = Set.fromList (Maybe.mapMaybe lookupCreatedAt [a.createdAt, b.createdAt])
-    merged = a.updatedAt <> b.updatedAt <> creations
 
+-- | Merging is field-wise, then 'normalize'd: the merged history holds both
+-- creation times, and normalizing removes the one that won.
 instance Semigroup Entity where
   a <> b =
-    MkEntity
-      { uri = a.uri <> b.uri
-      , createdAt = a.createdAt <> b.createdAt
-      , updatedAt = mergedUpdates a b
-      , names = a.names <> b.names
-      , labels = a.labels <> b.labels
-      , isFeed = a.isFeed <> b.isFeed
-      , shared = a.shared <> b.shared
-      , toRead = a.toRead <> b.toRead
-      , extended = a.extended <> b.extended
-      , lastVisitedAt = a.lastVisitedAt <> b.lastVisitedAt
-      }
+    normalize
+      MkEntity
+        { uri = a.uri <> b.uri
+        , createdAt = a.createdAt <> b.createdAt
+        , updatedAt = mergedUpdates a b
+        , names = a.names <> b.names
+        , labels = a.labels <> b.labels
+        , isFeed = a.isFeed <> b.isFeed
+        , shared = a.shared <> b.shared
+        , toRead = a.toRead <> b.toRead
+        , extended = a.extended <> b.extended
+        , lastVisitedAt = a.lastVisitedAt <> b.lastVisitedAt
+        }
 
 -- | The entity every construction starts from.
 --
