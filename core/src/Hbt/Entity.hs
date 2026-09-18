@@ -168,10 +168,16 @@ instance ToJSON Entity where
 
 -- | Drop an update that merely repeats the creation time.
 --
--- A timestamp equal to createdAt carries no information, which is what
--- bookmarks_same_timestamp pins and how the Go, OCaml and Rust implementations
--- settled it. An update strictly *below* createdAt is a different thing and is
--- untouched: henrytill/hbt-data#34.
+-- A timestamp equal to createdAt carries no information. An update strictly
+-- *below* createdAt is a different thing and is untouched:
+-- henrytill/hbt-data#34.
+--
+-- Held to it on the merge path by every implementation -- bookmarks_same_timestamp
+-- is two anchors with equal ADD_DATE and no LAST_MODIFIED, and all four drop the
+-- repeat. On the *parse* path this is so far only true here: given one anchor
+-- stating the same instant in both attributes, Go, OCaml and Rust still record
+-- the update. henrytill/hbt-data#38 is the decision that they should not, and
+-- until it lands there they diverge from this on html/bookmarks_simple.
 --
 -- This is the whole of the normal form (henrytill/hbt-data#38), and three
 -- places maintain it. '<>' ends here, so a merge that demotes the later
