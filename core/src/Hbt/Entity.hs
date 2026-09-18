@@ -132,13 +132,15 @@ data Entity = MkEntity
   { uri :: URI
   , createdAt :: CreatedAt
   , updatedAt :: Set Time
-  -- ^ Updates. A *merged* entity's never include 'createdAt', since
-  -- 'mergedUpdates' removes the creation time that wins; a *parsed* one's may,
-  -- because HTML reads ADD_DATE and LAST_MODIFIED independently and an anchor
-  -- may state the same instant in both - which html/bookmarks_simple pins. The
-  -- two are separate fields because the wire format distinguishes an update
-  -- that merely repeats the creation time from one that was never recorded at
-  -- all.
+  -- ^ Updates, never including 'createdAt'. HTML reads ADD_DATE and
+  -- LAST_MODIFIED independently, so an anchor may state the same instant in
+  -- both; 'normalize' is what makes that not survive, and html/bookmarks_simple
+  -- pins it. The two are separate fields because a creation time is not an
+  -- update, and an entity may have been created without ever being updated.
+  --
+  -- Nothing in the type enforces this - a record update can write any set.
+  -- Every construction the program has normalizes; closing the type is
+  -- henrytill/hbt-hs#54.
   , names :: Set Name
   , labels :: Set Label
   , isFeed :: IsFeed
