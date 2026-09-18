@@ -417,12 +417,16 @@ allTests = do
       , versionTests
       , roundTripTests
       ]
-  pure $
-    group
-      "Hbt.Collection tests"
-      ( [emptyEntityTests, entityTests, updateEntityTests, absorbEntityTests, absorbSupersededCreationTests, semigroupAssociativityTests]
-          ++ ioTests
-      )
+  pure $ group "Hbt.Collection tests" (pureTests ++ ioTests)
+  where
+    pureTests =
+      [ emptyEntityTests
+      , entityTests
+      , updateEntityTests
+      , absorbEntityTests
+      , absorbSupersededCreationTests
+      , semigroupAssociativityTests
+      ]
 
 results :: IO (String, Bool)
 results = testResults "Hbt.Collection" <$> allTests
