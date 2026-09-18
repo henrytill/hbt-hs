@@ -129,26 +129,19 @@ absorbEntityTests =
 -- Fixture: html/bookmarks_superseded_creation. See #43.
 absorbSupersededCreationTests :: Test
 absorbSupersededCreationTests =
-  let inverted =
-        ( Entity.mkEntity
-            (safeURI "https://example.com")
-            (Time.fromSeconds 2000)
-            Nothing
-            (Set.singleton (MkLabel "label1"))
-        )
-          { Entity.updatedAt = Set.singleton (Time.fromSeconds 1000)
-          }
-      lower =
-        Entity.mkEntity
-          (safeURI "https://example.com")
-          (Time.fromSeconds 1000)
-          Nothing
-          (Set.singleton (MkLabel "label2"))
-      absorbed = Entity.absorb lower inverted
+  let at secs = Entity.mkEntity (safeURI "https://example.com") (Time.fromSeconds secs) Nothing Set.empty
+      inverted = (at 2000) {Entity.updatedAt = Set.singleton (Time.fromSeconds 1000)}
+      absorbed = Entity.absorb (at 1000) inverted
+      repeats = (at 1000) {Entity.updatedAt = Set.singleton (Time.fromSeconds 1000)}
    in group
         "Entity absorption of a superseded creation time"
         [ assertEqual "takes the earlier creation time" (Entity.mkCreatedAt (Time.fromSeconds 1000)) absorbed.createdAt
         , assertEqual "records only the displaced one as an update" (Set.singleton (Time.fromSeconds 2000)) absorbed.updatedAt
+        , -- The guard in absorb, not '<>', is what keeps this one: the rule would remove an
+          -- update equal to createdAt, so without it an anchor whose LAST_MODIFIED repeats its
+          -- ADD_DATE would lose that update on meeting a byte-identical duplicate. No fixture
+          -- covers it; hbt-go, hbt-ocaml and hbt-rs pin it the same way.
+          assertEqual "an identical duplicate mention is a no-op" repeats (Entity.absorb repeats repeats)
         ]
 
 -- | '<>' is associative even when a history holds an instant equal to its own
