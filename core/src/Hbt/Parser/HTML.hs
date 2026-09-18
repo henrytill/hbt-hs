@@ -226,10 +226,9 @@ createEntity = do
   let names = maybe Set.empty (Set.singleton . Entity.MkName) name
       labels = Set.unions [accumulated.labels, Set.fromList . coerce $ reverse folders]
       extended = maybe Set.empty (Set.singleton . Entity.MkExtended) ext
-      -- ADD_DATE and LAST_MODIFIED are independent attributes and arrive in
-      -- whatever order the file lists them, so the history is normalized once
-      -- the whole anchor is read: an anchor stating the same instant in both
-      -- carries no update. Fixture: html/bookmarks_simple.
+      -- The attributes arrive in whatever order the file lists them, so the
+      -- history can only be normalized once the whole anchor is read. Why:
+      -- 'Entity.normalize'.
       entity = Entity.normalize accumulated {names, labels, extended}
    in if URI.null entity.uri
         then throwM $ ParseError "missing required attribute: href"
