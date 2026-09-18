@@ -168,13 +168,20 @@ instance ToJSON Entity where
 
 -- | Drop an update that merely repeats the creation time.
 --
--- Every way of building an entity ends here: the merge rule leaves its result
--- in this form, and construction and decoding are held to it too, so
--- @updatedAt@ never contains @createdAt@ whatever the input said. HTML reads
--- ADD_DATE and LAST_MODIFIED independently, so a parse is the one place that
--- can state the shape; html/bookmarks_simple pins that it does not survive.
+-- A timestamp equal to createdAt carries no information, which is what
+-- bookmarks_same_timestamp pins and how the Go, OCaml and Rust implementations
+-- settled it. An update strictly *below* createdAt is a different thing and is
+-- untouched: henrytill/hbt-data#34.
 --
--- An update strictly below createdAt is untouched: henrytill/hbt-data#34.
+-- This is the whole of the normal form (henrytill/hbt-data#38), and three
+-- places maintain it. '<>' ends here, so a merge that demotes the later
+-- creation time to an update does not then record the earlier one twice.
+-- 'FromJSON' and "Hbt.Parser.HTML" end here because both take a history from
+-- input: HTML reads ADD_DATE and LAST_MODIFIED independently, so one anchor may
+-- state the same instant in both - html/bookmarks_simple. The remaining
+-- constructors - 'empty', 'mkEntity', 'fromPost' - are normal for a weaker
+-- reason: they record no updates at all. One that learns to would have to
+-- normalize too, and nothing but this note says so; henrytill/hbt-hs#54.
 normalize :: Entity -> Entity
 normalize entity =
   entity {updatedAt = maybe entity.updatedAt (`Set.delete` entity.updatedAt) (lookupCreatedAt entity.createdAt)}
@@ -215,7 +222,11 @@ mergedUpdates a b = a.updatedAt <> b.updatedAt <> creations
     creations = Set.fromList (Maybe.mapMaybe lookupCreatedAt [a.createdAt, b.createdAt])
 
 -- | Merging is field-wise, then 'normalize'd: the merged history holds both
--- creation times, and normalizing removes the one that won.
+-- creation times, and normalizing removes the one that won. The instant that
+-- survives is typically another anchor's creation time -
+-- bookmarks_superseded_creation.
+--
+-- There is deliberately no 'Monoid': see 'empty'.
 instance Semigroup Entity where
   a <> b =
     normalize
