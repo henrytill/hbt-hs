@@ -82,12 +82,14 @@ test-suite hbt-test
     hs-source-dirs:   test
     other-modules:
         Hbt.CollectionTest
+        Hbt.EntityProperties
         Hbt.Formatter.HTMLTest
         Hbt.Parser.HTMLTest
         TestUtilities
 
     default-language: GHC2024
     build-depends:
+        QuickCheck >=2.15.0.1 && <2.19,
         base >=4.20.1 && <4.23,
         containers >=0.7 && <0.9,
         dwergaz ^>=0.3.1.0,
