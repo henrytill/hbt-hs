@@ -186,25 +186,19 @@ instance FromJSON Entity where
 -- ADD_DATE and LAST_MODIFIED independently, so either history may already hold
 -- the instant that becomes createdAt: bookmarks_superseded_creation.
 --
--- Adding both times before removing the winner is what keeps '<>' associative.
--- However the merge is bracketed, each step puts its operands' creation times
--- back into the history, so the result is always every history and every
--- creation time in the merge, minus the single smallest creation time. A rule
--- that removed the winner only when the two times differ is not associative:
--- with creation times 1, 1 and 2, bracketing left gives no update and
--- bracketing right leaves the 1 that the first merge did not remove.
+-- Adding both times before removing the winner is what keeps '<>' associative;
+-- 'semigroupAssociativityTests' carries the counterexample that a rule removing
+-- the winner only when the two times differ fails.
 --
 -- The price of that law is that a merge also removes an update equal to a
 -- createdAt it did not move, which Go and Rust keep - henrytill/hbt-data#35,
 -- where this is the argument from associativity for dropping it. An update
 -- strictly below createdAt is untouched either way: henrytill/hbt-data#34.
 mergedUpdates :: Entity -> Entity -> Set Time
-mergedUpdates a b =
-  case Maybe.mapMaybe lookupCreatedAt [a.createdAt, b.createdAt] of
-    [] -> histories
-    creations -> Set.delete (minimum creations) (foldr Set.insert histories creations)
+mergedUpdates a b = maybe merged (`Set.delete` merged) (lookupCreatedAt (a.createdAt <> b.createdAt))
   where
-    histories = a.updatedAt <> b.updatedAt
+    creations = Set.fromList (Maybe.mapMaybe lookupCreatedAt [a.createdAt, b.createdAt])
+    merged = a.updatedAt <> b.updatedAt <> creations
 
 instance Semigroup Entity where
   a <> b =
