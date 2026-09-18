@@ -41,8 +41,8 @@ instance Arbitrary SmallEntity where
     -- parser's fold, and an anchor with no ADD_DATE parses to one.
     created <- frequency [(1, pure Nothing), (4, Just <$> elements instants)]
     updates <- sublistOf instants
-    let base = mempty {uri = exampleURI, updatedAt = Set.fromList (map Time.fromSeconds updates)}
-    pure . MkSmallEntity $ case created of
+    let base = Entity.empty {uri = exampleURI, updatedAt = Set.fromList (map Time.fromSeconds updates)}
+    pure . MkSmallEntity . Entity.normalize $ case created of
       Nothing -> base
       Just secs -> base {createdAt = Entity.mkCreatedAt (Time.fromSeconds secs)}
 
@@ -53,6 +53,10 @@ props :: [(String, Property)]
 props =
   [ ("Entity <> is associative", property associative)
   , ("merged timestamps do not depend on merge order", property timestampsCommute)
+  , ("Entity.empty is a left unit", property leftUnit)
+  , ("Entity.empty is a right unit", property rightUnit)
+  , ("<> is idempotent on a normalized entity", property idempotent)
+  , ("<> preserves normal form", property preservesNormalForm)
   ]
   where
     associative (MkSmallEntity a) (MkSmallEntity b) (MkSmallEntity c) =
@@ -60,3 +64,12 @@ props =
     timestampsCommute (MkSmallEntity a) (MkSmallEntity b) =
       timestamps (a <> b) === timestamps (b <> a)
     timestamps e = (e.createdAt, e.updatedAt)
+    -- Entity.empty is not a Monoid identity for the type -- an entity whose
+    -- history repeats its own creation time is a counterexample -- but it is
+    -- one for every entity the program can reach, which is what normalizing at
+    -- construction and decoding buys. See henrytill/hbt-data#38.
+    leftUnit (MkSmallEntity a) = (Entity.empty <> a) === a
+    rightUnit (MkSmallEntity a) = (a <> Entity.empty) === a
+    idempotent (MkSmallEntity a) = (a <> a) === a
+    preservesNormalForm (MkSmallEntity a) (MkSmallEntity b) =
+      Entity.normalize (a <> b) === (a <> b)

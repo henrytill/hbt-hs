@@ -22,6 +22,7 @@ module Hbt.Entity
   , Entity (..)
   , mkEntity
   , empty
+  , normalize
   , absorb
   , fromPost
   )
@@ -163,20 +164,34 @@ instance ToJSON Entity where
         ++ ["extended" .= entity.extended | not (null entity.extended)]
         ++ ["lastVisitedAt" .= entity.lastVisitedAt | Maybe.isJust (getLastVisitedAt entity.lastVisitedAt)]
 
+-- | Drop an update that merely repeats the creation time.
+--
+-- Every way of building an entity ends here: the merge rule leaves its result
+-- in this form, and construction and decoding are held to it too, so
+-- @updatedAt@ never contains @createdAt@ whatever the input said. HTML reads
+-- ADD_DATE and LAST_MODIFIED independently, so a parse is the one place that
+-- can state the shape; html/bookmarks_simple pins that it does not survive.
+--
+-- An update strictly below createdAt is untouched: henrytill/hbt-data#34.
+normalize :: Entity -> Entity
+normalize entity =
+  maybe entity (\t -> entity {updatedAt = Set.delete t entity.updatedAt}) (lookupCreatedAt entity.createdAt)
+
 instance FromJSON Entity where
   parseJSON = withObject "Entity" $ \v -> do
     createdAt <- v .: "createdAt"
-    MkEntity
-      <$> v .: "uri"
-      <*> pure (mkCreatedAt createdAt)
-      <*> v .: "updatedAt"
-      <*> v .: "names"
-      <*> v .: "labels"
-      <*> v .:? "isFeed" .!= mempty
-      <*> v .:? "shared" .!= mempty
-      <*> v .:? "toRead" .!= mempty
-      <*> v .:? "extended" .!= mempty
-      <*> v .:? "lastVisitedAt" .!= mempty
+    fmap normalize $
+      MkEntity
+        <$> v .: "uri"
+        <*> pure (mkCreatedAt createdAt)
+        <*> v .: "updatedAt"
+        <*> v .: "names"
+        <*> v .: "labels"
+        <*> v .:? "isFeed" .!= mempty
+        <*> v .:? "shared" .!= mempty
+        <*> v .:? "toRead" .!= mempty
+        <*> v .:? "extended" .!= mempty
+        <*> v .:? "lastVisitedAt" .!= mempty
 
 -- | The updates of two merged entities: both histories and both creation
 -- times, minus the creation time that wins.
@@ -218,27 +233,34 @@ instance Semigroup Entity where
       , lastVisitedAt = a.lastVisitedAt <> b.lastVisitedAt
       }
 
-instance Monoid Entity where
-  mempty =
-    MkEntity
-      { uri = mempty
-      , createdAt = mempty
-      , updatedAt = mempty
-      , names = mempty
-      , labels = mempty
-      , isFeed = mempty
-      , shared = mempty
-      , toRead = mempty
-      , extended = mempty
-      , lastVisitedAt = mempty
-      }
-
+-- | The entity every construction starts from.
+--
+-- This is deliberately not a 'Monoid' instance. '<>' normalizes -- it removes
+-- the creation time that wins from the merged history -- so for an entity whose
+-- history repeats its own createdAt, @a <> empty@ would strip that update and
+-- differ from @a@. Normalizing at construction and at decoding (see 'normalize')
+-- makes such an entity unreachable, but nothing in the type stops one being
+-- written down, and an instance asserts a law about every value of the type,
+-- not only the reachable ones. 'Semigroup' stays: associativity holds for all
+-- of them. See henrytill/hbt-data#38, and #54 for closing the type.
 empty :: Entity
-empty = mempty
+empty =
+  MkEntity
+    { uri = mempty
+    , createdAt = mempty
+    , updatedAt = mempty
+    , names = mempty
+    , labels = mempty
+    , isFeed = mempty
+    , shared = mempty
+    , toRead = mempty
+    , extended = mempty
+    , lastVisitedAt = mempty
+    }
 
 mkEntity :: URI -> Time -> Maybe Name -> Set Label -> Entity
 mkEntity uri createdAt maybeName labels =
-  mempty
+  empty
     { uri
     , createdAt = mkCreatedAt createdAt
     , names = maybe Set.empty Set.singleton maybeName

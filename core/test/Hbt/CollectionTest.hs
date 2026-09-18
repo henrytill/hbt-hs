@@ -292,6 +292,36 @@ edgeTests = do
       , assertBool "addEdges creates backward edge" (Vector.elem id1 bidirectionalEdgesFromId2)
       ]
 
+-- | Decoding normalizes, so a serialized collection cannot reintroduce an
+-- entity the merge rule would have rejected.
+--
+-- The corpus has no YAML input format, so this half of the invariant
+-- (henrytill/hbt-data#38) is pinned here rather than by a fixture.
+decodeNormalizesTests :: IO Test
+decodeNormalizesTests = do
+  let yaml =
+        versionedYaml
+          "0.1.0"
+          1
+          [ "- id: 0\n  entity:\n    uri: https://example.com/\n    createdAt: 1700000000\n"
+              <> "    updatedAt:\n    - 1700000000\n    - 1800000000\n    names: []\n    labels: []\n  edges: []\n"
+          ]
+  repr <- Yaml.decodeThrow @IO @CollectionRepr (Text.Encoding.encodeUtf8 yaml)
+  collection <- fromRepr repr
+  let decoded = lookupEntity (safeURI "https://example.com") collection
+  pure $
+    group
+      "Decoding normalizes the update history"
+      [ assertEqual
+          "an update repeating createdAt does not survive the wire"
+          (Just (Set.singleton (Time.fromSeconds 1800000000)))
+          ((.updatedAt) <$> decoded)
+      , assertEqual
+          "createdAt is untouched"
+          (Just (Entity.mkCreatedAt (Time.fromSeconds 1700000000)))
+          ((.createdAt) <$> decoded)
+      ]
+
 -- | Decode a YAML collection, reporting whether it was accepted.
 decodes :: Text -> IO Bool
 decodes yaml = do
@@ -418,6 +448,7 @@ allTests = do
       , fromReprTests
       , versionTests
       , roundTripTests
+      , decodeNormalizesTests
       ]
   pure $ group "Hbt.Collection tests" (pureTests ++ ioTests)
   where
