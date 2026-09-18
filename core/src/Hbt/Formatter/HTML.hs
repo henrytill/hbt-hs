@@ -48,8 +48,10 @@ getFirstName def names
   | Set.null names = def
   | otherwise = (Set.findMin names).unName
 
--- | The most recent update, if the entity has one. @updatedAt@ never holds the
--- creation time, so an entity that was never updated has no LAST_MODIFIED.
+-- | The most recent update, if the entity has one, so an entity that was never
+-- updated has no LAST_MODIFIED. An anchor stating the same instant in ADD_DATE
+-- and LAST_MODIFIED parses to an entity whose history holds its own creation
+-- time, and that reproduces both attributes: html/bookmarks_simple.
 getLastModified :: Entity -> Maybe Time
 getLastModified entity = Set.lookupMax entity.updatedAt
 
