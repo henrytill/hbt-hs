@@ -148,8 +148,11 @@ absorbSupersededCreationTests =
         ]
 
 -- | '<>' is associative even when a history holds an instant equal to its own
--- createdAt, the shape html/bookmarks_simple parses. Removing the winning
--- creation time only when the two differ passes every fixture and fails here:
+-- createdAt. No fixture parses to that shape any more -- normalizing at the
+-- parse boundary is what removed it, and 'a' below is written by hand because
+-- of that -- but 'Entity' does not forbid it, and the law is asserted about
+-- every value of the type. Removing the winning creation time only when the two
+-- differ passes every fixture and fails here:
 -- bracketing left records no update, bracketing right keeps the 1000 that the
 -- first merge had no reason to remove. See henrytill/hbt-data#35.
 semigroupAssociativityTests :: Test
