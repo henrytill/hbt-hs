@@ -30,7 +30,7 @@ import Text.Microstache qualified as Microstache
 
 data TemplateEntity = MkTemplateEntity
   { href :: Text
-  , addDate :: Text
+  , addDate :: Maybe Text
   , title :: Text
   , lastModified :: Maybe Text
   , tags :: Maybe Text
@@ -89,7 +89,7 @@ fromEntity :: Entity -> TemplateEntity
 fromEntity entity =
   MkTemplateEntity
     { href = escapeAttribute href
-    , addDate = Time.toText (Entity.getCreatedAt entity.createdAt)
+    , addDate = fmap Time.toText (Entity.lookupCreatedAt entity.createdAt)
     , title = escapeText (getFirstName href entity.names)
     , lastModified = fmap Time.toText (getLastModified entity)
     , tags = if null tagsList then Nothing else Just (escapeAttribute (Text.intercalate "," tagsList))

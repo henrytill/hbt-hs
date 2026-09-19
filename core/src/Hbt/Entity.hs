@@ -17,7 +17,6 @@ module Hbt.Entity
   , getLastVisitedAt
   , CreatedAt
   , mkCreatedAt
-  , getCreatedAt
   , lookupCreatedAt
   , Entity (..)
   , mkEntity
@@ -109,6 +108,15 @@ instance Monoid LastVisitedAt where
 -- with the absent value as the identity. Wrapping @Min@ in @Maybe@ gets both
 -- instances from the ones they are built out of, rather than nominating a
 -- sentinel time to stand in for "none recorded".
+--
+-- That absence reaches the wire: 'toJSON' omits @createdAt@ when there is
+-- none, as it already did for the optional flags, and 'parseJSON' reads an
+-- omitted or null key back as absent. It used to be written as the epoch,
+-- which decoded as a real instant -- so an undated entity round-tripped into
+-- one created on 1970-01-01 and merged differently afterwards. This
+-- implementation was already merging the right way and only lacked the wire
+-- form; henrytill/hbt-data#37 gave it one. A @createdAt@ of 0 is a real
+-- instant and is kept.
 newtype CreatedAt = MkCreatedAt (Maybe (Min Time))
   deriving stock (Eq, Ord, Show, Generic)
   deriving newtype (Semigroup, Monoid)
@@ -119,14 +127,6 @@ mkCreatedAt = MkCreatedAt . Just . Min
 -- | The recorded creation time, if there is one.
 lookupCreatedAt :: CreatedAt -> Maybe Time
 lookupCreatedAt (MkCreatedAt a) = fmap getMin a
-
--- | The creation time, defaulting to the epoch.
---
--- An entity with none recorded is one that was never given a time - only
--- 'empty' and an HTML anchor with no ADD_DATE - and the epoch is what the
--- minimum of an empty update history used to give for those.
-getCreatedAt :: CreatedAt -> Time
-getCreatedAt = Maybe.fromMaybe Time.epoch . lookupCreatedAt
 
 data Entity = MkEntity
   { uri :: URI
@@ -155,11 +155,14 @@ instance ToJSON Entity where
   toJSON entity =
     object $
       [ "uri" .= entity.uri
-      , "createdAt" .= getCreatedAt entity.createdAt
       , "updatedAt" .= entity.updatedAt
       , "names" .= entity.names
       , "labels" .= entity.labels
       ]
+        -- Omitted when there is none, rather than written as the epoch. Without a wire form for
+        -- absence an undated entity decoded back as one created on 1970-01-01 and merged
+        -- differently afterwards: henrytill/hbt-data#37.
+        ++ ["createdAt" .= t | Just t <- [lookupCreatedAt entity.createdAt]]
         ++ ["isFeed" .= s | Just s <- [getIsFeed entity.isFeed]]
         ++ ["shared" .= s | Just s <- [getShared entity.shared]]
         ++ ["toRead" .= t | Just t <- [getToRead entity.toRead]]
@@ -194,11 +197,13 @@ normalize entity =
 
 instance FromJSON Entity where
   parseJSON = withObject "Entity" $ \v -> do
-    createdAt <- v .: "createdAt"
+    -- Absent and null both mean absent, as they do for the optional flags. A createdAt of 0 is a
+    -- real instant and is kept: henrytill/hbt-data#37.
+    createdAt <- v .:? "createdAt"
     fmap normalize $
       MkEntity
         <$> v .: "uri"
-        <*> pure (mkCreatedAt createdAt)
+        <*> pure (MkCreatedAt (fmap Min createdAt))
         <*> v .: "updatedAt"
         <*> v .: "names"
         <*> v .: "labels"

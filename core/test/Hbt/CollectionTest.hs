@@ -325,6 +325,74 @@ decodeNormalizesTests = do
           ((.createdAt) <$> decoded)
       ]
 
+-- | An absent creation time has a wire form of its own: the key is omitted,
+-- not written as the epoch.
+--
+-- That is what lets an undated entity decode back undated rather than as one
+-- created on 1970-01-01, which would then merge differently -- the
+-- serialization-only divergence henrytill/hbt-data#37 closed. This
+-- implementation was the one already merging the right way and only lacking
+-- the wire form, so this is the half that changed here.
+--
+-- A createdAt of 0 is a real instant and is kept, which is the distinction the
+-- wire form buys: reading it by truthiness rather than by presence collapses
+-- the two.
+--
+-- Only the decoding half is here. The encoding half -- that an undated entity
+-- omits the key rather than writing 0 -- is pinned by the corpus, in
+-- html/bookmarks_undated, whose expected YAML carries no createdAt.
+absentCreatedAtTests :: IO Test
+absentCreatedAtTests = do
+  undated <- decodeCollection (collectionYaml 1 [undatedNode 0 "https://example.com/"])
+  nulled <- decodeCollection (collectionYaml 1 [nullCreatedAtNode 0 "https://example.com/"])
+  epoch <- decodeCollection (collectionYaml 1 [datedNode 0 "https://example.com/" 0])
+  let createdAtOf = fmap (.createdAt) . lookupEntity (safeURI "https://example.com")
+  pure $
+    group
+      "An absent creation time"
+      [ assertEqual
+          "an omitted createdAt decodes as absent"
+          (Just mempty)
+          (createdAtOf undated)
+      , assertEqual
+          "an explicit null decodes as absent"
+          (Just mempty)
+          (createdAtOf nulled)
+      , assertEqual
+          "a createdAt of 0 is a real instant, not absence"
+          (Just (Entity.mkCreatedAt (Time.fromSeconds 0)))
+          (createdAtOf epoch)
+      ]
+
+-- | A node whose entity carries no createdAt key at all.
+undatedNode :: Int -> Text -> Text
+undatedNode nodeId uri =
+  "- id: "
+    <> Text.pack (show nodeId)
+    <> "\n  entity:\n    uri: "
+    <> uri
+    <> "\n    updatedAt: []\n    names: []\n    labels: []\n  edges: []\n"
+
+-- | A node whose createdAt is an explicit null.
+nullCreatedAtNode :: Int -> Text -> Text
+nullCreatedAtNode nodeId uri =
+  "- id: "
+    <> Text.pack (show nodeId)
+    <> "\n  entity:\n    uri: "
+    <> uri
+    <> "\n    createdAt: null\n    updatedAt: []\n    names: []\n    labels: []\n  edges: []\n"
+
+-- | A node with an explicit createdAt.
+datedNode :: Int -> Text -> Int64 -> Text
+datedNode nodeId uri created =
+  "- id: "
+    <> Text.pack (show nodeId)
+    <> "\n  entity:\n    uri: "
+    <> uri
+    <> "\n    createdAt: "
+    <> Text.pack (show created)
+    <> "\n    updatedAt: []\n    names: []\n    labels: []\n  edges: []\n"
+
 -- | Decode a YAML collection, the way the CLI does.
 decodeCollection :: Text -> IO Collection
 decodeCollection yaml = do
@@ -465,6 +533,7 @@ allTests = do
       , versionTests
       , roundTripTests
       , decodeNormalizesTests
+      , absentCreatedAtTests
       ]
   pure $ group "Hbt.Collection tests" (pureTests ++ ioTests)
   where
