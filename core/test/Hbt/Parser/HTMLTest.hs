@@ -8,6 +8,8 @@ import Data.Text (Text)
 import Hbt (Format (..), formatWith)
 import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity (..), Extended (..), Label (..), Name (..), getToRead)
+import Hbt.Entity qualified as Entity
+import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
 import Hbt.Parser.HTML qualified as HTMLParser
 import Test.Dwergaz
@@ -143,6 +145,35 @@ attributeRefTests = testIO "decodes character references in attributes" $ do
       , assertEqual "a non-reference ampersand is left alone" ["a&b", "c&notaref;d"] (labelsOf bare)
       ]
 
+-- | An anchor carrying exactly the ADD_DATE given, with no other attribute.
+addDateBookmark :: Text -> Text
+addDateBookmark attrs =
+  "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<DL><p>\n    <DT><A HREF=\"https://e.test/\" "
+    <> attrs
+    <> ">Title</A>\n</DL><p>\n"
+
+-- | An ADD_DATE that does not state a time states nothing, the way LAST_MODIFIED and
+-- LAST_VISIT already read theirs. Reading it as the epoch instead invents a 1970 creation
+-- time that, being a 'Min', then wins every merge against the real one -- and since
+-- henrytill/hbt-data#37 gave absence a wire form, that invention is no longer
+-- indistinguishable from an entity that simply has no creation time.
+addDateTests :: IO Test
+addDateTests = testIO "reads an ADD_DATE that states no time as an absence" $ do
+  stated <- parseOnly (addDateBookmark "ADD_DATE=\"1700000000\"")
+  empty <- parseOnly (addDateBookmark "ADD_DATE=\"\"")
+  garbled <- parseOnly (addDateBookmark "ADD_DATE=\"not-a-time\"")
+  absent <- parseOnly (addDateBookmark "")
+  epoch <- parseOnly (addDateBookmark "ADD_DATE=\"0\"")
+  pure $
+    group
+      "ADD_DATE parsing"
+      [ assertEqual "a stated time is read" (Just (Time.fromSeconds 1700000000)) (Entity.lookupCreatedAt stated.createdAt)
+      , assertEqual "an empty ADD_DATE states nothing" Nothing (Entity.lookupCreatedAt empty.createdAt)
+      , assertEqual "an unparsable ADD_DATE states nothing" Nothing (Entity.lookupCreatedAt garbled.createdAt)
+      , assertEqual "no ADD_DATE at all states nothing" Nothing (Entity.lookupCreatedAt absent.createdAt)
+      , assertEqual "a stated epoch is a real instant" (Just (Time.fromSeconds 0)) (Entity.lookupCreatedAt epoch.createdAt)
+      ]
+
 allTests :: IO Test
 allTests = do
   tests <-
@@ -153,6 +184,7 @@ allTests = do
       , roundTripTests
       , trailingBookmarkTests
       , attributeRefTests
+      , addDateTests
       ]
   pure (group "Hbt.Parser.HTML tests" tests)
 
