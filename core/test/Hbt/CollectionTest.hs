@@ -366,32 +366,15 @@ absentCreatedAtTests = do
 
 -- | A node whose entity carries no createdAt key at all.
 undatedNode :: Int -> Text -> Text
-undatedNode nodeId uri =
-  "- id: "
-    <> Text.pack (show nodeId)
-    <> "\n  entity:\n    uri: "
-    <> uri
-    <> "\n    updatedAt: []\n    names: []\n    labels: []\n  edges: []\n"
+undatedNode nodeId uri = nodeWithCreatedAt nodeId uri "" [] "[]"
 
 -- | A node whose createdAt is an explicit null.
 nullCreatedAtNode :: Int -> Text -> Text
-nullCreatedAtNode nodeId uri =
-  "- id: "
-    <> Text.pack (show nodeId)
-    <> "\n  entity:\n    uri: "
-    <> uri
-    <> "\n    createdAt: null\n    updatedAt: []\n    names: []\n    labels: []\n  edges: []\n"
+nullCreatedAtNode nodeId uri = nodeWithCreatedAt nodeId uri "\n    createdAt: null" [] "[]"
 
 -- | A node with an explicit createdAt.
 datedNode :: Int -> Text -> Int64 -> Text
-datedNode nodeId uri created =
-  "- id: "
-    <> Text.pack (show nodeId)
-    <> "\n  entity:\n    uri: "
-    <> uri
-    <> "\n    createdAt: "
-    <> Text.pack (show created)
-    <> "\n    updatedAt: []\n    names: []\n    labels: []\n  edges: []\n"
+datedNode nodeId uri created = nodeWithCreatedAt nodeId uri (createdAtYaml created) [] "[]"
 
 -- | Decode a YAML collection, the way the CLI does.
 decodeCollection :: Text -> IO Collection
@@ -410,12 +393,22 @@ node nodeId uri = nodeWith nodeId uri []
 
 -- | 'node' with an update history, which only 'decodeNormalizesTests' needs.
 nodeWith :: Int -> Text -> [Int64] -> Text -> Text
-nodeWith nodeId uri updates edges =
+nodeWith nodeId uri = nodeWithCreatedAt nodeId uri (createdAtYaml 1700000000)
+
+createdAtYaml :: Int64 -> Text
+createdAtYaml created = "\n    createdAt: " <> Text.pack (show created)
+
+-- | The one node shape every fixture here is built from. The createdAt line is passed in
+-- verbatim so a test can omit it, null it, or state an instant -- the distinction
+-- henrytill/hbt-data#37 turns on.
+nodeWithCreatedAt :: Int -> Text -> Text -> [Int64] -> Text -> Text
+nodeWithCreatedAt nodeId uri createdAt updates edges =
   "- id: "
     <> Text.pack (show nodeId)
     <> "\n  entity:\n    uri: "
     <> uri
-    <> "\n    createdAt: 1700000000\n    updatedAt:"
+    <> createdAt
+    <> "\n    updatedAt:"
     <> updatesYaml
     <> "\n    names: []\n    labels: []\n  edges: "
     <> edges
