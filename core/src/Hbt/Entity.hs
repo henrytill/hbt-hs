@@ -203,7 +203,7 @@ instance FromJSON Entity where
     fmap normalize $
       MkEntity
         <$> v .: "uri"
-        <*> pure (MkCreatedAt (fmap Min createdAt))
+        <*> pure (maybe mempty mkCreatedAt createdAt)
         <*> v .: "updatedAt"
         <*> v .: "names"
         <*> v .: "labels"
