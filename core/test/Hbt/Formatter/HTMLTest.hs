@@ -91,6 +91,26 @@ lastModifiedTests = testIO "emits LAST_MODIFIED only for a real update" $ do
       , assertBool "ADD_DATE still names the creation time" ("ADD_DATE=\"1700000000\"" `Text.isInfixOf` wasUpdated)
       ]
 
+-- | The encoding half of henrytill/hbt-data#37. The decoding half is pinned in
+-- 'Hbt.CollectionTest'; without this, reintroducing an epoch default on the way out would
+-- leave the whole unit suite green and be caught only by the corpus, which is a submodule
+-- and is silently absent from a checkout made without @--recurse-submodules@.
+addDateTests :: IO Test
+addDateTests = testIO "emits ADD_DATE only for a creation time that exists" $ do
+  let dated = entityWith "https://e.test/" Nothing Set.empty []
+      undated = dated {Entity.createdAt = mempty}
+      epoch = dated {Entity.createdAt = Entity.mkCreatedAt (Time.fromSeconds 0)}
+  withCreation <- formatEntity dated
+  withoutCreation <- formatEntity undated
+  atEpoch <- formatEntity epoch
+  pure $
+    group
+      "ADD_DATE"
+      [ assertBool "present when the entity has a creation time" ("ADD_DATE=\"1700000000\"" `Text.isInfixOf` withCreation)
+      , assertBool "omitted when the entity has none" (not ("ADD_DATE" `Text.isInfixOf` withoutCreation))
+      , assertBool "a creation time of 0 is a real instant" ("ADD_DATE=\"0\"" `Text.isInfixOf` atEpoch)
+      ]
+
 allTests :: IO Test
 allTests = do
   tests <-
@@ -100,6 +120,7 @@ allTests = do
       , quotePreservationTests
       , schemePreservationTests
       , lastModifiedTests
+      , addDateTests
       ]
   pure (group "Hbt.Formatter.HTML tests" tests)
 
