@@ -12,7 +12,6 @@ import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.State.Strict (MonadState, StateT (..), execStateT)
 import Data.Char qualified as Char
 import Data.Coerce (coerce)
-import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
@@ -192,8 +191,8 @@ accumulateEntity (entity, tagged) (Attr name rawValue) =
       uri <- either throwIO pure (URI.parse value)
       keep (entity {uri})
     "add_date" ->
-      let createdAtTime = Maybe.fromMaybe Time.epoch (Time.parseTimestamp value)
-       in keep (entity {createdAt = Entity.mkCreatedAt createdAtTime})
+      let createdAt = maybe entity.createdAt Entity.mkCreatedAt (Time.parseTimestamp value)
+       in keep (entity {createdAt})
     "last_modified" ->
       let modifiedTime = Time.parseTimestamp value
           updatedAt = maybe entity.updatedAt (`Set.insert` entity.updatedAt) modifiedTime
