@@ -1,0 +1,3 @@
+pinboard/json/url_caret_in_path  # hbt-hs#58
+pinboard/json/url_file_drive_letter_pipe  # hbt-hs#58
+pinboard/json/url_opaque_path_trailing_space  # hbt-hs#58
