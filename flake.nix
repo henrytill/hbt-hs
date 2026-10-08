@@ -176,6 +176,17 @@
             };
           };
         };
+      }
+      // prev.lib.optionalAttrs isStatic {
+        # sqlite reaches the static GHC through elfutils, python3, and
+        # util-linux, and so is built only to build the compiler; no static
+        # executable links it. No binary cache carries the musl build, and its
+        # test suite fails under musl (the fuzzcheck sanitizer builds, and
+        # test/capi3c.test), which nixpkgs reports as a build failure since
+        # NixOS/nixpkgs@0dc32d7e3b.
+        sqlite = prev.sqlite.overrideAttrs (_: {
+          doCheck = false;
+        });
       };
     in
     flake-utils.lib.eachDefaultSystem (
