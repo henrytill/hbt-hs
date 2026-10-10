@@ -55,53 +55,15 @@
             '';
           }
         );
+      # pkgsStatic links executables statically by default.  Dropping the
+      # library component keeps its static archive out of the output.
       maybeStaticExecutable =
-        isStatic: final: prev: drv:
+        isStatic: final: drv:
         final.haskell.lib.overrideCabal drv (
           _:
-          # Partially adapted from:
-          # https://sigkill.dk/blog/2024-05-22-static-linking-on-nix-with-ghc96.html
-          #
-          # Linking libdw's dependencies by hand allows us to build GHC with DWARF support.
           final.lib.optionalAttrs isStatic {
             isLibrary = false;
             isExecutable = true;
-            enableSharedExecutables = false;
-            enableSharedLibraries = false;
-            configureFlags =
-              let
-                bzip2 = prev.bzip2.override {
-                  enableStatic = true;
-                };
-                gmp = prev.gmp.overrideAttrs (_: {
-                  dontDisableStatic = true;
-                });
-                libffi = prev.libffi.overrideAttrs (_: {
-                  dontDisableStatic = true;
-                });
-                xz = prev.xz.override {
-                  enableStatic = true;
-                };
-                zlib = final.zlib.static;
-                zstd = prev.zstd.override {
-                  enableStatic = true;
-                };
-              in
-              [
-                "--ghc-option=-split-sections"
-                "--ghc-option=-optl=-static"
-                "--ghc-option=-optl=-lbz2"
-                "--ghc-option=-optl=-lelf"
-                "--ghc-option=-optl=-llzma"
-                "--ghc-option=-optl=-lz"
-                "--ghc-option=-optl=-lzstd"
-                "--extra-lib-dirs=${bzip2.out}/lib"
-                "--extra-lib-dirs=${gmp}/lib"
-                "--extra-lib-dirs=${libffi}/lib"
-                "--extra-lib-dirs=${xz.out}/lib"
-                "--extra-lib-dirs=${zlib}/lib"
-                "--extra-lib-dirs=${zstd.out}/lib"
-              ];
           }
         );
       overlay = isStatic: final: prev: {
@@ -109,40 +71,6 @@
           packages = prev.haskell.packages // {
             ${ghcName} = prev.haskell.packages.${ghcName}.override {
               overrides = hfinal: hprev: {
-                ghc = hprev.ghc.override (
-                  prev.lib.optionalAttrs isStatic {
-                    enableNuma = false;
-                  }
-                );
-                # callCabal2nix runs cabal2nix at evaluation time, with a
-                # cabal2nix built by the package set it is called from.
-                # pkgsMusl is not a cross set, so evaluating the static
-                # packages meant building cabal2nix, and the Haskell libraries
-                # under it, against musl. What cabal2nix writes depends only on
-                # the compiler and the platform, which the two sets share, so
-                # the static set takes the expression from the glibc cabal2nix.
-                callCabal2nix =
-                  if isStatic then
-                    name: src: args:
-                    let
-                      glibc = nixpkgs.legacyPackages.${final.stdenv.hostPlatform.system}.haskell.packages.${ghcName};
-                      expr = glibc.haskellSrc2nix {
-                        inherit name;
-                        src =
-                          if prev.lib.canCleanSource src then
-                            prev.lib.cleanSourceWith {
-                              inherit src;
-                              filter = path: _: prev.lib.hasSuffix ".cabal" path;
-                            }
-                          else
-                            src;
-                      };
-                    in
-                    final.haskell.lib.overrideCabal (hfinal.callPackage expr args) (_: {
-                      inherit src;
-                    })
-                  else
-                    hprev.callCabal2nix;
                 commonmark-initial = hfinal.callCabal2nix "commonmark-initial" commonmark-initial-src { };
                 dwergaz = hfinal.callCabal2nix "dwergaz" dwergaz-src { };
                 uri-bytestring = hfinal.callCabal2nix "uri-bytestring" uri-bytestring-src { };
@@ -150,7 +78,7 @@
                   path = ./attic;
                   name = "hbt-attic-src";
                 }) { };
-                hbt-cli = maybeStaticExecutable isStatic final prev (
+                hbt-cli = maybeStaticExecutable isStatic final (
                   stampCliRevision final (
                     hfinal.callCabal2nix "hbt-cli" (builtins.path {
                       path = ./cli;
@@ -162,7 +90,7 @@
                   path = ./core;
                   name = "hbt-core-src";
                 }) { };
-                hbt-pinboard-client = maybeStaticExecutable isStatic final prev (
+                hbt-pinboard-client = maybeStaticExecutable isStatic final (
                   hfinal.callCabal2nix "hbt-pinboard-client" (builtins.path {
                     path = ./pinboard-client;
                     name = "hbt-pinboard-client-src";
@@ -176,32 +104,21 @@
             };
           };
         };
-      }
-      // prev.lib.optionalAttrs isStatic {
-        # sqlite reaches the static GHC through elfutils, python3, and
-        # util-linux, and so is built only to build the compiler; no static
-        # executable links it. No binary cache carries the musl build, and its
-        # test suite fails under musl (the fuzzcheck sanitizer builds, and
-        # test/capi3c.test), which nixpkgs reports as a build failure since
-        # NixOS/nixpkgs@0dc32d7e3b.
-        sqlite = prev.sqlite.overrideAttrs (_: {
-          doCheck = false;
-        });
       };
     in
     flake-utils.lib.eachDefaultSystem (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system}.extend (overlay false);
-        pkgsMusl = nixpkgs.legacyPackages.${system}.pkgsMusl.extend (overlay true);
+        pkgsStatic = nixpkgs.legacyPackages.${system}.pkgsStatic.extend (overlay true);
       in
       {
         packages = rec {
           hbt-attic = pkgs.haskell.packages.${ghcName}.hbt-attic;
           hbt-cli = pkgs.haskell.packages.${ghcName}.hbt-cli;
-          hbt-cli-static = pkgsMusl.haskell.packages.${ghcName}.hbt-cli;
+          hbt-cli-static = pkgsStatic.haskell.packages.${ghcName}.hbt-cli;
           hbt-pinboard-client = pkgs.haskell.packages.${ghcName}.hbt-pinboard-client;
-          hbt-pinboard-client-static = pkgsMusl.haskell.packages.${ghcName}.hbt-pinboard-client;
+          hbt-pinboard-client-static = pkgsStatic.haskell.packages.${ghcName}.hbt-pinboard-client;
           all = pkgs.symlinkJoin {
             pname = "hbt-all";
             version = "0.1.0.0";
@@ -211,7 +128,7 @@
               hbt-pinboard-client
             ];
           };
-          all-static = pkgsMusl.symlinkJoin {
+          all-static = pkgsStatic.symlinkJoin {
             pname = "hbt-all-static";
             version = "0.1.0.0";
             paths = [
@@ -220,6 +137,37 @@
               hbt-pinboard-client-static
             ];
           };
+          # Everything the static executables are built from, the cross GHC
+          # and the Haskell libraries above all, gathered into one path whose
+          # runtime closure is that build closure, so a binary cache can pin it.
+          # As shellFor does, it combines the Cabal dependencies of the project's
+          # packages less the packages themselves, so the path changes with
+          # nixpkgs and the dependency lists but not with the project's source.
+          # A package of the static set takes them, so its inputs also carry the
+          # cross GHC and the external interpreter that runs Template Haskell.
+          all-static-deps =
+            let
+              hpkgs = pkgsStatic.haskell.packages.${ghcName};
+              selected = [
+                hpkgs.hbt-cli
+                hpkgs.hbt-core
+                hpkgs.hbt-pinboard-client
+                hpkgs.hbt-pinboard-types
+              ];
+              isNotSelected = input: pkgs.lib.all (p: input.outPath or null != p.outPath) selected;
+              depends = pkgs.lib.zipAttrsWith (_: vals: pkgs.lib.filter isNotSelected (pkgs.lib.concatLists vals)) (
+                map (p: p.getCabalDeps) selected
+              );
+            in
+            (hpkgs.mkDerivation (
+              {
+                pname = "hbt-all-static-deps";
+                version = "0.1.0.0";
+                src = pkgs.emptyDirectory;
+                license = pkgs.lib.licenses.isc;
+              }
+              // depends
+            )).inputDerivation;
           default = all;
         };
         checks.conformance = hbt-data.lib.${system}.check {
