@@ -137,6 +137,37 @@
               hbt-pinboard-client-static
             ];
           };
+          # Everything the static executables are built from, the cross GHC
+          # and the Haskell libraries above all, gathered into one path whose
+          # runtime closure is that build closure, so a binary cache can pin it.
+          # As shellFor does, it combines the Cabal dependencies of the project's
+          # packages less the packages themselves, so the path changes with
+          # nixpkgs and the dependency lists but not with the project's source.
+          # A package of the static set takes them, so its inputs also carry the
+          # cross GHC and the external interpreter that runs Template Haskell.
+          all-static-deps =
+            let
+              hpkgs = pkgsStatic.haskell.packages.${ghcName};
+              selected = [
+                hpkgs.hbt-cli
+                hpkgs.hbt-core
+                hpkgs.hbt-pinboard-client
+                hpkgs.hbt-pinboard-types
+              ];
+              isNotSelected = input: pkgs.lib.all (p: input.outPath or null != p.outPath) selected;
+              depends = pkgs.lib.zipAttrsWith (_: vals: pkgs.lib.filter isNotSelected (pkgs.lib.concatLists vals)) (
+                map (p: p.getCabalDeps) selected
+              );
+            in
+            (hpkgs.mkDerivation (
+              {
+                pname = "hbt-all-static-deps";
+                version = "0.1.0.0";
+                src = pkgs.emptyDirectory;
+                license = pkgs.lib.licenses.isc;
+              }
+              // depends
+            )).inputDerivation;
           default = all;
         };
         checks.conformance = hbt-data.lib.${system}.check {
