@@ -69,7 +69,7 @@ parseWith Markdown = Markdown.parse "content"
 parseWith HTML = HTMLParser.parse
 
 templateBytes :: ByteString
-templateBytes = $(FileEmbed.embedFileRelative "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache")
+templateBytes = $(FileEmbed.embedFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache")
 
 formatWith :: Format To -> Collection -> IO Text
 formatWith YAML collection = do
