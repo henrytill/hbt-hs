@@ -58,15 +58,15 @@
       # pkgsStatic links executables statically by default.  Dropping the
       # library component keeps its static archive out of the output.
       maybeStaticExecutable =
-        isStatic: final: drv:
+        final: drv:
         final.haskell.lib.overrideCabal drv (
           _:
-          final.lib.optionalAttrs isStatic {
+          final.lib.optionalAttrs final.stdenv.hostPlatform.isStatic {
             isLibrary = false;
             isExecutable = true;
           }
         );
-      overlay = isStatic: final: prev: {
+      overlay = final: prev: {
         haskell = prev.haskell // {
           packages = prev.haskell.packages // {
             ${ghcName} = prev.haskell.packages.${ghcName}.override {
@@ -78,7 +78,7 @@
                   path = ./attic;
                   name = "hbt-attic-src";
                 }) { };
-                hbt-cli = maybeStaticExecutable isStatic final (
+                hbt-cli = maybeStaticExecutable final (
                   stampCliRevision final (
                     hfinal.callCabal2nix "hbt-cli" (builtins.path {
                       path = ./cli;
@@ -90,7 +90,7 @@
                   path = ./core;
                   name = "hbt-core-src";
                 }) { };
-                hbt-pinboard-client = maybeStaticExecutable isStatic final (
+                hbt-pinboard-client = maybeStaticExecutable final (
                   hfinal.callCabal2nix "hbt-pinboard-client" (builtins.path {
                     path = ./pinboard-client;
                     name = "hbt-pinboard-client-src";
@@ -109,8 +109,8 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = nixpkgs.legacyPackages.${system}.extend (overlay false);
-        pkgsStatic = nixpkgs.legacyPackages.${system}.pkgsStatic.extend (overlay true);
+        pkgs = nixpkgs.legacyPackages.${system}.extend overlay;
+        pkgsStatic = nixpkgs.legacyPackages.${system}.pkgsStatic.extend overlay;
       in
       {
         packages = rec {
