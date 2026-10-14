@@ -38,6 +38,14 @@
     }:
     let
       ghcName = "ghc9103";
+      # The project's packages that the static set builds.  hbt-attic is built
+      # only against glibc.
+      staticPackages = hpkgs: [
+        hpkgs.hbt-cli
+        hpkgs.hbt-core
+        hpkgs.hbt-pinboard-client
+        hpkgs.hbt-pinboard-types
+      ];
       # Stamp the revision the executable is built from into project.h, the
       # header cli/exe/Version.hs includes.  A source with no git metadata
       # carries neither attribute, and the header in the repository defaults the
@@ -152,12 +160,7 @@
           all-static-deps =
             let
               hpkgs = pkgsStatic.haskell.packages.${ghcName};
-              selected = [
-                hpkgs.hbt-cli
-                hpkgs.hbt-core
-                hpkgs.hbt-pinboard-client
-                hpkgs.hbt-pinboard-types
-              ];
+              selected = staticPackages hpkgs;
               isNotSelected = input: pkgs.lib.all (p: input.outPath or null != p.outPath) selected;
               depends = pkgs.lib.zipAttrsWith (_: vals: pkgs.lib.filter isNotSelected (pkgs.lib.concatLists vals)) (
                 map (p: p.getCabalDeps) selected
@@ -179,13 +182,7 @@
           waivers = ./conformance.waivers;
         };
         devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
-          packages = hpkgs: [
-            hpkgs.hbt-attic
-            hpkgs.hbt-cli
-            hpkgs.hbt-core
-            hpkgs.hbt-pinboard-client
-            hpkgs.hbt-pinboard-types
-          ];
+          packages = hpkgs: [ hpkgs.hbt-attic ] ++ staticPackages hpkgs;
           withHoogle = true;
           nativeBuildInputs = with pkgs; [
             cabal-install
