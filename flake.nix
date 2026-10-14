@@ -55,17 +55,12 @@
             '';
           }
         );
-      # pkgsStatic links executables statically by default.  Dropping the
-      # library component keeps its static archive out of the output.
+      # pkgsStatic links executables statically by default.
+      # justStaticExecutables keeps the library component, its documentation,
+      # and any reference to GHC out of the output.
       maybeStaticExecutable =
         final: drv:
-        final.haskell.lib.overrideCabal drv (
-          _:
-          final.lib.optionalAttrs final.stdenv.hostPlatform.isStatic {
-            isLibrary = false;
-            isExecutable = true;
-          }
-        );
+        if final.stdenv.hostPlatform.isStatic then final.haskell.lib.justStaticExecutables drv else drv;
       overlay = final: prev: {
         haskell = prev.haskell // {
           packages = prev.haskell.packages // {
