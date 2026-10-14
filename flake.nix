@@ -61,6 +61,11 @@
       maybeStaticExecutable =
         final: drv:
         if final.stdenv.hostPlatform.isStatic then final.haskell.lib.justStaticExecutables drv else drv;
+      # The static executables are not built for profiling, so the project's own
+      # libraries, which change with every commit, skip their profiled copies.
+      maybeStaticLibrary =
+        final: drv:
+        if final.stdenv.hostPlatform.isStatic then final.haskell.lib.disableLibraryProfiling drv else drv;
       overlay = final: prev: {
         haskell = prev.haskell // {
           packages = prev.haskell.packages // {
@@ -81,20 +86,24 @@
                     }) { }
                   )
                 );
-                hbt-core = hfinal.callCabal2nix "hbt-core" (builtins.path {
-                  path = ./core;
-                  name = "hbt-core-src";
-                }) { };
+                hbt-core = maybeStaticLibrary final (
+                  hfinal.callCabal2nix "hbt-core" (builtins.path {
+                    path = ./core;
+                    name = "hbt-core-src";
+                  }) { }
+                );
                 hbt-pinboard-client = maybeStaticExecutable final (
                   hfinal.callCabal2nix "hbt-pinboard-client" (builtins.path {
                     path = ./pinboard-client;
                     name = "hbt-pinboard-client-src";
                   }) { }
                 );
-                hbt-pinboard-types = hfinal.callCabal2nix "hbt-pinboard-types" (builtins.path {
-                  path = ./pinboard-types;
-                  name = "hbt-pinboard-types-src";
-                }) { };
+                hbt-pinboard-types = maybeStaticLibrary final (
+                  hfinal.callCabal2nix "hbt-pinboard-types" (builtins.path {
+                    path = ./pinboard-types;
+                    name = "hbt-pinboard-types-src";
+                  }) { }
+                );
               };
             };
           };
