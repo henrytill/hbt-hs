@@ -5,7 +5,7 @@
 module Hbt.Parser.Markdown (Error (..), parse) where
 
 import Commonmark qualified
-import Commonmark.Entity qualified as Commonmark (lookupEntity)
+import Commonmark.Entity qualified as Commonmark (unEntity)
 import Commonmark.Initial (Block, Blocks, Inline, pattern MkBlock, pattern MkInline)
 import Commonmark.Initial qualified as Initial
 import Control.Exception (Exception, throwIO)
@@ -140,9 +140,7 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
 -- can emit it unchanged; a name or a label is text, not HTML, so it wants the
 -- character. One that does not decode is kept as written: henrytill/hbt-hs#60.
 decodeEntity :: Text -> Text
-decodeEntity t = Maybe.fromMaybe t $ do
-  inner <- Text.stripPrefix "&" t >>= Text.stripSuffix ";"
-  Commonmark.lookupEntity inner
+decodeEntity = Commonmark.unEntity . Commonmark.tokenize ""
 
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
 extractLink dest _title desc = do
