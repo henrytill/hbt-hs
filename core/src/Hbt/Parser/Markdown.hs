@@ -70,7 +70,7 @@ toEntity st =
     <$> st.maybeURI
     <*> st.maybeTime
     <*> pure st.maybeName
-    <*> pure (Set.fromList (filter (not . Text.null . (.unLabel)) st.labels))
+    <*> pure (Set.delete (MkLabel Text.empty) (Set.fromList st.labels))
 
 collection :: Lens' ParseState Collection
 collection f s = (\c -> s {collection = c}) <$> f s.collection
