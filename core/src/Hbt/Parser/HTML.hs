@@ -182,8 +182,9 @@ decodeRefs input
 
     numeric :: Text -> Maybe Char
     numeric digits
-      | Just hexDigits <- Text.stripPrefix "x" digits = codepoint Read.hexadecimal hexDigits
-      | Just hexDigits <- Text.stripPrefix "X" digits = codepoint Read.hexadecimal hexDigits
+      | Just (x, hexDigits) <- Text.uncons digits
+      , x == 'x' || x == 'X' =
+          codepoint Read.hexadecimal hexDigits
       | otherwise = codepoint Read.decimal digits
 
     -- Surrogates are excluded because Text cannot hold them.
