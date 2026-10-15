@@ -133,6 +133,7 @@ attributeRefTests = testIO "decodes character references in attributes" $ do
   tagged <- parseOnly (bookmark "TAGS=\"a&amp;b,c\"")
   numeric <- parseOnly (bookmark "TAGS=\"a&#38;b,&#x26;c\"")
   bare <- parseOnly (bookmark "TAGS=\"a&b,c&notaref;d\"")
+  prefixed <- parseOnly (bookmark "TAGS=\"&#x0x41;,&#X0X26;\"")
   pure $
     group
       "Attribute references"
@@ -143,6 +144,7 @@ attributeRefTests = testIO "decodes character references in attributes" $ do
       , assertEqual "references in TAGS are decoded" ["a&b", "c"] (labelsOf tagged)
       , assertEqual "numeric references are decoded" ["&c", "a&b"] (labelsOf numeric)
       , assertEqual "a non-reference ampersand is left alone" ["a&b", "c&notaref;d"] (labelsOf bare)
+      , assertEqual "a second 0x prefix is not a reference" ["&#X0X26;", "&#x0x41;"] (labelsOf prefixed)
       ]
 
 -- | An anchor carrying exactly the ADD_DATE given, with no other attribute.
