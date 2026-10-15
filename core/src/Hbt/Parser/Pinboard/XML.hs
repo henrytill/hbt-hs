@@ -46,7 +46,14 @@ posts :: Lens' ParseState [Post]
 posts f s = (\p -> s {posts = p}) <$> f s.posts
 
 newtype PinboardM a = MkPinboardM (StateT ParseState IO a)
-  deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
+  deriving newtype
+    ( Functor
+    , Applicative
+    , Monad
+    , MonadState ParseState
+    , MonadIO
+    , MonadThrow
+    )
 
 execPinboardM :: PinboardM a -> ParseState -> IO ParseState
 execPinboardM (MkPinboardM m) = execStateT m
