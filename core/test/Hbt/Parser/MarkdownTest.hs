@@ -37,7 +37,6 @@ entityTests = testIO "decodes entities in text" $ do
   query <- parseOnly (document [] "[A](https://z.com/?a=1&amp;b=2)")
   bareURL <- parseOnly (document [] "[https://z.com/?a=1&amp;b=2](https://z.com/?a=1&amp;b=2)")
   unknown <- parseOnly (document ["Foo&nope;bar"] "[A](https://z.com)")
-  dated <- parseOnly "# January&#32;1, 2024\n\n- [A](https://z.com)\n"
   pure $
     group
       "Markdown entities"
@@ -49,12 +48,19 @@ entityTests = testIO "decodes entities in text" $ do
       , assertEqual "an entity in a destination is decoded" (safeURI "https://z.com/?a=1&b=2") query.uri
       , assertEqual "link text that decodes to its destination is no name" [] (Set.toList bareURL.names)
       , assertEqual "CommonMark reads a reference that is not an entity as text" [MkLabel "Foo&nope;bar"] (Set.toList unknown.labels)
-      , assertEqual "an entity in a date heading is decoded" (Just (Time.fromSeconds 1704067200)) (Entity.lookupCreatedAt dated.createdAt)
       ]
+
+-- | Apart from 'entityTests' because an undecoded date heading does not parse:
+-- 'testIO' would report that one exception in place of every assertion there.
+dateEntityTests :: IO Test
+dateEntityTests = testIO "decodes an entity in a date heading" $ do
+  dated <- parseOnly "# January&#32;1, 2024\n\n- [A](https://z.com)\n"
+  pure $
+    assertEqual "an entity in a date heading is decoded" (Just (Time.fromSeconds 1704067200)) (Entity.lookupCreatedAt dated.createdAt)
 
 allTests :: IO Test
 allTests = do
-  tests <- sequence [entityTests]
+  tests <- sequence [entityTests, dateEntityTests]
   pure (group "Hbt.Parser.Markdown tests" tests)
 
 results :: IO (String, Bool)
