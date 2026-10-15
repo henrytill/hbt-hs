@@ -16,17 +16,9 @@ import Hbt.Collection
 import Hbt.Entity (Entity (..), Label (..), Name (..))
 import Hbt.Entity qualified as Entity
 import Hbt.Entity.Time qualified as Time
-import Hbt.Entity.URI (URI)
-import Hbt.Entity.URI qualified as URI
 import Test.Dwergaz
-import TestUtilities (testResults)
+import TestUtilities (safeURI, testResults)
 import Prelude hiding (length, null)
-
-fromEither :: (Show e) => Either e a -> a
-fromEither = either (error . show) id
-
-safeURI :: Text -> URI
-safeURI s = fromEither (URI.parse s)
 
 emptyEntityTests :: Test
 emptyEntityTests =

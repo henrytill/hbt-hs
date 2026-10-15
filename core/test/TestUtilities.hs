@@ -1,10 +1,14 @@
 module TestUtilities
   ( testIO
   , testResults
+  , safeURI
   )
 where
 
 import Control.Exception (SomeException, try)
+import Data.Text (Text)
+import Hbt.Entity.URI (URI)
+import Hbt.Entity.URI qualified as URI
 import Test.Dwergaz
 
 -- | Run an IO action that produces a Test, catching any exceptions as test failures
@@ -22,3 +26,7 @@ testResults _groupName test = (buildString mempty, allPassed)
     result = runTest test
     buildString output = showString (resultToString result) (showChar '\n' output)
     allPassed = resultIsPassed result
+
+-- | Parse a URI the test states, failing loudly if it does not parse
+safeURI :: Text -> URI
+safeURI = either (error . show) id . URI.parse

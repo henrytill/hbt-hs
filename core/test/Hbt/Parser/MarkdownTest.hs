@@ -9,10 +9,9 @@ import Hbt.Collection qualified as Collection
 import Hbt.Entity (Entity (..), Label (..), Name (..))
 import Hbt.Entity qualified as Entity
 import Hbt.Entity.Time qualified as Time
-import Hbt.Entity.URI qualified as URI
 import Hbt.Parser.Markdown qualified as Markdown
 import Test.Dwergaz
-import TestUtilities (testIO, testResults)
+import TestUtilities (safeURI, testIO, testResults)
 
 -- | Parse a document and return its only entity.
 parseOnly :: Text -> IO Entity
@@ -38,7 +37,6 @@ entityTests = testIO "decodes entities in text" $ do
   query <- parseOnly (document [] "[A](https://z.com/?a=1&amp;b=2)")
   unknown <- parseOnly (document ["Foo&nope;bar"] "[A](https://z.com)")
   dated <- parseOnly "# January&#32;1, 2024\n\n- [A](https://z.com)\n"
-  let expectedQuery = either (error . show) id (URI.parse "https://z.com/?a=1&b=2")
   pure $
     group
       "Markdown entities"
@@ -47,7 +45,7 @@ entityTests = testIO "decodes entities in text" $ do
       , assertEqual "a decimal entity in a label is decoded" [MkLabel "FooAbar"] (Set.toList decimal.labels)
       , assertEqual "a hex entity in a label is decoded" [MkLabel "FooAbar"] (Set.toList hex.labels)
       , assertEqual "a backslash escape is decoded" [MkName "Foo*bar"] (Set.toList escaped.names)
-      , assertEqual "an entity in a destination is decoded" expectedQuery query.uri
+      , assertEqual "an entity in a destination is decoded" (safeURI "https://z.com/?a=1&b=2") query.uri
       , assertEqual "a reference that is not an entity is kept" [MkLabel "Foo&nope;bar"] (Set.toList unknown.labels)
       , assertEqual "an entity in a date heading is decoded" (Just (Time.fromSeconds 1704067200)) (Entity.lookupCreatedAt dated.createdAt)
       ]
