@@ -61,13 +61,16 @@ mkParseState coll =
     , parents = []
     }
 
+-- | An empty heading keeps its place in 'labels', since a heading's level is
+-- its position there, but names no label: an empty string is absent where a
+-- string is expected, henrytill/hbt-data#44.
 toEntity :: ParseState -> Maybe Entity
 toEntity st =
   Entity.mkEntity
     <$> st.maybeURI
     <*> st.maybeTime
     <*> pure st.maybeName
-    <*> pure (Set.fromList st.labels)
+    <*> pure (Set.fromList (filter (not . Text.null . (.unLabel)) st.labels))
 
 collection :: Lens' ParseState Collection
 collection f s = (\c -> s {collection = c}) <$> f s.collection
