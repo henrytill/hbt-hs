@@ -357,14 +357,8 @@ absentCreatedAtTests = do
           (createdAtOf epoch)
       ]
 
--- | A null field or entry means absent, and an empty string means absent only
--- where a string is expected: henrytill/hbt-data#44. An omitted or null set is
--- the empty set, a null entry in one is dropped, and so is an empty string in
--- the sets of strings. In 'updatedAt' an empty string is not a time, and stays
--- an error.
---
--- No shared fixture can pin this, since hbt-ocaml is the only CLI that reads
--- YAML.
+-- | Decoding the sets of an entity by henrytill/hbt-data#44, as
+-- 'Hbt.Entity.setField' and 'Hbt.Entity.textSetField' describe it.
 absentSetTests :: Test
 absentSetTests =
   group
