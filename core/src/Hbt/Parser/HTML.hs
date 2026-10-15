@@ -111,7 +111,14 @@ textChunks :: Lens' ParseState [Text]
 textChunks f s = (\t -> s {textChunks = t}) <$> f s.textChunks
 
 newtype NetscapeM a = MkNetscapeM (StateT ParseState IO a)
-  deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
+  deriving newtype
+    ( Functor
+    , Applicative
+    , Monad
+    , MonadState ParseState
+    , MonadIO
+    , MonadThrow
+    )
 
 execNetscapeM :: NetscapeM a -> ParseState -> IO ParseState
 execNetscapeM (MkNetscapeM m) = execStateT m
