@@ -367,14 +367,18 @@ absentSetTests =
     , assertEqual "an empty name is dropped" (Right [MkName "x"]) (field (.names) "names: ['', x]")
     , assertEqual "an empty extended is dropped" (Right [Entity.MkExtended "x"]) (field (.extended) "extended: ['', x]")
     , assertEqual "a null label is dropped" (Right [MkLabel "x"]) (field (.labels) "labels: [null, x]")
+    , assertEqual "a null name is dropped" (Right [MkName "x"]) (field (.names) "names: [null, x]")
     , assertEqual "a bare item is a null label, and dropped" (Right [MkLabel "x"]) (field (.labels) "labels:\n- \n- x")
     , assertEqual "a null extended is dropped" (Right [Entity.MkExtended "x"]) (field (.extended) "extended: [null, x]")
     , assertEqual "a null update is dropped" (Right [Time.fromSeconds 2]) (field (.updatedAt) "updatedAt: [null, 2]")
     , assertEqual "a null labels field is empty" (Right []) (field (.labels) "labels:")
     , assertEqual "a null updatedAt field is empty" (Right []) (field (.updatedAt) "updatedAt:")
+    , assertEqual "a null names field is empty" (Right []) (field (.names) "names:")
+    , assertEqual "a null extended field is empty" (Right []) (field (.extended) "extended:")
     , assertEqual "an omitted labels field is empty" (Right []) (field (.labels) "")
     , assertEqual "an omitted names field is empty" (Right []) (field (.names) "")
     , assertEqual "an omitted updatedAt field is empty" (Right []) (field (.updatedAt) "")
+    , assertEqual "an omitted extended field is empty" (Right []) (field (.extended) "")
     , assertBool "an empty string in updatedAt is still an error" (Either.isLeft (field (.updatedAt) "updatedAt: ['', 2]"))
     ]
   where
