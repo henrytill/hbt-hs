@@ -30,6 +30,7 @@ where
 import Control.Exception (throwIO)
 import Data.Aeson (FromJSON (..), Key, Object, ToJSON (..), object, withObject, (.!=), (.:), (.:?), (.=))
 import Data.Aeson.Types (Parser)
+import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.Maybe qualified as Maybe
 import Data.Monoid (Last (..))
@@ -203,9 +204,10 @@ setField v key = Set.fromList . Maybe.catMaybes <$> v .:? key .!= []
 
 -- | A set of strings, read as 'setField' reads one, less the empty string: it
 -- means absent where a string is expected. Only these sets drop it; in
--- 'updatedAt' it is not a time, and so an error.
-textSetField :: (FromJSON a, Ord a) => (Text -> a) -> Object -> Key -> Parser (Set a)
-textSetField mk v key = Set.delete (mk "") <$> setField v key
+-- 'updatedAt' it is not a time, and so an error. The entries are newtypes over
+-- 'Text', so the empty one is the empty 'Text' coerced, whatever builds them.
+textSetField :: (FromJSON a, Ord a, Coercible Text a) => Object -> Key -> Parser (Set a)
+textSetField v key = Set.delete (coerce ("" :: Text)) <$> setField v key
 
 instance FromJSON Entity where
   parseJSON = withObject "Entity" $ \v -> do
@@ -217,12 +219,12 @@ instance FromJSON Entity where
         <$> v .: "uri"
         <*> pure (maybe mempty mkCreatedAt createdAt)
         <*> setField v "updatedAt"
-        <*> textSetField MkName v "names"
-        <*> textSetField MkLabel v "labels"
+        <*> textSetField v "names"
+        <*> textSetField v "labels"
         <*> v .:? "isFeed" .!= mempty
         <*> v .:? "shared" .!= mempty
         <*> v .:? "toRead" .!= mempty
-        <*> textSetField MkExtended v "extended"
+        <*> textSetField v "extended"
         <*> v .:? "lastVisitedAt" .!= mempty
 
 -- | The updates of two merged entities: both histories and both creation
