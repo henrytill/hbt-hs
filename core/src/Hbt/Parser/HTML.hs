@@ -223,7 +223,10 @@ createEntity = do
   let startEntity = Entity.empty
   accumulated <- liftIO $ resolveToRead <$> foldM accumulateEntity (startEntity, mempty) attrs
   let names = maybe Set.empty (Set.singleton . Entity.MkName) name
-      labels = Set.unions [accumulated.labels, Set.fromList . coerce $ reverse folders]
+      -- An empty folder stays on the stack to keep </DL> balanced, but names no
+      -- label: an empty string is absent where a string is expected,
+      -- henrytill/hbt-data#44.
+      labels = Set.unions [accumulated.labels, Set.fromList . coerce $ filter (not . Text.null) folders]
       extended = maybe Set.empty (Set.singleton . Entity.MkExtended) ext
       -- The attributes arrive in whatever order the file lists them, so the
       -- history can only be normalized once the whole anchor is read. Why:

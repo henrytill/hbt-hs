@@ -13,7 +13,7 @@ import Hbt.Entity.Time qualified as Time
 import Hbt.Entity.URI qualified as URI
 import Hbt.Parser.HTML qualified as HTMLParser
 import Test.Dwergaz
-import TestUtilities (testIO, testResults)
+import TestUtilities (safeURI, testIO, testResults)
 
 -- | Wrap an anchor's attributes in the smallest bookmark file that parses.
 bookmark :: Text -> Text
@@ -174,6 +174,26 @@ addDateTests = testIO "reads an ADD_DATE that states no time as an absence" $ do
       , assertEqual "a stated epoch is a real instant" (Just (Time.fromSeconds 0)) (Entity.lookupCreatedAt epoch.createdAt)
       ]
 
+-- | An empty folder names no label, but still closes at its own </DL>.
+emptyFolderTests :: IO Test
+emptyFolderTests = testIO "an empty folder names no label" $ do
+  collection <-
+    HTMLParser.parse
+      "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<DL><p>\n\
+      \<DT><H3>Outer</H3>\n<DL><p>\n\
+      \    <DT><H3></H3>\n    <DL><p>\n\
+      \        <DT><A HREF=\"https://e.test/inner\" ADD_DATE=\"1700000000\">Inner</A>\n\
+      \    </DL><p>\n\
+      \    <DT><A HREF=\"https://e.test/after\" ADD_DATE=\"1700000000\">After</A>\n\
+      \</DL><p>\n</DL><p>\n"
+  let labelsAt uri = labelsOf <$> Collection.lookupEntity (safeURI uri) collection
+  pure $
+    group
+      "Empty folders"
+      [ assertEqual "a bookmark in an empty folder keeps only the named ones" (Just ["Outer"]) (labelsAt "https://e.test/inner")
+      , assertEqual "the empty folder closes where it should" (Just ["Outer"]) (labelsAt "https://e.test/after")
+      ]
+
 allTests :: IO Test
 allTests = do
   tests <-
@@ -185,6 +205,7 @@ allTests = do
       , trailingBookmarkTests
       , attributeRefTests
       , addDateTests
+      , emptyFolderTests
       ]
   pure (group "Hbt.Parser.HTML tests" tests)
 
