@@ -201,11 +201,11 @@ normalize entity =
 setField :: (FromJSON a, Ord a) => Object -> Key -> Parser (Set a)
 setField v key = Set.fromList . Maybe.catMaybes <$> v .:? key .!= []
 
--- | A set of strings, read as 'setField' reads one, with an empty string
--- dropped as well: it means absent where a string is expected. Only these sets
--- drop it; in 'updatedAt' it is not a time, and so an error.
-textSetField :: (Ord a) => (Text -> a) -> Object -> Key -> Parser (Set a)
-textSetField mk v key = Set.map mk . Set.filter (not . Text.null) <$> setField v key
+-- | A set of strings, read as 'setField' reads one, less the empty string: it
+-- means absent where a string is expected. Only these sets drop it; in
+-- 'updatedAt' it is not a time, and so an error.
+textSetField :: (FromJSON a, Ord a) => (Text -> a) -> Object -> Key -> Parser (Set a)
+textSetField mk v key = Set.delete (mk "") <$> setField v key
 
 instance FromJSON Entity where
   parseJSON = withObject "Entity" $ \v -> do
