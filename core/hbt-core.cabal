@@ -87,6 +87,7 @@ test-suite hbt-test
         Hbt.EntityProperties
         Hbt.Formatter.HTMLTest
         Hbt.Parser.HTMLTest
+        Hbt.Parser.MarkdownTest
         TestUtilities
 
     default-language: GHC2024

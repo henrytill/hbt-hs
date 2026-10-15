@@ -5,6 +5,7 @@ import Hbt.CollectionTest qualified as CollectionTest
 import Hbt.EntityProperties qualified as EntityProperties
 import Hbt.Formatter.HTMLTest qualified as FormatterHTMLTest
 import Hbt.Parser.HTMLTest qualified as ParserHTMLTest
+import Hbt.Parser.MarkdownTest qualified as ParserMarkdownTest
 import System.Exit (exitFailure)
 import Test.QuickCheck (Property, isSuccess, quickCheckResult)
 import Text.Printf (printf)
@@ -23,6 +24,7 @@ main = do
     sequence
       [ CollectionTest.results
       , ParserHTMLTest.results
+      , ParserMarkdownTest.results
       , FormatterHTMLTest.results
       ]
 

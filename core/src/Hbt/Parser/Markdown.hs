@@ -1,9 +1,11 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 
 module Hbt.Parser.Markdown (Error (..), parse) where
 
 import Commonmark qualified
+import Commonmark.Entity qualified as Commonmark (lookupEntity)
 import Commonmark.Initial (Block, Blocks, Inline, pattern MkBlock, pattern MkInline)
 import Commonmark.Initial qualified as Initial
 import Control.Exception (Exception, throwIO)
@@ -123,7 +125,7 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
         Initial.LineBreak -> Builder.singleton '\n'
         Initial.SoftBreak -> Builder.singleton '\SP'
         Initial.Str t -> Builder.fromText t
-        Initial.Entity t -> Builder.fromText t
+        Initial.Entity t -> Builder.fromText (decodeEntity t)
         Initial.EscapedChar c -> Builder.singleton c
         Initial.Emph ils -> foldMap go ils
         Initial.Strong ils -> foldMap go ils
@@ -131,6 +133,18 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
         Initial.Image _ _ ils -> foldMap go ils
         Initial.Code t -> backtick <> Builder.fromText t <> backtick
         Initial.RawInline _ t -> Builder.fromText t
+
+-- | Decode an entity as CommonMark reads it in text: @&amp;@ is @&@.
+--
+-- commonmark hands an entity through as its source, so that an HTML renderer
+-- can emit it unchanged; a name or a label is text, not HTML, so it wants the
+-- character. A destination is decoded by commonmark itself. A reference that
+-- is not an entity, like @&nope;@, never reaches here as one, but one the
+-- lookup does not know is kept as written regardless: henrytill/hbt-hs#60.
+decodeEntity :: Text -> Text
+decodeEntity t = Maybe.fromMaybe t $ do
+  inner <- Text.stripPrefix "&" t >>= Text.stripSuffix ";"
+  Commonmark.lookupEntity inner
 
 extractLink :: Text -> Text -> [Inline a] -> MarkdownM ()
 extractLink dest _title desc = do
