@@ -28,6 +28,9 @@ import Hbt.Parser.HTML qualified as HTMLParser
 import Hbt.Parser.Markdown qualified as Markdown
 import Hbt.Parser.Pinboard.JSON qualified as PinboardJSON
 import Hbt.Parser.Pinboard.XML qualified as PinboardXML
+import Language.Haskell.TH.Syntax qualified as TH
+import System.FilePath ((</>))
+import System.FilePath qualified as FilePath
 import Text.Microstache qualified as Microstache
 
 type data Flow = From | To
@@ -68,8 +71,20 @@ parseWith XML = PinboardXML.parse
 parseWith Markdown = Markdown.parse "content"
 parseWith HTML = HTMLParser.parse
 
+-- | The template, found beside this module rather than by the compiler's
+-- working directory, which is core/ under cabal build but the repository root
+-- under a multi-unit repl or an editor. embedFileRelative found it from the
+-- project root instead, by walking up to the .cabal file, which runs directory
+-- and unix code inside the Template Haskell interpreter and kills it under
+-- cross-compilation; working from the splice's own location is path
+-- arithmetic only.
 templateBytes :: ByteString
-templateBytes = $(FileEmbed.embedFile "src/Hbt/Formatter/HTML/netscape_bookmarks.mustache")
+templateBytes =
+  $( do
+       loc <- TH.location
+       let dir = FilePath.takeDirectory (TH.loc_filename loc)
+       FileEmbed.embedFile (dir </> "Hbt/Formatter/HTML/netscape_bookmarks.mustache")
+   )
 
 formatWith :: Format To -> Collection -> IO Text
 formatWith YAML collection = do
