@@ -38,9 +38,10 @@
     }:
     let
       ghcName = "ghc9103";
-      # The project's packages that the static set builds.  hbt-attic is built
-      # only against glibc.
-      staticPackages = hpkgs: [
+      # The project's packages, as the static set builds them and the dev shell
+      # works on them.  hbt-attic is built only against glibc, so the dev shell
+      # adds it.
+      projectPackages = hpkgs: [
         hpkgs.hbt-cli
         hpkgs.hbt-core
         hpkgs.hbt-pinboard-client
@@ -160,7 +161,7 @@
           all-static-deps =
             let
               hpkgs = pkgsStatic.haskell.packages.${ghcName};
-              selected = staticPackages hpkgs;
+              selected = projectPackages hpkgs;
               isNotSelected = input: pkgs.lib.all (p: input.outPath or null != p.outPath) selected;
               depends = pkgs.lib.zipAttrsWith (_: vals: pkgs.lib.filter isNotSelected (pkgs.lib.concatLists vals)) (
                 map (p: p.getCabalDeps) selected
@@ -182,7 +183,7 @@
           waivers = ./conformance.waivers;
         };
         devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
-          packages = hpkgs: [ hpkgs.hbt-attic ] ++ staticPackages hpkgs;
+          packages = hpkgs: [ hpkgs.hbt-attic ] ++ projectPackages hpkgs;
           withHoogle = true;
           nativeBuildInputs = with pkgs; [
             cabal-install
