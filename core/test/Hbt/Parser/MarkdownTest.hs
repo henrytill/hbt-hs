@@ -35,6 +35,7 @@ entityTests = testIO "decodes entities in text" $ do
   hex <- parseOnly (document ["Foo&#x41;bar"] "[A](https://z.com)")
   escaped <- parseOnly (document [] "[Foo\\*bar](https://z.com)")
   query <- parseOnly (document [] "[A](https://z.com/?a=1&amp;b=2)")
+  bareURL <- parseOnly (document [] "[https://z.com/?a=1&amp;b=2](https://z.com/?a=1&amp;b=2)")
   unknown <- parseOnly (document ["Foo&nope;bar"] "[A](https://z.com)")
   dated <- parseOnly "# January&#32;1, 2024\n\n- [A](https://z.com)\n"
   pure $
@@ -46,6 +47,7 @@ entityTests = testIO "decodes entities in text" $ do
       , assertEqual "a hex entity in a label is decoded" [MkLabel "FooAbar"] (Set.toList hex.labels)
       , assertEqual "a backslash escape is decoded" [MkName "Foo*bar"] (Set.toList escaped.names)
       , assertEqual "an entity in a destination is decoded" (safeURI "https://z.com/?a=1&b=2") query.uri
+      , assertEqual "link text that decodes to its destination is no name" [] (Set.toList bareURL.names)
       , assertEqual "CommonMark reads a reference that is not an entity as text" [MkLabel "Foo&nope;bar"] (Set.toList unknown.labels)
       , assertEqual "an entity in a date heading is decoded" (Just (Time.fromSeconds 1704067200)) (Entity.lookupCreatedAt dated.createdAt)
       ]
