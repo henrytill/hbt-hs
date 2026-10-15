@@ -64,17 +64,17 @@
             '';
           }
         );
+      # Apply a haskell.lib function to a package of the static set only.
+      whenStatic =
+        f: final: drv:
+        if final.stdenv.hostPlatform.isStatic then f final.haskell.lib drv else drv;
       # pkgsStatic links executables statically by default.
       # justStaticExecutables keeps the library component, its documentation,
       # and any reference to GHC out of the output.
-      maybeStaticExecutable =
-        final: drv:
-        if final.stdenv.hostPlatform.isStatic then final.haskell.lib.justStaticExecutables drv else drv;
+      maybeStaticExecutable = whenStatic (hlib: hlib.justStaticExecutables);
       # The static executables are not built for profiling, so the project's own
       # libraries, which change with every commit, skip their profiled copies.
-      maybeStaticLibrary =
-        final: drv:
-        if final.stdenv.hostPlatform.isStatic then final.haskell.lib.disableLibraryProfiling drv else drv;
+      maybeStaticLibrary = whenStatic (hlib: hlib.disableLibraryProfiling);
       overlay = final: prev: {
         haskell = prev.haskell // {
           packages = prev.haskell.packages // {
