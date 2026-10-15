@@ -58,9 +58,22 @@ dateEntityTests = testIO "decodes an entity in a date heading" $ do
   pure $
     assertEqual "an entity in a date heading is decoded" (Just (Time.fromSeconds 1704067200)) (Entity.lookupCreatedAt dated.createdAt)
 
+-- | An empty heading names no label, but keeps its level, so the headings
+-- around it still nest as written.
+emptyHeadingTests :: IO Test
+emptyHeadingTests = testIO "an empty heading names no label" $ do
+  below <- parseOnly "# January 1, 2024\n\n## Outer\n\n### \n\n- [A](https://z.com)\n"
+  above <- parseOnly "# January 1, 2024\n\n## \n\n### Inner\n\n- [A](https://z.com)\n"
+  pure $
+    group
+      "Empty headings"
+      [ assertEqual "an empty heading under a named one adds nothing" [MkLabel "Outer"] (Set.toList below.labels)
+      , assertEqual "a heading under an empty one keeps its own label" [MkLabel "Inner"] (Set.toList above.labels)
+      ]
+
 allTests :: IO Test
 allTests = do
-  tests <- sequence [entityTests, dateEntityTests]
+  tests <- sequence [entityTests, dateEntityTests, emptyHeadingTests]
   pure (group "Hbt.Parser.Markdown tests" tests)
 
 results :: IO (String, Bool)
