@@ -26,12 +26,6 @@ parseOnly input = do
 document :: [Text] -> Text -> Text
 document headings link = "# January 1, 2024\n\n" <> foldMap (\h -> "## " <> h <> "\n\n") headings <> "- " <> link <> "\n"
 
-namesOf :: Entity -> [Text]
-namesOf entity = map (.unName) (Set.toAscList entity.names)
-
-labelsOf :: Entity -> [Text]
-labelsOf entity = map (.unLabel) (Set.toAscList entity.labels)
-
 -- | henrytill/hbt-hs#60: a name or a label is text, so an entity in it is
 -- decoded, as hbt-rs and hbt-js read it.
 entityTests :: IO Test
@@ -48,13 +42,13 @@ entityTests = testIO "decodes entities in text" $ do
   pure $
     group
       "Markdown entities"
-      [ assertEqual "a named entity in a name is decoded" ["Foo & bar"] (namesOf named)
-      , assertEqual "a named entity outside ASCII is decoded" ["\169 2024"] (namesOf copyright)
-      , assertEqual "a decimal entity in a label is decoded" ["FooAbar"] (labelsOf decimal)
-      , assertEqual "a hex entity in a label is decoded" ["FooAbar"] (labelsOf hex)
-      , assertEqual "a backslash escape is decoded" ["Foo*bar"] (namesOf escaped)
+      [ assertEqual "a named entity in a name is decoded" [MkName "Foo & bar"] (Set.toList named.names)
+      , assertEqual "a named entity outside ASCII is decoded" [MkName "\169 2024"] (Set.toList copyright.names)
+      , assertEqual "a decimal entity in a label is decoded" [MkLabel "FooAbar"] (Set.toList decimal.labels)
+      , assertEqual "a hex entity in a label is decoded" [MkLabel "FooAbar"] (Set.toList hex.labels)
+      , assertEqual "a backslash escape is decoded" [MkName "Foo*bar"] (Set.toList escaped.names)
       , assertEqual "an entity in a destination is decoded" expectedQuery query.uri
-      , assertEqual "a reference that is not an entity is kept" ["Foo&nope;bar"] (labelsOf unknown)
+      , assertEqual "a reference that is not an entity is kept" [MkLabel "Foo&nope;bar"] (Set.toList unknown.labels)
       , assertEqual "an entity in a date heading is decoded" (Just (Time.fromSeconds 1704067200)) (Entity.lookupCreatedAt dated.createdAt)
       ]
 
