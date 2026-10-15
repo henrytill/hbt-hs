@@ -163,9 +163,9 @@
               hpkgs = pkgsStatic.haskell.packages.${ghcName};
               selected = projectPackages hpkgs;
               isNotSelected = input: pkgs.lib.all (p: input.outPath or null != p.outPath) selected;
-              depends = pkgs.lib.zipAttrsWith (_: vals: pkgs.lib.filter isNotSelected (pkgs.lib.concatLists vals)) (
-                map (p: p.getCabalDeps) selected
-              );
+              depends = pkgs.lib.zipAttrsWith (
+                _: vals: pkgs.lib.filter isNotSelected (pkgs.lib.concatLists vals)
+              ) (map (p: p.getCabalDeps) selected);
             in
             (hpkgs.mkDerivation (
               {
