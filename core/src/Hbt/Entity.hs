@@ -28,7 +28,8 @@ module Hbt.Entity
 where
 
 import Control.Exception (throwIO)
-import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?), (.=))
+import Data.Aeson (FromJSON (..), Key, Object, ToJSON (..), object, withObject, (.!=), (.:), (.:?), (.=))
+import Data.Aeson.Types (Parser)
 import Data.Functor ((<&>))
 import Data.Maybe qualified as Maybe
 import Data.Monoid (Last (..))
@@ -195,6 +196,17 @@ normalize :: Entity -> Entity
 normalize entity =
   entity {updatedAt = maybe entity.updatedAt (`Set.delete` entity.updatedAt) (lookupCreatedAt entity.createdAt)}
 
+-- | A set, where an omitted or null field is the empty set and a null entry is
+-- dropped: henrytill/hbt-data#44.
+setField :: (FromJSON a, Ord a) => Object -> Key -> Parser (Set a)
+setField v key = Set.fromList . Maybe.catMaybes <$> v .:? key .!= []
+
+-- | A set of strings, read as 'setField' reads one, with an empty string
+-- dropped as well: it means absent where a string is expected. Only these sets
+-- drop it; in 'updatedAt' it is not a time, and so an error.
+textSetField :: (Ord a) => (Text -> a) -> Object -> Key -> Parser (Set a)
+textSetField mk v key = Set.map mk . Set.filter (not . Text.null) <$> setField v key
+
 instance FromJSON Entity where
   parseJSON = withObject "Entity" $ \v -> do
     -- Absent and null both mean absent, as they do for the optional flags. A createdAt of 0 is a
@@ -204,13 +216,13 @@ instance FromJSON Entity where
       MkEntity
         <$> v .: "uri"
         <*> pure (maybe mempty mkCreatedAt createdAt)
-        <*> v .: "updatedAt"
-        <*> v .: "names"
-        <*> v .: "labels"
+        <*> setField v "updatedAt"
+        <*> textSetField MkName v "names"
+        <*> textSetField MkLabel v "labels"
         <*> v .:? "isFeed" .!= mempty
         <*> v .:? "shared" .!= mempty
         <*> v .:? "toRead" .!= mempty
-        <*> v .:? "extended" .!= mempty
+        <*> textSetField MkExtended v "extended"
         <*> v .:? "lastVisitedAt" .!= mempty
 
 -- | The updates of two merged entities: both histories and both creation

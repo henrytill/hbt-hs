@@ -3,6 +3,7 @@
 module Hbt.CollectionTest (results) where
 
 import Control.Exception (SomeException, try)
+import Data.Either qualified as Either
 import Data.Int (Int64)
 import Data.Maybe qualified as Maybe
 import Data.Set qualified as Set
@@ -356,6 +357,39 @@ absentCreatedAtTests = do
           (createdAtOf epoch)
       ]
 
+-- | A null field or entry means absent, and an empty string means absent only
+-- where a string is expected: henrytill/hbt-data#44. An omitted or null set is
+-- the empty set, a null entry in one is dropped, and so is an empty string in
+-- the sets of strings. In 'updatedAt' an empty string is not a time, and stays
+-- an error.
+--
+-- No shared fixture can pin this, since hbt-ocaml is the only CLI that reads
+-- YAML.
+absentSetTests :: Test
+absentSetTests =
+  group
+    "Absent set fields and entries"
+    [ assertEqual "an empty label is dropped" (Right [MkLabel "x"]) (field (.labels) "labels: ['', x]")
+    , assertEqual "an empty name is dropped" (Right [MkName "x"]) (field (.names) "names: ['', x]")
+    , assertEqual "an empty extended is dropped" (Right [Entity.MkExtended "x"]) (field (.extended) "extended: ['', x]")
+    , assertEqual "a null label is dropped" (Right [MkLabel "x"]) (field (.labels) "labels: [null, x]")
+    , assertEqual "a bare item is a null label, and dropped" (Right [MkLabel "x"]) (field (.labels) "labels:\n- \n- x")
+    , assertEqual "a null extended is dropped" (Right [Entity.MkExtended "x"]) (field (.extended) "extended: [null, x]")
+    , assertEqual "a null update is dropped" (Right [Time.fromSeconds 2]) (field (.updatedAt) "updatedAt: [null, 2]")
+    , assertEqual "a null labels field is empty" (Right []) (field (.labels) "labels:")
+    , assertEqual "a null updatedAt field is empty" (Right []) (field (.updatedAt) "updatedAt:")
+    , assertEqual "an omitted labels field is empty" (Right []) (field (.labels) "")
+    , assertEqual "an omitted names field is empty" (Right []) (field (.names) "")
+    , assertEqual "an omitted updatedAt field is empty" (Right []) (field (.updatedAt) "")
+    , assertBool "an empty string in updatedAt is still an error" (Either.isLeft (field (.updatedAt) "updatedAt: ['', 2]"))
+    ]
+  where
+    -- One field of an entity whose only other key is its uri, as a list.
+    field :: (Entity -> Set.Set a) -> Text -> Either String [a]
+    field get yaml =
+      either (Left . show) (Right . Set.toList . get) $
+        Yaml.decodeEither' @Entity (Text.Encoding.encodeUtf8 ("uri: https://example.com/\n" <> yaml))
+
 -- | A node whose entity carries no createdAt key at all.
 undatedNode :: Int -> Text -> Text
 undatedNode nodeId uri = nodeWithCreatedAt nodeId uri "" [] "[]"
@@ -529,6 +563,7 @@ allTests = do
       , absorbEntityTests
       , absorbSupersededCreationTests
       , semigroupAssociativityTests
+      , absentSetTests
       ]
 
 results :: IO (String, Bool)
