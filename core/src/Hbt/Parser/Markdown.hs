@@ -138,9 +138,7 @@ textFromInlines = LazyText.toStrict . Builder.toLazyText . foldMap go
 --
 -- commonmark hands an entity through as its source, so that an HTML renderer
 -- can emit it unchanged; a name or a label is text, not HTML, so it wants the
--- character. A destination is decoded by commonmark itself. A reference that
--- is not an entity, like @&nope;@, never reaches here as one, but one the
--- lookup does not know is kept as written regardless: henrytill/hbt-hs#60.
+-- character. One that does not decode is kept as written: henrytill/hbt-hs#60.
 decodeEntity :: Text -> Text
 decodeEntity t = Maybe.fromMaybe t $ do
   inner <- Text.stripPrefix "&" t >>= Text.stripSuffix ";"
