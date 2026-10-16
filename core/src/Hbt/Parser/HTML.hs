@@ -16,7 +16,9 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Lazy qualified as LazyText
+import Data.Text.Lazy.Builder (Builder)
 import Data.Text.Lazy.Builder qualified as Builder
+import Data.Text.Read (Reader)
 import Data.Text.Read qualified as Read
 import GHC.Stack (HasCallStack)
 import Hbt.Collection (Collection)
@@ -111,7 +113,14 @@ textChunks :: Lens' ParseState [Text]
 textChunks f s = (\t -> s {textChunks = t}) <$> f s.textChunks
 
 newtype NetscapeM a = MkNetscapeM (StateT ParseState IO a)
-  deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadIO, MonadThrow)
+  deriving newtype
+    ( Functor
+    , Applicative
+    , Monad
+    , MonadState ParseState
+    , MonadIO
+    , MonadThrow
+    )
 
 execNetscapeM :: NetscapeM a -> ParseState -> IO ParseState
 execNetscapeM (MkNetscapeM m) = execStateT m
@@ -151,38 +160,44 @@ decodeRefs input
   | Text.isInfixOf "&" input = LazyText.toStrict (Builder.toLazyText (go input))
   | otherwise = input
   where
+    go :: Text -> Builder
     go text
       | Text.null rest = Builder.fromText before
       | otherwise = Builder.fromText before <> decode (Text.drop 1 rest)
       where
         (before, rest) = Text.breakOn "&" text
 
+    decode :: Text -> Builder
     decode text
-      | not (Text.null semi)
+      | let (body, semi) = Text.breakOn ";" (Text.take maxRefLength text)
+      , not (Text.null semi)
       , Just c <- resolve body =
           Builder.singleton c <> go (Text.drop (Text.length body + 1) text)
       | otherwise = Builder.singleton '&' <> go text
-      where
-        (body, semi) = Text.breakOn ";" (Text.take maxRefLength text)
 
-    resolve body = case Text.uncons body of
-      Just ('#', digits) -> numeric digits
-      _ -> lookup body namedRefs
+    resolve :: Text -> Maybe Char
+    resolve body
+      | Just ('#', digits) <- Text.uncons body = numeric digits
+      | otherwise = lookup body namedRefs
 
+    numeric :: Text -> Maybe Char
     numeric digits
-      | Just hexDigits <- Text.stripPrefix "x" digits = codepoint Read.hexadecimal hexDigits
-      | Just hexDigits <- Text.stripPrefix "X" digits = codepoint Read.hexadecimal hexDigits
+      | Just (x, hexDigits) <- Text.uncons digits
+      , x == 'x' || x == 'X'
+      , Text.all Char.isHexDigit hexDigits =
+          codepoint Read.hexadecimal hexDigits
       | otherwise = codepoint Read.decimal digits
 
     -- Surrogates are excluded because Text cannot hold them.
-    codepoint reader digits = case reader digits of
-      Right (n, rest)
-        | Text.null rest
-        , n > 0
-        , n <= 0x10FFFF
-        , n < 0xD800 || n > 0xDFFF ->
-            Just (Char.chr n)
-      _ -> Nothing
+    codepoint :: Reader Int -> Text -> Maybe Char
+    codepoint reader digits
+      | Right (n, rest) <- reader digits
+      , Text.null rest
+      , n > 0
+      , n <= 0x10FFFF
+      , n < 0xD800 || n > 0xDFFF =
+          Just (Char.chr n)
+      | otherwise = Nothing
 
 accumulateEntity :: (HasCallStack) => Accum -> Attr -> IO Accum
 accumulateEntity (entity, tagged) (Attr name rawValue) =

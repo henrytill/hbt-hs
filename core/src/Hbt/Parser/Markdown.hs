@@ -94,7 +94,13 @@ parents :: Lens' ParseState [Id]
 parents f s = (\p -> s {parents = p}) <$> f s.parents
 
 newtype MarkdownM a = MkMarkdownM (StateT ParseState IO a)
-  deriving newtype (Functor, Applicative, Monad, MonadState ParseState, MonadThrow)
+  deriving newtype
+    ( Functor
+    , Applicative
+    , Monad
+    , MonadState ParseState
+    , MonadThrow
+    )
 
 execMarkdownM :: MarkdownM a -> ParseState -> IO ParseState
 execMarkdownM (MkMarkdownM m) = execStateT m
