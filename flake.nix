@@ -179,7 +179,7 @@
           default = all;
         };
         checks.conformance = hbt-data.lib.${system}.check {
-          binary = "${self.packages.${system}.hbt-cli}/bin/hbt";
+          binary = pkgs.lib.getExe self.packages.${system}.hbt-cli;
           waivers = ./conformance.waivers;
         };
         devShells.default = pkgs.haskell.packages.${ghcName}.shellFor {
